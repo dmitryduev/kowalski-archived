@@ -1,0 +1,48 @@
+version: '3.1'
+
+volumes:
+  mongodb:
+  data:
+
+services:
+  traefik:
+    image: traefik
+    container_name: traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.toml:/etc/traefik/traefik.toml:ro
+      - ./traefik/acme:/etc/traefik/acme
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8000:8080"
+    restart: always
+
+  kowalski:
+    build: .
+    volumes:
+      - data:/data
+    expose:
+      - "4000"
+    links:
+      - mongo:kowalski-mongo
+    restart: always
+    depends_on:
+      - mongo
+    labels:
+      - "traefik.enable=true"
+      - "traefik.basic.frontend.rule=Host:kowalski.caltech.edu"
+      - "traefik.basic.port=4000"
+      - "traefik.basic.protocol=http"
+
+
+  mongo:
+    image: mongo
+    expose:
+      - "27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+      - MONGO_INITDB_ROOT_PASSWORD=mongoadminsecret
+    volumes:
+    - mongodb:/data/db
+    restart: always
