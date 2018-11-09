@@ -15,16 +15,30 @@ git clone https://github.com/dmitryduev/kowalski.git
 cd kowalski
 ```
 
-Create `secrets.json` with secret info:
+Create `secrets.json` with confidential/secret data:
 ```json
 {
   "server" : {
-    "SECRET_KEY": "very_secret_key",
-    "JWT_SECRET_KEY": "even_more_secret_key"
-  },
-  "database": {
+    "SECRET_KEY": "secret_key",
+    "JWT_SECRET_KEY": "jwt_secret_key",
     "admin_username": "ADMIN",
     "admin_password": "PASSWORD"
+  },
+  "database": {
+    "admin": "mongoadmin",
+    "admin_pwd": "mongoadminsecret",
+    "user": "user",
+    "pwd": "pwd"
+  },
+  "kafka": {
+    "bootstrap.servers": "IP1:PORT,IP2:PORT",
+    "default.topic.config": {
+      "auto.offset.reset": "earliest"
+    },
+    "group": "kowalski.caltech.edu",
+    "cmd": {
+      "zookeeper": "IP:PORT"
+    }
   }
 }
 ```
