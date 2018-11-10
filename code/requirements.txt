@@ -1,6 +1,13 @@
-astropy>=3.0.3
+aiohttp>=3.4.4
+aiodns>=1.1.1
+aiohttp-jinja2>=1.1.0
+astropy>=3.0.5
+cchardet>=2.1.1
 gunicorn>=19.9.0
-matplotlib>=3.0.0
+jinja2>=2.10
+matplotlib>=3.0.1
+motor>=2.0.0
 pandas>=0.23.4
-pymongo>=3.6.1
+pyjwt>=1.6.4
+pymongo>=3.7.2
 -e git://github.com/Supervisor/supervisor.git#egg=supervisor
