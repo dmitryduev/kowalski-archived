@@ -82,7 +82,7 @@ Build and launch the app container:
 docker build --rm -t kowalski:latest -f Dockerfile .
 docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski-volume:/data --link kowalski-mongo:mongo kowalski:latest
 # test mode:
-docker run -it --rm --name deep-asteroids -p 8000:4000 -v kowalski-volume:/data --link kowalski-mongo:mongo kowalski:latest
+docker run -it --rm --name kowalski -p 8000:4000 -v kowalski-volume:/data --link kowalski-mongo:mongo kowalski:latest
 
 ```
 

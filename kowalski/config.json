@@ -27,11 +27,12 @@
     "default.topic.config": {
       "auto.offset.reset": "earliest"
     },
-    "group": "kowalski.caltech.edu",
-    "cmd": {
-      "cmd": "/data/ztf/tmp/kafka_2.11-1.1.0/bin/kafka-topics.sh",
-    }
+    "group": "kowalski.caltech.edu"
   },
+
+  "kafka-topics": {
+      "cmd": "/kafka_2.11-1.1.0/bin/kafka-topics.sh"
+    },
 
   "misc": {
     "query_expiration_interval": 30,

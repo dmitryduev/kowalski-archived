@@ -1,5 +1,5 @@
-#FROM python:3.6
-FROM python:3.6-slim
+FROM python:3.6
+#FROM python:3.6-slim
 
 # Install vim, git, cron, and jdk
 RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get -y install vim && \
@@ -25,14 +25,14 @@ RUN mkdir -p /data
 #RUN touch /var/log/cron.log
 
 # install python libs
-COPY code/requirements.txt /app/
+COPY kowalski/requirements.txt /app/
 RUN pip install -r /app/requirements.txt
 
 # copy over the secrets:
 COPY secrets.json /app/
 
 # copy over the code
-ADD code/ /app/
+ADD kowalski/ /app/
 
 # change working directory to /app
 WORKDIR /app
