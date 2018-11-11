@@ -78,6 +78,22 @@ async def add_admin(_mongo):
 routes = web.RouteTableDef()
 
 
+async def auth_middleware(app, handler):
+    async def middleware(request):
+        request.user = None
+        jwt_token = request.headers.get('authorization', None)
+        if jwt_token:
+            try:
+                payload = jwt.decode(jwt_token, request.app['JWT']['JWT_SECRET'],
+                                     algorithms=[request.app['JWT']['JWT_ALGORITHM']])
+            except (jwt.DecodeError, jwt.ExpiredSignatureError):
+                return json_response({'message': 'Token is invalid'}, status=400)
+
+            request.user = payload['user_id']
+        return await handler(request)
+    return middleware
+
+
 @routes.post('/auth')
 async def auth(request):
     post_data = await request.post()
