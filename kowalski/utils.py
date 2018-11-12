@@ -1,6 +1,6 @@
 import os
 import inspect
-import json
+import hashlib
 import numpy as np
 import datetime
 import pytz
@@ -100,3 +100,15 @@ def mjd(_t):
     _jd = jd(_t)
     _mjd = _jd - 2400000.5
     return _mjd
+
+
+def compute_hash(_task):
+    """
+        Compute hash for a hashable task
+    :return:
+    """
+    ht = hashlib.blake2b(digest_size=16)
+    ht.update(_task.encode('utf-8'))
+    hsh = ht.hexdigest()
+
+    return hsh

@@ -165,21 +165,48 @@ async def auth(request):
         return json_response({'message': 'Wrong credentials'}, status=400)
 
 
-@routes.get('/hw')
-async def hello(request):
-    return web.Response(text="Hello, world")
+@routes.get('/login')
+async def login_get(request):
+    """
+        Serve login page
+    :param request:
+    :return:
+    """
+    context = {'logo': config['server']['logo']}
+    response = aiohttp_jinja2.render_template('template-login.html',
+                                              request,
+                                              context)
+    return response
+
+
+@routes.post('/login')
+async def login_post(request):
+    """
+        Serve login page
+    :param request:
+    :return:
+    """
+    context = {'logo': config['server']['logo']}
+    response = aiohttp_jinja2.render_template('template-login.html',
+                                              request,
+                                              context)
+    return response
 
 
 @routes.get('/')
 # @auth_required
 async def root_handler(request):
     # todo: if unauthorized, redirect to login page
-    context = {'first_name': 'Robo', 'last_name': 'Mind'}
-    response = aiohttp_jinja2.render_template('template-root.html',
-                                              request,
-                                              context)
-    # response.headers['Content-Language'] = 'ru'
-    return response
+    if request.user:
+        context = {'logo': config['server']['logo']}
+        response = aiohttp_jinja2.render_template('template-root.html',
+                                                  request,
+                                                  context)
+        # response.headers['Content-Language'] = 'ru'
+        return response
+
+    else:
+        pass
 
 
 async def app_factory(_config):
@@ -200,22 +227,28 @@ async def app_factory(_config):
     # add site admin if necessary
     await add_admin(mongo)
 
-    # init app
+    # init app with auth middleware
     app = web.Application(middlewares=[auth_middleware])
 
     # store mongo connection
     app['mongo'] = mongo
 
+    # todo: mark all enqueued tasks failed on shutdown
+    async def mark_enqueued_tasks_failed(app):
+        pass
+
+    app.on_cleanup.append(mark_enqueued_tasks_failed)
+
     # graciously close mongo client on shutdown
     async def close_mongo(app):
         app['mongo'].client.close()
+
     app.on_cleanup.append(close_mongo)
 
     # set up JWT for user authentication/authorization
     app['JWT'] = {'JWT_SECRET': config['server']['JWT_SECRET_KEY'],
                   'JWT_ALGORITHM': 'HS256',
                   'JWT_EXP_DELTA_SECONDS': 30 * 86400 * 3}
-    # add auth middleware
 
     # render templates with jinja2
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./templates'))
@@ -223,6 +256,9 @@ async def app_factory(_config):
     # route table
     # app.add_routes([web.get('/', hello)])
     app.add_routes(routes)
+
+    # static files
+    app.add_routes([web.static('/static', './static')])
 
     return app
 
