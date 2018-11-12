@@ -5,6 +5,7 @@ import json
 import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
 import datetime
+import time
 
 # from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
 # from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
@@ -78,20 +79,45 @@ async def add_admin(_mongo):
 routes = web.RouteTableDef()
 
 
-async def auth_middleware(app, handler):
-    async def middleware(request):
-        request.user = None
-        jwt_token = request.headers.get('authorization', None)
-        if jwt_token:
-            try:
-                payload = jwt.decode(jwt_token, request.app['JWT']['JWT_SECRET'],
-                                     algorithms=[request.app['JWT']['JWT_ALGORITHM']])
-            except (jwt.DecodeError, jwt.ExpiredSignatureError):
-                return json_response({'message': 'Token is invalid'}, status=400)
+@web.middleware
+async def auth_middleware(request, handler):
+    """
+        auth middleware
+    :param request:
+    :param handler:
+    :return:
+    """
+    # tic = time.time()
+    request.user = None
+    jwt_token = request.headers.get('authorization', None)
+    if jwt_token:
+        try:
+            payload = jwt.decode(jwt_token, request.app['JWT']['JWT_SECRET'],
+                                 algorithms=[request.app['JWT']['JWT_ALGORITHM']])
+            # print('Godny token!')
+        except (jwt.DecodeError, jwt.ExpiredSignatureError):
+            return json_response({'message': 'Token is invalid'}, status=400)
 
-            request.user = payload['user_id']
-        return await handler(request)
-    return middleware
+        request.user = payload['user_id']
+
+    response = await handler(request)
+    # toc = time.time()
+    # print(f"Auth middleware took {toc-tic} seconds to execute")
+
+    return response
+
+
+def auth_required(func):
+    """
+        Wrapper to ensure successful user authorization
+    :param func:
+    :return:
+    """
+    def wrapper(request):
+        if not request.user:
+            return json_response({'message': 'Auth required'}, status=401)
+        return func(request)
+    return wrapper
 
 
 @routes.post('/auth')
@@ -145,8 +171,10 @@ async def hello(request):
 
 
 @routes.get('/')
-async def handler(request):
-    context = {'first_name': 'Dmitry', 'last_name': 'Duev'}
+# @auth_required
+async def root_handler(request):
+    # todo: if unauthorized, redirect to login page
+    context = {'first_name': 'Robo', 'last_name': 'Mind'}
     response = aiohttp_jinja2.render_template('template-root.html',
                                               request,
                                               context)
@@ -173,7 +201,7 @@ async def app_factory(_config):
     await add_admin(mongo)
 
     # init app
-    app = web.Application()
+    app = web.Application(middlewares=[auth_middleware])
 
     # store mongo connection
     app['mongo'] = mongo
@@ -187,6 +215,7 @@ async def app_factory(_config):
     app['JWT'] = {'JWT_SECRET': config['server']['JWT_SECRET_KEY'],
                   'JWT_ALGORITHM': 'HS256',
                   'JWT_EXP_DELTA_SECONDS': 30 * 86400 * 3}
+    # add auth middleware
 
     # render templates with jinja2
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./templates'))
