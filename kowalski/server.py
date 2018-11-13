@@ -312,6 +312,9 @@ async def root_handler(request):
     :param request:
     :return:
     """
+    # get session:
+    session = await get_session(request)
+
     context = {'logo': config['server']['logo'],
                'user': session['user_id']}
     response = aiohttp_jinja2.render_template('template-root.html',
