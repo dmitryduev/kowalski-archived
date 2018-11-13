@@ -324,6 +324,35 @@ async def root_handler(request):
     return response
 
 
+# manage users
+@routes.get('/users')
+@login_required
+async def users_get(request):
+    """
+        Serve home page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    # only admin can access this
+    if session['user_id'] == config['server']['admin_username']:
+        users = await request.app['mongo'].users.find({}, {'password': 0}).to_list(length=1000)
+        # print(users)
+
+        context = {'logo': config['server']['logo'],
+                   'user': session['user_id'],
+                   'users': users}
+        response = aiohttp_jinja2.render_template('template-users.html',
+                                                  request,
+                                                  context)
+        return response
+
+    else:
+        json_response({'message': '403 Forbidden'}, status=403)
+
+
 async def app_factory(_config):
     """
         App Factory

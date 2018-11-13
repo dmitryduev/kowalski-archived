@@ -38,15 +38,15 @@
                 <tbody>
                 {% for u in users %}
                     <tr>
-                        <th scope="row" style="width: 20%">{{ u }}</th>
-                        <td style="width: 50%">{{ users[u]['permissions'] }}</td>
+                        <th scope="row" style="width: 20%">{{ u['_id'] }}</th>
+                        <td style="width: 50%">{{ u['permissions'] }}</td>
                         <td style="width: 30%">
                             <button type="button" class="btn btn-sm btn-primary editButton"
                                     data-toggle="modal" data-target="#editUserModal"
-                                    data-user="{{ u }}" data-permissions="'{{ users[u]['permissions'] }}'">
+                                    data-user="{{ u['_id'] }}" data-permissions="'{{ u['permissions'] }}'">
                                 edit</button>
                             <button type="button" class="btn btn-sm btn-danger removeButton"
-                                    data-user="{{ u }}">
+                                    data-user="{{ u['_id'] }}">
                                 remove</button>
                         </td>
                     </tr>
@@ -155,7 +155,7 @@
     <script type="text/javascript" src="{{-script_root-}}/static/js/jquery.tablesorter.min.js"></script>
     <script>
         // for AJAX requests [absolute website's uri]:
-        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+        // $SCRIPT_ROOT = '';
         // global var to keep track of user name changes
         var user_keep;
 
