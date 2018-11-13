@@ -1,7 +1,11 @@
 from aiohttp import web
 import jinja2
 import aiohttp_jinja2
+from aiohttp_session import setup, get_session, session_middleware
+from aiohttp_session.cookie_storage import EncryptedCookieStorage
 import json
+import base64
+from cryptography import fernet
 import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
 import datetime
@@ -87,9 +91,10 @@ async def auth_middleware(request, handler):
     :param handler:
     :return:
     """
-    # tic = time.time()
+    tic = time.time()
     request.user = None
     jwt_token = request.headers.get('authorization', None)
+
     if jwt_token:
         try:
             payload = jwt.decode(jwt_token, request.app['JWT']['JWT_SECRET'],
@@ -101,15 +106,15 @@ async def auth_middleware(request, handler):
         request.user = payload['user_id']
 
     response = await handler(request)
-    # toc = time.time()
-    # print(f"Auth middleware took {toc-tic} seconds to execute")
+    toc = time.time()
+    print(f"Auth middleware took {toc-tic} seconds to execute")
 
     return response
 
 
 def auth_required(func):
     """
-        Wrapper to ensure successful user authorization
+        Wrapper to ensure successful user authorization to use the API
     :param func:
     :return:
     """
@@ -118,6 +123,15 @@ def auth_required(func):
             return json_response({'message': 'Auth required'}, status=401)
         return func(request)
     return wrapper
+
+
+async def token_ok(request, jwt_token):
+    try:
+        payload = jwt.decode(jwt_token, request.app['JWT']['JWT_SECRET'],
+                             algorithms=[request.app['JWT']['JWT_ALGORITHM']])
+        return True
+    except (jwt.DecodeError, jwt.ExpiredSignatureError):
+        return False
 
 
 @routes.post('/auth')
@@ -182,36 +196,97 @@ async def login_get(request):
 @routes.post('/login')
 async def login_post(request):
     """
-        Serve login page
+        Server login page for the browser
     :param request:
     :return:
     """
-    context = {'logo': config['server']['logo']}
-    response = aiohttp_jinja2.render_template('template-login.html',
-                                              request,
-                                              context)
-    return response
+    post_data = await request.post()
+
+    # get session:
+    session = await get_session(request)
+
+    if ('username' not in post_data) or (len(post_data['username']) == 0):
+        return json_response({'message': 'Missing "username"'}, status=400)
+    if ('password' not in post_data) or (len(post_data['password']) == 0):
+        return json_response({'message': 'Missing "password"'}, status=400)
+
+    username = str(post_data['username'])
+    password = str(post_data['password'])
+
+    # print(username, password)
+    print(f'User {username} logged in.')
+
+    # user exists and passwords match?
+    select = await request.app['mongo'].users.find_one({'_id': username})
+    if check_password_hash(select['password'], password):
+        payload = {
+            'user_id': username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(
+                seconds=request.app['JWT']['JWT_EXP_DELTA_SECONDS'])
+        }
+        jwt_token = jwt.encode(payload,
+                               request.app['JWT']['JWT_SECRET'],
+                               request.app['JWT']['JWT_ALGORITHM'])
+
+        # store the token, will need it
+        session['jwt_token'] = jwt_token.decode('utf-8')
+        session['user_id'] = username
+
+        print('LOGIN', session)
+
+        location = '/'
+        raise web.HTTPFound(location=location)
+
+    else:
+        context = {'logo': config['server']['logo'],
+                   'messages': [(u'Failed to log in.', u'danger')]}
+        response = aiohttp_jinja2.render_template('template-login.html',
+                                                  request,
+                                                  context)
+        return response
+
+
+@routes.get('/test')
+@auth_required
+async def test_handler(request):
+    return json_response({'message': 'test ok.'}, status=200)
 
 
 @routes.get('/')
-# @auth_required
 async def root_handler(request):
-    # todo: if unauthorized, redirect to login page
-    if request.user:
-        context = {'logo': config['server']['logo']}
-        response = aiohttp_jinja2.render_template('template-root.html',
-                                                  request,
-                                                  context)
-        # response.headers['Content-Language'] = 'ru'
-        return response
+    """
+        Serve home page for the browser
+    :param request:
+    :return:
+    """
+
+    # get session:
+    session = await get_session(request)
+
+    print('ROOT', session)
+
+    if 'jwt_token' in session:
+        jwt_token = session['jwt_token']
+        if await token_ok(request, jwt_token):
+
+            context = {'logo': config['server']['logo'],
+                       'user': session['user_id']}
+            response = aiohttp_jinja2.render_template('template-root.html',
+                                                      request,
+                                                      context)
+            # response.headers['Content-Language'] = 'ru'
+            return response
 
     else:
-        pass
+        # if unauthorized, redirect to login page
+        # location = request.app.router['login'].url_for()
+        location = '/login'
+        raise web.HTTPFound(location=location)
 
 
 async def app_factory(_config):
     """
-
+        App Factory
     :param _config:
     :return:
     """
@@ -252,6 +327,11 @@ async def app_factory(_config):
 
     # render templates with jinja2
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./templates'))
+
+    # set up browser sessions
+    fernet_key = fernet.Fernet.generate_key()
+    secret_key = base64.urlsafe_b64decode(fernet_key)
+    setup(app, EncryptedCookieStorage(secret_key))
 
     # route table
     # app.add_routes([web.get('/', hello)])

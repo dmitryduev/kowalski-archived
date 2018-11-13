@@ -7,9 +7,11 @@ RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get 
 
 # Kafka:
 RUN mkdir -p /kafka
-ADD http://apache.claz.org/kafka/1.1.0/kafka_2.11-1.1.0.tgz /kafka
-RUN tar -xzf /kafka/kafka_2.11-1.1.0.tgz
-RUN pip install confluent-kafka==0.11.4
+#fixme:
+#ADD http://apache.claz.org/kafka/1.1.0/kafka_2.11-1.1.0.tgz /kafka
+#RUN tar -xzf /kafka/kafka_2.11-1.1.0.tgz
+#RUN pip install confluent-kafka==0.11.4
+#fixme:
 
 # place to keep our app and the data:
 RUN mkdir -p /app
@@ -37,7 +39,9 @@ ADD kowalski/ /app/
 # change working directory to /app
 WORKDIR /app
 
-RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
+#fixme:
+#RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
+#fixme:
 
 # run container
 #CMD /usr/local/bin/supervisord -n -c supervisord.conf
