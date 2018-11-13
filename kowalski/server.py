@@ -10,6 +10,7 @@ import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
 import datetime
 import time
+# import functools
 
 # from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
 # from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
@@ -122,6 +123,33 @@ def auth_required(func):
         if not request.user:
             return json_response({'message': 'Auth required'}, status=401)
         return func(request)
+    return wrapper
+
+
+def login_required(func):
+    """
+        Wrapper to ensure successful user authorization to use the web frontend
+    :param func:
+    :return:
+    """
+    async def wrapper(request):
+        # get session:
+        session = await get_session(request)
+        if 'jwt_token' not in session:
+            # return json_response({'message': 'Auth required'}, status=401)
+            # redirect to login page
+            # location = request.app.router['login'].url_for()
+            location = '/login'
+            raise web.HTTPFound(location=location)
+        else:
+            jwt_token = session['jwt_token']
+            if not await token_ok(request, jwt_token):
+                # return json_response({'message': 'Auth required'}, status=401)
+                # redirect to login page
+                # location = request.app.router['login'].url_for()
+                location = '/login'
+                raise web.HTTPFound(location=location)
+        return await func(request)
     return wrapper
 
 
@@ -246,42 +274,51 @@ async def login_post(request):
         return response
 
 
+@routes.get('/logout')
+async def logout(request):
+    """
+        Logout web user
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    session.invalidate()
+
+    # redirect to login page
+    # location = request.app.router['login'].url_for()
+    location = '/login'
+    raise web.HTTPFound(location=location)
+
+
 @routes.get('/test')
 @auth_required
 async def test_handler(request):
     return json_response({'message': 'test ok.'}, status=200)
 
 
+@routes.get('/test_wrapper')
+@login_required
+async def test_wrapper_handler(request):
+    return json_response({'message': 'test ok.'}, status=200)
+
+
 @routes.get('/')
+@login_required
 async def root_handler(request):
     """
         Serve home page for the browser
     :param request:
     :return:
     """
-
-    # get session:
-    session = await get_session(request)
-
-    print('ROOT', session)
-
-    if 'jwt_token' in session:
-        jwt_token = session['jwt_token']
-        if await token_ok(request, jwt_token):
-
-            context = {'logo': config['server']['logo'],
-                       'user': session['user_id']}
-            response = aiohttp_jinja2.render_template('template-root.html',
-                                                      request,
-                                                      context)
-            # response.headers['Content-Language'] = 'ru'
-            return response
-
-    else:
-        # if unauthorized, redirect to login page
-        # location = request.app.router['login'].url_for()
-        location = '/login'
-        raise web.HTTPFound(location=location)
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-root.html',
+                                              request,
+                                              context)
+    # response.headers['Content-Language'] = 'ru'
+    return response
 
 
 async def app_factory(_config):
