@@ -15,7 +15,7 @@
   },
 
   "database": {
-    "host": "kowalski.caltech.edu",
+    "host": "kowalski-mongo",
     "port": 27017,
     "db": "kowalski",
     "collection_users": "users",
