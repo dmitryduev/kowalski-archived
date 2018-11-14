@@ -51,6 +51,22 @@
             <li class="nav-item {% block nav_home %}{% endblock %}">
                 <a class="nav-link" href="/">Home</a>
             </li>
+            <li class="nav-item {% block nav_my_queries %}{% endblock %}">
+                <a class="nav-link" href="/my_queries">My queries</a>
+            </li>
+            <li class="nav-item dropdown {% block nav_query %}{% endblock %}">
+                <a class="nav-link dropdown-toggle" href="#" id="queryDropdown" role="button"
+                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Query
+                </a>
+                <div class="dropdown-menu" aria-labelledby="queryDropdown">
+                    <a class="dropdown-item" href="/query-cone-search">Cone search</a>
+                    <a class="dropdown-item" href="/query-general-search">General search</a>
+                </div>
+            </li>
+            <li class="nav-item {% block nav_docs %}{% endblock %}">
+                <a class="nav-link" href="/docs">Docs</a>
+            </li>
         </ul>
 
         <ul class="navbar-nav navbar-right">

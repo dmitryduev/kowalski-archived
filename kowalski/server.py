@@ -11,7 +11,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import datetime
 import time
 from ast import literal_eval
-# import functools
+from async_timeout import timeout
 
 # from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
 # from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
@@ -334,7 +334,7 @@ async def root_handler(request):
 @login_required
 async def manage_users(request):
     """
-        Serve home page for the browser
+        Serve users page for the browser
     :param request:
     :return:
     """
@@ -503,6 +503,14 @@ async def edit_user(request):
             return json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
     else:
         return json_response({'message': '403 Forbidden'}, status=403)
+
+
+'''
+# how to use async timeout
+async with timeout(1.5) as cm:
+    await inner()
+print(cm.expired)
+'''
 
 
 async def app_factory(_config):
