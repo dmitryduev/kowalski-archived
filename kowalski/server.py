@@ -10,6 +10,7 @@ import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
 import datetime
 import time
+from ast import literal_eval
 # import functools
 
 # from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
@@ -164,8 +165,12 @@ async def token_ok(request, jwt_token):
 
 @routes.post('/auth')
 async def auth(request):
-    post_data = await request.post()
-    # post_data = dict(post_data)
+    try:
+        post_data = await request.json()
+    except Exception as _e:
+        print(str(_e))
+        post_data = await request.post()
+
     # print(post_data)
 
     # must contain 'username' and 'password'
@@ -327,7 +332,7 @@ async def root_handler(request):
 # manage users
 @routes.get('/users')
 @login_required
-async def users_get(request):
+async def manage_users(request):
     """
         Serve home page for the browser
     :param request:
@@ -350,7 +355,154 @@ async def users_get(request):
         return response
 
     else:
-        json_response({'message': '403 Forbidden'}, status=403)
+        return json_response({'message': '403 Forbidden'}, status=403)
+
+
+@routes.put('/users')
+@login_required
+async def add_user(request):
+    """
+        Add new user to DB
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    _data = await request.json()
+    # print(_data)
+
+    if session['user_id'] == config['server']['admin_username']:
+        try:
+            username = _data['user'] if 'user' in _data else None
+            password = _data['password'] if 'password' in _data else None
+            permissions = _data['permissions'] if 'permissions' in _data else '{}'
+
+            if len(username) == 0 or len(password) == 0:
+                return json_response({'message': 'username and password must be set'}, status=500)
+
+            if len(permissions) == 0:
+                permissions = '{}'
+
+            # add user to coll_usr collection:
+            await request.app['mongo'].users.insert_one(
+                {'_id': username,
+                 'password': generate_password_hash(password),
+                 'permissions': literal_eval(str(permissions)),
+                 'last_modified': datetime.datetime.now()}
+            )
+
+            return json_response({'message': 'success'}, status=200)
+
+        except Exception as _e:
+            print(str(_e))
+            # return str(_e)
+            return json_response({'message': f'Failed to add user: {str(_e)}'}, status=500)
+    else:
+        return json_response({'message': '403 Forbidden'}, status=403)
+
+
+@routes.delete('/users')
+@login_required
+async def remove_user(request):
+    """
+        Remove user from DB
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    _data = await request.json()
+    # print(_data)
+
+    if session['user_id'] == config['server']['admin_username']:
+        try:
+            # get username from request
+            username = _data['user'] if 'user' in _data else None
+            if username == config['server']['admin_username']:
+                return json_response({'message': 'Cannot remove the superuser!'}, status=500)
+
+            # try to remove the user:
+            await request.app['mongo'].users.delete_one({'_id': username})
+
+            return json_response({'message': 'success'}, status=200)
+
+        except Exception as _e:
+            print(_e)
+            return json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
+    else:
+        return json_response({'message': '403 Forbidden'}, status=403)
+
+
+@routes.post('/users')
+@login_required
+async def edit_user(request):
+    """
+        Edit user info
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    _data = await request.json()
+    # print(_data)
+
+    if session['user_id'] == config['server']['admin_username']:
+        try:
+            _id = _data['_user'] if '_user' in _data else None
+            username = _data['edit-user'] if 'edit-user' in _data else None
+            password = _data['edit-password'] if 'edit-password' in _data else None
+            # permissions = _data['edit-permissions'] if 'edit-permissions' in _data else '{}'
+
+            if _id == config['server']['admin_username'] and username != config['server']['admin_username']:
+                return json_response({'message': 'Cannot change the admin username!'}, status=500)
+
+            if len(username) == 0:
+                return json_response({'message': 'username must be set'}, status=500)
+
+            # change username:
+            if _id != username:
+                select = await request.app['mongo'].users.find_one({'_id': _id})
+                select['_id'] = username
+                await request.app['mongo'].users.insert_one(select)
+                await request.app['mongo'].users.delete_one({'_id': _id})
+
+            # change password:
+            if len(password) != 0:
+                await request.app['mongo'].users.update_one(
+                    {'_id': username},
+                    {
+                        '$set': {
+                            'password': generate_password_hash(password)
+                        },
+                        '$currentDate': {'last_modified': True}
+                    }
+                )
+
+            # change permissions:
+            # if len(permissions) != 0:
+            #     select = await request.app['mongo'].users.find_one({'_id': username}, {'_id': 0, 'permissions': 1})
+            #     # print(select)
+            #     # print(permissions)
+            #     _p = literal_eval(str(permissions))
+            #     # print(_p)
+            #     if str(permissions) != str(select['permissions']):
+            #         result = await request.app['mongo'].users.update_one(
+            #             {'_id': _id},
+            #             {
+            #                 '$set': {
+            #                     'permissions': _p
+            #                 },
+            #                 '$currentDate': {'last_modified': True}
+            #             }
+            #         )
+
+            return json_response({'message': 'success'}, status=200)
+
+        except Exception as _e:
+            print(_e)
+            return json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
+    else:
+        return json_response({'message': '403 Forbidden'}, status=403)
 
 
 async def app_factory(_config):

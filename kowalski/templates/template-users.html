@@ -191,12 +191,12 @@
                 processData: false,
                 contentType: 'application/json',
                 success: function(data) {
-                    if (data === 'success') {
+                    if (data['message'] === 'success') {
                         location.reload(true);
                     }
                     else {
                         $('#addUserModal').modal('hide');
-                        showFlashingMessage('Info:', 'Failed to add user', 'danger');
+                        showFlashingMessage('Info:', 'Failed to add user' + data['message'], 'danger');
                     }
                 },
                 error: function(data) {
@@ -219,12 +219,11 @@
                         processData: false,
                         contentType: 'application/json',
                         success: function(data) {
-                            if (data === 'success') {
+                            if (data['message'] === 'success') {
                                 location.reload(true);
                             }
                             else {
-                                {#showFlashingMessage('Info:', 'Failed to remove user', 'danger');#}
-                                showFlashingMessage('Info:', data, 'danger');
+                                showFlashingMessage('Info:', data['message'], 'danger');
                             }
                         },
                         error: function(data) {
@@ -251,12 +250,12 @@
                         processData: false,
                         contentType: 'application/json',
                         success: function(data) {
-                            if (data === 'success') {
+                            if (data['message'] === 'success') {
                                 location.reload(true);
                             }
                             else {
                                 $('#editUserModal').modal('hide');
-                                showFlashingMessage('Info:', data, 'danger');
+                                showFlashingMessage('Info:', data['message'], 'danger');
                             }
                         },
                         error: function(data) {
