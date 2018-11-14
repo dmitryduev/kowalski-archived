@@ -329,7 +329,9 @@ async def root_handler(request):
     return response
 
 
-# manage users
+''' manage users: API '''
+
+
 @routes.get('/users')
 @login_required
 async def manage_users(request):
@@ -503,6 +505,122 @@ async def edit_user(request):
             return json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
     else:
         return json_response({'message': '403 Forbidden'}, status=403)
+
+
+''' query API '''
+
+
+@routes.put('/query')
+@login_required
+async def query(request):
+    """
+        Add new user to DB
+
+        db['ZTF_alerts'].find_one({}, {'_id': 1})
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    _data = await request.json()
+    print(_data)
+
+    try:
+        print(session['user_id'])
+        # todo
+        return json_response({'message': 'success'}, status=200)
+
+    except Exception as _e:
+        print(str(_e))
+        # return str(_e)
+        return json_response({'message': f'Failed to add user: {str(_e)}'}, status=500)
+
+
+''' web endpoints '''
+
+
+@routes.get('/my-queries')
+@login_required
+async def my_queries_handler(request):
+    """
+        Serve my-queries page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    # todo: grab user tasks:
+    user_tasks = []
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id'],
+               'user_tasks': user_tasks}
+    response = aiohttp_jinja2.render_template('template-my-queries.html',
+                                              request,
+                                              context)
+    return response
+
+
+@routes.get('/query-cone-search')
+@login_required
+async def query_cone_search_handler(request):
+    """
+        Serve CS page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id'],
+               'catalogs': ('ZTF_alerts', 'Gaia_DR2')}
+    response = aiohttp_jinja2.render_template('template-query-cone-search.html',
+                                              request,
+                                              context)
+    return response
+
+
+@routes.get('/query-general-search')
+@login_required
+async def query_general_search_handler(request):
+    """
+        Serve GS page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-query-general-search.html',
+                                              request,
+                                              context)
+    return response
+
+
+@routes.get('/docs')
+@login_required
+async def docs_handler(request):
+    """
+        Serve doc page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    # todo: grab user tasks:
+    user_tasks = []
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-docs.html',
+                                              request,
+                                              context)
+    return response
 
 
 '''

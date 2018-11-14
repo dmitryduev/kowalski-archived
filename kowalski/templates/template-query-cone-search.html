@@ -1,0 +1,329 @@
+{% extends "template.html" %}
+
+{% block css %}
+    <style>
+        .form-group {
+            margin-bottom:5px !important;
+            margin-top: 2px !important;
+        }
+    </style>
+{% endblock %}
+
+{% block nav_query %}
+    active
+{% endblock %}
+
+{% block body %}
+
+    <div class="container">
+
+        <h2>Query the databases</h2><br>
+
+        <div id="accordion" role="tablist">
+            <div class="card">
+                <div class="card-header" role="tab" id="headingCoordinatesTab">
+                    <h5 class="mb-0">
+                        <a data-toggle="collapse" href="#coordinatesTab" aria-expanded="true"
+                           aria-controls="coordinatesTab">
+                            Cone search
+                        </a>
+                    </h5>
+                </div>
+                <div id="coordinatesTab" class="collapse show" role="tabpanel" aria-labelledby="headingCoordinatesTab">
+                    <div class="card-body">
+                        <form id="objects_form" class="form">
+
+                            <div class="form-group row">
+                                <label for="ra" class="col-md-2 col-form-label">RA/Dec, ICRS</label>
+                                <div class="col-md-10">
+                                    <textarea class="form-control form-control-sm object_coordinates" id="radec" name="radec"
+                                              placeholder="Python-readable list of comma-separated object coordinates or dictionary:
+[(HH:MM:SS, DD:MM:SS) or (HHhMMmSSs, DDdMMmSSs) or (deg, deg)]
+Examples:
+[(0.0, 0.0)]
+[(0.0, 0.0), (1.0, 1.0)]
+[('08:55:29.205', '-34:02:36.8944')]
+{'object1': ('08h55m29.205s', '-34d02m36.8944s'), 'object2': ('06h55m29.205s', '32d02m36.1944s')}
+"
+                                              rows="8"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="cone_search_radius" class="col-md-2 control-label">
+                                    Cone search radius
+                                </label>
+
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control form-control-sm object_coordinates" id="cone_search_radius"
+                                           name="cone_search_radius" placeholder="">
+                                </div>
+                                <div class="col-md-5">
+                                    <select class="form-control form-control-sm object_coordinates" id="cone_search_unit"
+                                            name="cone_search_unit">
+                                        <option>arcsec</option>
+                                        <option>arcmin</option>
+                                        <option>deg</option>
+                                        <option>rad</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <div class="col-md-2">Query all catalogs?</div>
+                                <div class="col-md-10">
+                                    <div class="form-check">
+                                        <label class="form-check-label">
+                                            <input class="form-check-input" type="checkbox"
+                                                   id="select_all_catalogs"> Select all
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <br>
+            <h4>Catalogs</h4>
+
+            {% for catalog in catalogs %}
+                <div class="card">
+                <div class="card-header" role="tab" id="heading_{{ catalog }}">
+                    <h5 class="mb-0">
+                        <div class="form-check ml-3">
+                            {# add switch class to enable 'query all catalogs' checkbox #}
+                            <input class="form-check-input catalog_switch" type="checkbox" id="{{ catalog }}_switch"
+                                   data-catalog="{{ catalog }}">
+                            <label class="form-check-label p-0" for="{{ catalog }}_switch">
+                                <a class="collapsed ml-0" data-toggle="collapse" href="#collapse_{{ catalog }}"
+                                   aria-expanded="false" aria-controls="collapse_{{ catalog }}">
+                                    {{ catalog }}
+                                </a>
+                            </label>
+                        </div>
+                    </h5>
+                </div>
+
+                <div id="collapse_{{ catalog }}" class="collapse" role="tabpanel"
+                     aria-labelledby="heading_{{ catalog }}">
+                    <div class="card-body">
+                        <form id="form_{{ catalog }}" class="form">
+
+                            <div class="form-group row">
+                                <label for="{{ catalog }}_filter" class="col-md-2 control-label">
+                                    Filter
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="{{ catalog }}_filter"
+                                           name="{{ catalog }}_filter" placeholder="" disabled>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="{{ catalog }}_projection" class="col-md-2 control-label">
+                                    Projection
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="{{ catalog }}_projection"
+                                           name="{{ catalog }}_projection" placeholder="" disabled>
+                                </div>
+
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {% endfor %}
+        </div>
+
+        <br>
+        <input class="btn btn-outline-primary" id="get_query" type="submit" value="Get query">
+        <input class="btn btn-primary" id="submit_query" type="submit" value="Submit">
+
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        {# search particular catalog #}
+        $(document).ready(function(){
+            $('.catalog_switch').click(function() {
+                var cat = $(this).data('catalog');
+                if($(this).is(":checked")){
+                    // enable input fields
+                    $("#"+cat+"_filter").prop( "disabled", false );
+                    $("#"+cat+"_projection").prop( "disabled", false );
+                }
+                else if($(this).is(":not(:checked)")){
+                    // disable
+                    $("#"+cat+"_filter").prop( "disabled", true );
+                    $("#"+cat+"_projection").prop( "disabled", true );
+                }
+            });
+        });
+
+        {# check/uncheck all catalogs #}
+        $(document).ready(function(){
+            $('#select_all_catalogs').click(function(){
+                if($(this).is(":checked")){
+                    // clever trick: check all cats first
+                    $( ".catalog_switch" ).prop( "checked", false );
+                    // trigger toggle_catalog_switches()
+                    $( ".catalog_switch" ).trigger("click");
+                }
+                else if($(this).is(":not(:checked)")){
+                    // clever trick: uncheck all cats first
+                    $( ".catalog_switch" ).prop( "checked", true );
+                    // trigger toggle_catalog_switches()
+                    $( ".catalog_switch" ).trigger("click");
+                }
+            });
+        });
+    </script>
+
+    <script>
+        // generate "random" 32-symbol string:
+        function random_string() {
+            return Math.random().toString(36).substr(2, 7) + Math.random().toString(36).substr(2, 7) +
+                Math.random().toString(36).substr(2, 7) + Math.random().toString(36).substr(2, 7) +
+                Math.random().toString(36).substr(2, 4);
+        }
+        // construct query in JSON format
+        function construct_query() {
+            var query = {};
+            query['query_type'] = 'cone_search';
+            // console.log('Confirmed');
+            {#var serializedData = JSON.stringify($("#objects_form > :input").serializeArray());#}
+            // serialize object coordinates
+            var object_coordinates = {};
+            $(".object_coordinates").each(function() {
+                object_coordinates[this.id] = this.value;
+            });
+            query['object_coordinates'] = object_coordinates;
+            // serialize catalogs:
+            query['catalogs'] = {};
+            {% for catalog in catalogs %}
+                // searching catalog, are we?
+                if($("#{{ catalog }}_switch").is(":checked")){
+                    query['catalogs']['{{ catalog }}'] = {'filter': '', 'projection': ''};
+
+                    let cat_filter = $("#{{ catalog }}_filter").val();
+                    let cat_projection = $("#{{ catalog }}_projection").val();
+
+                    if (cat_filter.length === 0) {
+                        query['catalogs']['{{ catalog }}']['filter'] = '{}';
+                    }
+                    else {
+                        query['catalogs']['{{ catalog }}']['filter'] = $("#{{ catalog }}_filter").val();
+                    }
+
+                    if (cat_projection.length === 0) {
+                        query['catalogs']['{{ catalog }}']['projection'] = '{}';
+                    }
+                    else {
+                        query['catalogs']['{{ catalog }}']['projection'] = $("#{{ catalog }}_projection").val();
+                    }
+
+                }
+            {% endfor %}
+
+
+            return query;
+        }
+        // get query in JSON format
+        $(document).ready(function() {
+            $('#get_query').click(function () {
+                var query = construct_query();
+                bootbox.alert(JSON.stringify(query, null, 4));
+            });
+        });
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fa fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fa fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            var query = construct_query();
+
+                            // season query with some salt:
+                            query['kwargs'] = {};
+                            query['kwargs']['_id'] = random_string();
+                            // do not wait for the result
+                            query['kwargs']['enqueue_only'] = true;
+
+                            $.ajax({url: '{{-script_root-}}/query',
+                                method: 'PUT',
+                                data: JSON.stringify(query),
+                                processData: false,
+                                contentType: 'application/json',
+                                success: function(data) {
+                                    if (data['message'] === 'success') {
+                                        {#location.reload(true);#}
+                                        showFlashingMessage('Info:', 'Successfully enqueued query.', 'success');
+                                    }
+                                    else {
+                                        $('#addUserModal').modal('hide');
+                                        showFlashingMessage('Info:', 'Failed to run query: ' + data['message'], 'danger');
+                                    }
+                                },
+                                error: function(data) {
+                                    $('#addUserModal').modal('hide');
+                                    showFlashingMessage('Info:', 'Failed to run query.', 'danger');
+                                }
+                            });
+                            bootbox.hideAll();
+                            return false;
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+    {# show flashing messages #}
+    <script>
+        function showFlashingMessage(title, message, type) {
+            $.notify({title: title, message: message},
+                {placement: {
+                    from: "bottom",
+                    align: "right"
+                },
+                    type: type,
+                    template: '<div data-notify="container" class="col-xs-11 col-md-3 alert alert-{0}" role="alert" ' +
+                    'style="max-width:400px; font-size: 0.75rem;">' +
+                    '<button type="button" aria-hidden="true" class="close" data-notify="dismiss">×</button>' +
+                    '<span data-notify="icon"></span> ' +
+                    '<span data-notify="title">{1}</span> ' +
+                    '<span data-notify="message">{2}</span>' +
+                    '<div class="progress" data-notify="progressbar">' +
+                    '<div class="progress-bar progress-bar-{0}" role="progressbar" aria-valuenow="0" ' +
+                    'aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>' +
+                    '</div>' +
+                    '<a href="{3}" target="{4}" data-notify="url"></a>' +
+                    '</div>'
+                                        });
+        }
+    </script>
+{% endblock %}
