@@ -1,0 +1,32 @@
+{% extends "template.html" %}
+
+{% block nav_docs %}
+    active
+{% endblock %}
+
+{% block css %}
+{#    <link rel="stylesheet" href="{{-script_root-}}/static/css/github-v2.css">#}
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/tranquil-heart.css">
+{% endblock %}
+
+{% block body %}
+
+    <div class="container">
+
+        <h2>Tutorials</h2><br>
+
+        <h3>{{ title }}</h3><br>
+
+        {{ content | safe }}
+
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    {# highlight code #}
+    <script>
+        $("pre").addClass("prettyprint")
+    </script>
+    <script src="{{-script_root-}}/static/js/run_prettify.js"></script>
+{% endblock %}

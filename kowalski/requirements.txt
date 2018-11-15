@@ -10,6 +10,7 @@ cryptography>=2.4.1
 gunicorn>=19.9.0
 jinja2>=2.10
 matplotlib>=3.0.1
+misaka>=2.1.0
 motor>=2.0.0
 pandas>=0.23.4
 pyjwt>=1.6.4

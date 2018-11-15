@@ -2,8 +2,8 @@
 
 {# custom css #}
 {% block css %}
-    <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{#    <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">#}
+{#    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />#}
 {% endblock %}
 
 {% block nav_docs %}
@@ -20,22 +20,27 @@
 
     <div class="container mt-2">
 
+        <h2>Documentation</h2><br>
+
         <ul>
             <li>
-                <a href="#">Introduction</a>
+                <a href="/docs/introduction">Introduction</a>
             </li>
             <li>
-                <a href="#">Databases</a>
+                <a href="/docs/databases">Databases</a>
+            </li>
+            <li>
+                <a href="/docs/python_client">Python client library <code>penquins</code></a>
             </li>
             <li>
                 Tutorials
             </li>
                 <ul>
                     <li>
-                        <a href="#">Web interface</a>
+                        <a href="/docs/web_browser_client">Web interface</a>
                     </li>
                     <li>
-                        <a href="#">Python client</a>
+                        <a href="/docs/querying_databases">Querying databases</a>
                     </li>
                 </ul>
         </ul>
@@ -69,18 +74,8 @@
 
 {% block js %}
 
-    <!-- Bootstrap table -->
-    <script src="{{-script_root-}}/static/js/bootstrap-table.js"></script>
-    <script src="{{-script_root-}}/static/js/bootstrap-table-en-US.js"></script>
-    <script src="{{-script_root-}}/static/js/tableExport.js"></script>
-    <script src="{{-script_root-}}/static/js/bootstrap-table-export.js"></script>
-    <script src="{{-script_root-}}/static/js/FileSaver.min.js"></script>
-    <script src="{{-script_root-}}/static/js/bootstrap-table-multiple-sort.js"></script>
-
     <!-- Big int support for js -->
     <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
-
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 
     <script>
 

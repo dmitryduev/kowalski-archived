@@ -8,6 +8,7 @@
 
   "path": {
     "path_app": "/app",
+    "path_docs": "/app/doc/",
     "path_logs": "/data/logs/",
     "path_data": "/data/",
     "path_alerts": "/data/alerts/",

@@ -12,10 +12,17 @@ import datetime
 import time
 from ast import literal_eval
 from async_timeout import timeout
+from misaka import Markdown, HtmlRenderer
+import os
 
 # from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
 # from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
 from utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
+
+
+''' markdown rendering '''
+rndr = HtmlRenderer()
+md = Markdown(rndr, extensions=('fenced-code',))
 
 
 ''' load config and secrets '''
@@ -139,16 +146,16 @@ def login_required(func):
         if 'jwt_token' not in session:
             # return json_response({'message': 'Auth required'}, status=401)
             # redirect to login page
-            # location = request.app.router['login'].url_for()
-            location = '/login'
+            location = request.app.router['login'].url_for()
+            # location = '/login'
             raise web.HTTPFound(location=location)
         else:
             jwt_token = session['jwt_token']
             if not await token_ok(request, jwt_token):
                 # return json_response({'message': 'Auth required'}, status=401)
                 # redirect to login page
-                # location = request.app.router['login'].url_for()
-                location = '/login'
+                location = request.app.router['login'].url_for()
+                # location = '/login'
                 raise web.HTTPFound(location=location)
         return await func(request)
     return wrapper
@@ -226,7 +233,7 @@ async def login_get(request):
     return response
 
 
-@routes.post('/login')
+@routes.post('/login', name='login')
 async def login_post(request):
     """
         Server login page for the browser
@@ -279,7 +286,7 @@ async def login_post(request):
         return response
 
 
-@routes.get('/logout')
+@routes.get('/logout', name='logout')
 async def logout(request):
     """
         Logout web user
@@ -292,8 +299,8 @@ async def logout(request):
     session.invalidate()
 
     # redirect to login page
-    # location = request.app.router['login'].url_for()
-    location = '/login'
+    location = request.app.router['login'].url_for()
+    # location = '/login'
     raise web.HTTPFound(location=location)
 
 
@@ -309,7 +316,7 @@ async def test_wrapper_handler(request):
     return json_response({'message': 'test ok.'}, status=200)
 
 
-@routes.get('/')
+@routes.get('/', name='root')
 @login_required
 async def root_handler(request):
     """
@@ -573,9 +580,15 @@ async def query_cone_search_handler(request):
     # get session:
     session = await get_session(request)
 
+    # todo: get available catalog names
+    catalogs = await request.app['mongo'].list_collection_names()
+    catalogs = [c for c in catalogs if c not in (config['database']['collection_users'],
+                                                 config['database']['collection_queries'],
+                                                 config['database']['collection_stats'])]
+
     context = {'logo': config['server']['logo'],
                'user': session['user_id'],
-               'catalogs': ('ZTF_alerts', 'Gaia_DR2')}
+               'catalogs': catalogs}
     response = aiohttp_jinja2.render_template('template-query-cone-search.html',
                                               request,
                                               context)
@@ -605,6 +618,27 @@ async def query_general_search_handler(request):
 @login_required
 async def docs_handler(request):
     """
+        Serve docs page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    # todo?
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-docs.html',
+                                              request,
+                                              context)
+    return response
+
+
+@routes.get('/docs/{doc}')
+@login_required
+async def doc_handler(request):
+    """
         Serve doc page for the browser
     :param request:
     :return:
@@ -612,12 +646,22 @@ async def docs_handler(request):
     # get session:
     session = await get_session(request)
 
-    # todo: grab user tasks:
-    user_tasks = []
+    doc = request.match_info['doc']
+
+    title = doc.replace('_', ' ').capitalize()
+
+    # render doc with misaka
+    with open(os.path.join(config['path']['path_docs'],
+                           doc + '.md'), 'r') as f:
+        tut = f.read()
+
+    content = md(tut)
 
     context = {'logo': config['server']['logo'],
-               'user': session['user_id']}
-    response = aiohttp_jinja2.render_template('template-docs.html',
+               'user': session['user_id'],
+               'title': title,
+               'content': content}
+    response = aiohttp_jinja2.render_template('template-doc.html',
                                               request,
                                               context)
     return response
