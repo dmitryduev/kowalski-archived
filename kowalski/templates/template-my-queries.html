@@ -1,0 +1,359 @@
+{% extends "template.html" %}
+
+{# custom css #}
+{% block css %}
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">
+{% endblock %}
+
+{% block nav_home %}
+    active
+{% endblock %}
+
+{% block body %}
+
+
+    <div class="container">
+
+        <h2><a href="#">Recent queries</a></h2>
+
+            <div id="toolbar" class="btn-group">
+                <button type="button" class="btn btn-outline-danger"
+                        style="cursor: pointer;" onclick="remove_all_queries()">
+                    <i class="fa fa-trash" aria-hidden="true"></i>
+                </button>
+            </div>
+            <table id="table"
+                   class="table table-hover table-condensed"
+                   data-toggle="table"
+                   data-toolbar="#toolbar"
+                   data-pagination="true"
+                   data-side-pagination="client"
+                   data-minimum-count-columns="2"
+                   data-page-size="20"
+                   data-page-list="[20, 50, 100, 200, 500, All]"
+                   data-search="true"
+                   data-show-columns="true"
+                   data-show-export="true"
+                   data-export-types="['json', 'csv']"
+                   data-export-options='{ "fileName": "queries",
+                                          "worksheetName": "queries1"
+                                         }'>
+                <thead>
+                <tr>
+{#                    <th data-field="state" data-checkbox="true"></th>#}
+                    <th data-sortable="true" data-sorter="stringSorter"
+                        data-field="id">query id</th>
+                    <th data-sortable="true" data-sorter="stringSorter"
+                        data-field="query_created">date created, UTC</th>
+                    <th data-sortable="true" data-sorter="stringSorter" data-visible="false"
+                        data-field="query_last_modified">date last modified, UTC</th>
+                    <th data-sortable="true" data-sorter="stringSorter"
+                        data-field="query_expires">date expires, UTC</th>
+                    <th data-sortable="true" data-sorter="stringSorter"
+                        data-field="query_status">status</th>
+                    <th data-field="query_actions">actions</th>
+                </tr>
+                </thead>
+                <tbody id="table-tbody">
+                {% for query in user_tasks %}
+                    {% set query_id = query['task_id'] %}
+                    <tr class="clickable-row" data-uniqueid="{{ query_id }}" id="{{ query_id }}">
+{#                        <td></td>#}
+                        <td>{{ query_id }}</td>
+                        {% for key in ('created', 'last_modified', 'expires')%}
+                            <td id="{{ query_id }}-{{ key }}">
+                                {{ query[key].strftime('%Y-%m-%d %H:%M:%S') }}
+                            </td>
+                        {% endfor %}
+                        <td id="{{ query_id }}-status">
+                            {% if query["status"] == "done" %}
+                                {% set query_status = 'success' %}
+                            {% endif %}
+                            {% if query["status"] == "failed" %}
+                                {% set query_status = 'danger' %}
+                            {% endif %}
+                            {% if query["status"] == "enqueued" %}
+                                {% set query_status = 'warning' %}
+                            {% endif %}
+                            <span class="badge badge-{{ query_status }}">{{ query["status"] }}</span>
+                        </td>
+                        <td id="{{ query_id }}-actions">
+                            {# remove if not enqueued #}
+                            {% if query["status"] != "enqueued" %}
+
+                                <a href="#" class="text-danger"
+                                   onclick="remove_query('{{ query_id }}')"
+                                   data-toggle="tooltip" data-placement="top" title="Remove query"><i class="fa fa-trash" aria-hidden="true"></i></a>
+                            {% endif %}
+                            {# download query #}
+                            |
+                            <a href="#" onclick="get_query('{{ query_id }}')"
+                               data-toggle="tooltip" data-placement="top" title="Get query"><i class="fa fa-tasks" aria-hidden="true"></i></a>
+                            <a href="#" onclick="get_query_view('{{ query_id }}')"
+                               data-toggle="tooltip" data-placement="top" title="View query in browser"><i class="fa fa-eye" aria-hidden="true"></i></a>
+                            {# download result #}
+                            {% if query["status"] in ["done", "failed"] %}
+                                |
+                                <a download="{{ query_id }}.result.json" href="/data/{{ user }}/{{ query_id }}.result.json"
+                                   data-toggle="tooltip" data-placement="top" title="Get result"><i class="fa fa-download" aria-hidden="true"></i></a>
+                                <a href="#" onclick="get_query_result_view('{{ query_id }}')"
+                                   data-toggle="tooltip" data-placement="top" title="View result in browser"><i class="fa fa-eye" aria-hidden="true"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+{#        <br>#}
+
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modal" tabindex="-1" role="dialog"
+         aria-labelledby="modal-query-id" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-query-id"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <pre><code id="modal-body-code" style="font-size:0.75em;"></code></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+{#                    <button type="button" class="btn btn-primary">Save changes</button>#}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    <!-- Bootstrap table -->
+    <script src="{{-script_root-}}/static/js/bootstrap-table.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-en-US.js"></script>
+    <script src="{{-script_root-}}/static/js/tableExport.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-export.js"></script>
+    <script src="{{-script_root-}}/static/js/FileSaver.min.js"></script>
+    <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
+
+    <script>
+        // Fancy table stuff
+        function getHeight() {
+            var window_height = $(window).height();
+            if (window_height > 1200) {
+                var top = document.getElementById('table').getBoundingClientRect().top;
+                return Math.max(400, window_height - top - 10);
+            }
+            else {
+                return Math.max(400, window_height - 210);
+            }
+        }
+        // reset height of table with search results
+        function resetTableHeight() {
+            var $table = $('#table');
+            $table.bootstrapTable('resetView', {
+                height: getHeight()
+            });
+        }
+        $(document).ready(function() {
+            // on load
+            if( $('#table').length ) {
+                resetTableHeight();
+            }
+        });
+        $(window).resize(function () {
+            // on window resize
+            if( $('#table').length ) {
+                resetTableHeight();
+            }
+        });
+
+        {# table sorting #}
+        function getOrder() {
+            var $table = $('#table');
+            return $table.bootstrapTable('getOptions').sortOrder === 'asc' ? -1 : 1;
+        }
+
+        function numberSorter(a, b) {
+            a = $.trim(a.replace(/<\/?[^>]+(>|$)/g, ""));
+            b = $.trim(b.replace(/<\/?[^>]+(>|$)/g, ""));
+            if (!a || a === 'None') return -1 * getOrder();
+            if (!b || b === 'None') return 1 * getOrder();
+            if (parseFloat(a) < parseFloat(b)) return -1;
+            if (parseFloat(a) > parseFloat(b)) return 1;
+            return 0;
+        }
+
+        function stringSorter(a, b) {
+            a = $.trim(a.replace(/<\/?[^>]+(>|$)/g, ""));
+            b = $.trim(b.replace(/<\/?[^>]+(>|$)/g, ""));
+            if (!a || a === 'None') return -1 * getOrder();
+            if (!b || b === 'None') return 1 * getOrder();
+            if (a < b) return -1;
+            if (a > b) return 1;
+            return 0;
+        }
+
+
+        {# init tooltips #}
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        });
+
+        {# set up socket.io #}
+        {#var socket = io();#}
+        var socket = io({transports: ['websocket']});
+        {#var socket = io.connect('https://kowalski.caltech.edu:443');#}
+
+        function remove_query(query_id) {
+            bootbox.confirm({
+                message: "Do you want to remove the query?",
+                buttons: {
+                    cancel: {
+                        label: '<i class="fa fa-times"></i> Cancel'
+                    },
+                    confirm: {
+                        label: '<i class="fa fa-check"></i> Confirm'
+                    }
+                },
+                callback: function (result) {
+                    // console.log('This was logged in the callback: ' + result);
+                    // confirmed? emit remove_query event:
+                    if (result) {
+                        // emit remove_query event on click
+                        {# TODO #}
+                    }
+                }
+            });
+        }
+
+        function remove_all_queries() {
+            bootbox.confirm({
+                message: "Do you want to remove all queries on this page?",
+                buttons: {
+                    cancel: {
+                        label: '<i class="fa fa-times"></i> Cancel'
+                    },
+                    confirm: {
+                        label: '<i class="fa fa-check"></i> Confirm'
+                    }
+                },
+                callback: function (result) {
+                    // console.log('This was logged in the callback: ' + result);
+                    // confirmed? emit remove_query event:
+                    if (result) {
+                        // remove all queries event on click
+                        // loop over tr's in table-tbody
+                        $("#table-tbody tr").each(function() {
+                            {# TODO #}
+                        });
+
+                    }
+                }
+            });
+        }
+
+        function get_query(query_id) {
+            {# TODO #}
+        }
+
+        function get_query_result(query_id) {
+            {# TODO #}
+        }
+
+        function get_query_view(query_id) {
+            {# TODO #}
+        }
+
+        function get_query_result_view(query_id) {
+            {# TODO #}
+        }
+
+        {# actions #}
+        {# download json as files #}
+        function download(json, name, type) {
+            var a = document.createElement("a");
+            var file = new Blob([json], {type: type});
+            var url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function(){
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+        function add_query(data){
+            var $table = $('#table');
+            $table.bootstrapTable('prepend', data);
+        }
+
+        function modify_query(query_id, query_status){
+            var $table = $('#table');
+            // get td
+            var td = $("td:contains(" + query_id + ")");
+            // get row number
+            var row = td.parent().parent().children().index(td.parent());
+            // badge type:
+            var status = query_status === "success" ? "done" : "failed";
+            {#console.log(row);#}
+            // update status
+            $table.bootstrapTable('updateCell', {index: row, field:'query_status',
+                value: "<span class='badge badge-" + query_status +"'>" + status + "</span>"});
+            // add download action:
+            if ((query_status == 'success') || (query_status == 'danger')) {
+                $table.bootstrapTable('updateCell', {index: row, field:'query_actions',
+                value: "<a href=\"#\" class=\"text-danger\"" +
+                            " onclick=\"remove_query(\'" + query_id + "\')\"" +
+                            " data-toggle=\"tooltip\" data-placement=\"top\" title=\"Remove query\"><i class=\"fa fa-trash\" aria-hidden=\"true\"></i></a>" +
+                            " | <a href=\"#\" onclick=\"socket.emit('get_query', '" + query_id + "')\"" +
+                            " data-toggle=\"tooltip\" data-placement=\"top\" title=\"Get query\"><i class=\"fa fa-tasks\" aria-hidden=\"true\"></i></a>" +
+                            " <a href=\"#\" onclick=\"get_query_view('" + query_id + "')\"\n" +
+                            " data-toggle=\"tooltip\" data-placement=\"top\" title=\"View query in browser\"><i class=\"fa fa-eye\" aria-hidden=\"true\"></i></a>" +
+                            " | <a download=\"" + query_id + ".result.json\" href=\"/data/{{ user }}/" + query_id + ".result.json\"\n" +
+                            " data-toggle=\"tooltip\" data-placement=\"top\" title=\"Get result\"><i class=\"fa fa-download\" aria-hidden=\"true\"></i></a>" +
+                            " <a href=\"#\" onclick=\"get_query_result_view('" + query_id + "')\"\n" +
+                            " data-toggle=\"tooltip\" data-placement=\"top\" title=\"View result in browser\"><i class=\"fa fa-eye\" aria-hidden=\"true\"></i></a>"
+                });
+            }
+
+        }
+
+        function remove_query_from_table(query_id){
+            var $table = $('#table');
+            $table.bootstrapTable('remove', {field:'id', values: [query_id]});
+        }
+
+        {# show flashing messages #}
+        function showFlashingMessage(title, message, type) {
+            $.notify({title: title, message: message},
+                {placement: {
+                    from: "bottom",
+                    align: "right"
+                },
+                    type: type,
+                    template: '<div data-notify="container" class="col-xs-11 col-sm-3 alert alert-{0}" role="alert" ' +
+                    'style="max-width:400px; font-size: 0.75rem;">' +
+                    '<button type="button" aria-hidden="true" class="close" data-notify="dismiss">×</button>' +
+                    '<span data-notify="icon"></span> ' +
+                    '<span data-notify="title">{1}</span> ' +
+                    '<span data-notify="message">{2}</span>' +
+                    '<div class="progress" data-notify="progressbar">' +
+                    '<div class="progress-bar progress-bar-{0}" role="progressbar" aria-valuenow="0" ' +
+                    'aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>' +
+                    '</div>' +
+                    '<a href="{3}" target="{4}" data-notify="url"></a>' +
+                    '</div>'
+            });
+        }
+    </script>
+{% endblock %}
