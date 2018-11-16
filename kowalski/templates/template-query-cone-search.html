@@ -274,7 +274,7 @@ Examples:
                             // do not wait for the result
                             query['kwargs']['enqueue_only'] = true;
 
-                            $.ajax({url: '{{-script_root-}}/query',
+                            $.ajax({url: '{{-script_root-}}/web-query',
                                 method: 'PUT',
                                 data: JSON.stringify(query),
                                 processData: false,
@@ -282,7 +282,7 @@ Examples:
                                 success: function(data) {
                                     if (data['message'] === 'success') {
                                         {#location.reload(true);#}
-                                        showFlashingMessage('Info:', 'Successfully enqueued query.', 'success');
+                                        showFlashingMessage('Info:', 'Running query.', 'success');
                                     }
                                     else {
                                         $('#addUserModal').modal('hide');

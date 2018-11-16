@@ -8,6 +8,7 @@ import base64
 from cryptography import fernet
 import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson.json_util import loads, dumps
 import datetime
 import time
 from ast import literal_eval
@@ -16,10 +17,12 @@ import asyncio
 import concurrent.futures
 from misaka import Markdown, HtmlRenderer
 import os
+import re
+import numpy as np
 
-# from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
-# from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
-from utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash
+# from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
+# from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
+from utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
 
 
 ''' markdown rendering '''
@@ -518,6 +521,175 @@ async def edit_user(request):
 
 ''' query API '''
 
+regex = dict()
+regex['collection_main'] = re.compile(r"db\[['\"](.*?)['\"]\]")
+regex['aggregate'] = re.compile(r"aggregate\((\[(?s:.*)\])")
+
+
+def parse_query(task):
+    # save auxiliary stuff
+    kwargs = task['kwargs'] if 'kwargs' in task else {}
+
+    # reduce!
+    task_reduced = {'user': task['user'], 'query': {}, 'kwargs': kwargs}
+
+    if task['query_type'] == 'general_search':
+        # specify task type:
+        task_reduced['query_type'] = 'general_search'
+        # nothing dubious to start with?
+        if task['user'] != config['server']['admin_username']:
+            go_on = True in [s in str(task['query']) for s in ['.aggregate(',
+                                                               '.map_reduce(',
+                                                               '.distinct(',
+                                                               '.count(',
+                                                               '.find_one(',
+                                                               '.find(']] and \
+                    True not in [s in str(task['query']) for s in ['import',
+                                                                   'pymongo.',
+                                                                   'shutil.',
+                                                                   'command(',
+                                                                   'bulk_write(',
+                                                                   'exec(',
+                                                                   'spawn(',
+                                                                   'subprocess(',
+                                                                   'call(',
+                                                                   'insert(',
+                                                                   'update(',
+                                                                   'delete(',
+                                                                   'create_index(',
+                                                                   'create_collection(',
+                                                                   'run(',
+                                                                   'popen(',
+                                                                   'Popen(']] and \
+                    str(task['query']).strip()[0] not in ('"', "'", '[', '(', '{', '\\')
+        else:
+            go_on = True
+
+        # TODO: check access permissions:
+        # TODO: for now, only check on admin stuff
+        if task['user'] != config['server']['admin_username']:
+            prohibited_collections = ('users', 'stats', 'queries')
+
+            # get the main collection that is being queried:
+            main_collection = regex['collection_main'].search(str(task['query'])).group(1)
+            # print(main_collection)
+
+            if main_collection in prohibited_collections:
+                go_on = False
+
+            # aggregating?
+            if '.aggregate(' in str(task['query']):
+                pipeline = literal_eval(regex['aggregate'].search(str(task['query'])).group(1))
+                # pipeline = literal_eval(self.regex['aggregate'].search(str(task['query'])).group(1))
+                lookups = [_ip for (_ip, _pp) in enumerate(pipeline) if '$lookup' in _pp]
+                for _l in lookups:
+                    if pipeline[_l]['$lookup']['from'] in prohibited_collections:
+                        go_on = False
+
+        if go_on:
+            task_reduced['query'] = task['query']
+        else:
+            raise Exception('Atata!')
+
+    elif task['query_type'] == 'cone_search':
+        # specify task type:
+        task_reduced['query_type'] = 'cone_search'
+        # cone search radius:
+        cone_search_radius = float(task['object_coordinates']['cone_search_radius'])
+        # convert to rad:
+        if task['object_coordinates']['cone_search_unit'] == 'arcsec':
+            cone_search_radius *= np.pi / 180.0 / 3600.
+        elif task['object_coordinates']['cone_search_unit'] == 'arcmin':
+            cone_search_radius *= np.pi / 180.0 / 60.
+        elif task['object_coordinates']['cone_search_unit'] == 'deg':
+            cone_search_radius *= np.pi / 180.0
+        elif task['object_coordinates']['cone_search_unit'] == 'rad':
+            cone_search_radius *= 1
+        else:
+            raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
+
+        for catalog in task['catalogs']:
+            # TODO: check that not trying to query what's not allowed!
+            task_reduced['query'][catalog] = dict()
+            # parse catalog query:
+            # construct filter
+            catalog_query = literal_eval(task['catalogs'][catalog]['filter'].strip())
+
+            # construct projection
+            # catalog_projection = dict()
+            # FIXME:always return standardized coordinates?
+            # catalog_projection = {'coordinates.epoch': 1, 'coordinates.radec_str': 1, 'coordinates.radec': 1}
+            catalog_projection = literal_eval(task['catalogs'][catalog]['projection'].strip())
+
+            # parse coordinate list
+            # print(task['object_coordinates']['radec'])
+            objects = literal_eval(task['object_coordinates']['radec'].strip())
+            # print(type(objects), isinstance(objects, dict), isinstance(objects, list))
+
+            # this could either be list [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
+            if isinstance(objects, list):
+                object_coordinates = objects
+                object_names = [str(obj_crd) for obj_crd in object_coordinates]
+            elif isinstance(objects, dict):
+                object_names, object_coordinates = zip(*objects.items())
+                object_names = list(map(str, object_names))
+            else:
+                raise ValueError('Unsupported type of object coordinates')
+
+            # print(object_names, object_coordinates)
+
+            for oi, obj_crd in enumerate(object_coordinates):
+                # convert ra/dec into GeoJSON-friendly format
+                # print(obj_crd)
+                _ra, _dec = radec_str2geojson(*obj_crd)
+                # print(str(obj_crd), _ra, _dec)
+                object_position_query = dict()
+                object_position_query['coordinates.radec_geojson'] = {
+                    '$geoWithin': {'$centerSphere': [[_ra, _dec], cone_search_radius]}}
+                # use stringified object coordinates as dict keys and merge dicts with cat/obj queries:
+                task_reduced['query'][catalog][object_names[oi]] = ({**object_position_query, **catalog_query},
+                                                                    {**catalog_projection})
+
+    # print(task_reduced)
+    # task_hashable = dumps(task)
+    task_hashable = dumps(task_reduced)
+    # compute hash for task. this is used as key in DB
+    task_hash = compute_hash(task_hashable)
+
+    # print({'user': task['user'], 'task_id': task_hash})
+
+    # mark as enqueued in DB:
+    t_stamp = utc_now()
+    if 'query_expiration_interval' not in kwargs:
+        # default expiration interval:
+        t_expires = t_stamp + datetime.timedelta(days=int(config['misc']['query_expiration_interval']))
+    else:
+        # custom expiration interval:
+        t_expires = t_stamp + datetime.timedelta(days=int(kwargs['query_expiration_interval']))
+
+    # dump task_hashable to file, as potentially too big to store in mongo
+    # save task:
+    user_tmp_path = os.path.join(config['path']['path_queries'], task['user'])
+    # print(user_tmp_path)
+    # mkdir if necessary
+    if not os.path.exists(user_tmp_path):
+        os.makedirs(user_tmp_path)
+    task_file = os.path.join(user_tmp_path, f'{task_hash}.task.json')
+
+    with open(task_file, 'w') as f_task_file:
+        f_task_file.write(dumps(task))
+
+    task_doc = {'task_id': task_hash,
+                'user': task['user'],
+                'task': task_file,
+                'result': None,
+                'status': 'enqueued',
+                'created': t_stamp,
+                'expires': t_expires,
+                'last_modified': t_stamp}
+
+    return task_hash, task_reduced, task_doc
+
 
 async def long_computation(mongo, n: int):
     print(f"run long computation with delay: {n}")
@@ -532,9 +704,8 @@ async def long_computation(mongo, n: int):
 @auth_required
 async def query(request):
     """
-        Add new user to DB
+        Query DB
 
-        db['ZTF_alerts'].find_one({}, {'_id': 1})
     :return:
     """
 
@@ -542,10 +713,8 @@ async def query(request):
     print(_data)
 
     try:
-        print(request.user)
+        # print(request.user)
         # todo
-
-
 
         return json_response({'message': 'success'}, status=200)
 
@@ -580,6 +749,47 @@ done, _ = await asyncio.wait(tasks)
         #     print(f"{f.result()}")
 
 '''
+
+
+@routes.put('/web-query')
+@login_required
+async def web_query(request):
+    """
+        Query DB from the browser.
+        Uses sessions => needs additional middleware => slightly slower if implemented together with @auth_required
+
+    :return:
+    """
+
+    # get session:
+    session = await get_session(request)
+    user = session['user_id']
+
+    # get query
+    _query = await request.json()
+    print(_query)
+
+    try:
+        # todo
+        known_query_types = ('cone_search', 'general_search')
+
+        assert _query['query_type'] in known_query_types, \
+            f'query_type {_query["query_type"]} not in {str(known_query_types)}'
+
+        _query['user'] = user
+
+        tic = time.time()
+        task_hash, task_reduced, task_doc = parse_query(_query)
+        toc = time.time()
+        print(f'parsing task took {toc-tic} seconds')
+        print(task_hash, task_reduced, task_doc)
+
+        return json_response({'message': 'success'}, status=200)
+
+    except Exception as _e:
+        print(str(_e))
+        # return str(_e)
+        return json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
 
 
 ''' web endpoints '''
