@@ -9,10 +9,10 @@
   "path": {
     "path_app": "/app",
     "path_docs": "/app/doc/",
-    "path_logs": "/data/logs/",
+    "path_logs": "/app/logs/",
     "path_data": "/data/",
     "path_alerts": "/data/alerts/",
-    "path_tmp": "/data/_tmp/"
+    "path_queries": "/data/queries/"
   },
 
   "database": {

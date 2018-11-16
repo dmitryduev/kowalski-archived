@@ -545,28 +545,7 @@ async def query(request):
         print(request.user)
         # todo
 
-        print("Start")
-        tasks = [
-            asyncio.ensure_future(long_computation(request.app['mongo'], 1)),
-            asyncio.ensure_future(long_computation(request.app['mongo'], 2)),
-        ]
-        # loop = asyncio.get_event_loop()
-        # if long_computation is blocking, need to hand it off to a separate thread using run_in_executor:
-        # 1. Run in the default loop's executor:
-        # tasks = [
-        #     loop.run_in_executor(None, long_computation, request.app['mongo'], 1),
-        #     loop.run_in_executor(None, long_computation, request.app['mongo'], 2),
-        # ]
-        # 2. Run in a custom thread pool:
-        # with concurrent.futures.ThreadPoolExecutor() as pool:
-        #     tasks = [
-        #         loop.run_in_executor(pool, long_computation, request.app['mongo'], 1),
-        #         loop.run_in_executor(pool, long_computation, request.app['mongo'], 2),
-        #     ]
-        # done, _ = await asyncio.wait(tasks)
 
-        # for f in done:
-        #     print(f"{f.result()}")
 
         return json_response({'message': 'success'}, status=200)
 
@@ -574,6 +553,33 @@ async def query(request):
         print(str(_e))
         # return str(_e)
         return json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
+
+
+''' useful stuff 
+
+tasks = [
+    asyncio.ensure_future(long_computation(request.app['mongo'], 1)),
+    asyncio.ensure_future(long_computation(request.app['mongo'], 2)),
+]
+loop = asyncio.get_event_loop()
+if long_computation is blocking, need to hand it off to a separate thread using run_in_executor:
+1. Run in the default loop's executor:
+tasks = [
+    loop.run_in_executor(None, long_computation, request.app['mongo'], 1),
+    loop.run_in_executor(None, long_computation, request.app['mongo'], 2),
+]
+2. Run in a custom thread pool:
+with concurrent.futures.ThreadPoolExecutor() as pool:
+    tasks = [
+        loop.run_in_executor(pool, long_computation, request.app['mongo'], 1),
+        loop.run_in_executor(pool, long_computation, request.app['mongo'], 2),
+    ]
+done, _ = await asyncio.wait(tasks)
+
+# for f in done:
+        #     print(f"{f.result()}")
+
+'''
 
 
 ''' web endpoints '''
@@ -784,6 +790,9 @@ async def app_factory(_config):
 
     # static files
     app.add_routes([web.static('/static', './static')])
+
+    # data files
+    app.add_routes([web.static('/data', '/data')])
 
     return app
 
