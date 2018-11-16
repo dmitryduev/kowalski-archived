@@ -23,6 +23,8 @@ code {
 }
 .navbar {
     padding: 0.2rem 2rem !important;
+    background-color: #26408B !important;
+    /*background-color: #343a40 !important;*/
 }
 
 .footer {

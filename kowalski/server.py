@@ -12,6 +12,8 @@ import datetime
 import time
 from ast import literal_eval
 from async_timeout import timeout
+import asyncio
+import concurrent.futures
 from misaka import Markdown, HtmlRenderer
 import os
 
@@ -517,8 +519,17 @@ async def edit_user(request):
 ''' query API '''
 
 
+async def long_computation(mongo, n: int):
+    print(f"run long computation with delay: {n}")
+    for i in range(1000):
+        catalogs = await mongo.list_collection_names()
+    # asyncio.sleep(n)
+    print(catalogs)
+    print(f"done long computation with delay: {n}")
+
+
 @routes.put('/query')
-@login_required
+@auth_required
 async def query(request):
     """
         Add new user to DB
@@ -526,21 +537,43 @@ async def query(request):
         db['ZTF_alerts'].find_one({}, {'_id': 1})
     :return:
     """
-    # get session:
-    session = await get_session(request)
 
     _data = await request.json()
     print(_data)
 
     try:
-        print(session['user_id'])
+        print(request.user)
         # todo
+
+        print("Start")
+        tasks = [
+            asyncio.ensure_future(long_computation(request.app['mongo'], 1)),
+            asyncio.ensure_future(long_computation(request.app['mongo'], 2)),
+        ]
+        # loop = asyncio.get_event_loop()
+        # if long_computation is blocking, need to hand it off to a separate thread using run_in_executor:
+        # 1. Run in the default loop's executor:
+        # tasks = [
+        #     loop.run_in_executor(None, long_computation, request.app['mongo'], 1),
+        #     loop.run_in_executor(None, long_computation, request.app['mongo'], 2),
+        # ]
+        # 2. Run in a custom thread pool:
+        # with concurrent.futures.ThreadPoolExecutor() as pool:
+        #     tasks = [
+        #         loop.run_in_executor(pool, long_computation, request.app['mongo'], 1),
+        #         loop.run_in_executor(pool, long_computation, request.app['mongo'], 2),
+        #     ]
+        # done, _ = await asyncio.wait(tasks)
+
+        # for f in done:
+        #     print(f"{f.result()}")
+
         return json_response({'message': 'success'}, status=200)
 
     except Exception as _e:
         print(str(_e))
         # return str(_e)
-        return json_response({'message': f'Failed to add user: {str(_e)}'}, status=500)
+        return json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
 
 
 ''' web endpoints '''
@@ -662,6 +695,27 @@ async def doc_handler(request):
                'title': title,
                'content': content}
     response = aiohttp_jinja2.render_template('template-doc.html',
+                                              request,
+                                              context)
+    return response
+
+
+@routes.get('/lab/ztf-alerts')
+@login_required
+async def docs_handler(request):
+    """
+        Serve docs page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    # todo?
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-lab-ztf-alerts.html',
                                               request,
                                               context)
     return response
