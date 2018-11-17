@@ -14,99 +14,31 @@
 
     <div class="container">
 
-        <h2>Recent queries</h2>
+        <h3>Recent queries</h3>
 
-            <div id="toolbar" class="btn-group">
-                <button type="button" class="btn btn-outline-danger"
-                        style="cursor: pointer;" onclick="remove_all_queries()">
-                    <i class="fa fa-trash" aria-hidden="true"></i>
-                </button>
-            </div>
-            <table id="table"
-                   class="table table-hover table-condensed"
-                   data-toggle="table"
-                   data-toolbar="#toolbar"
-                   data-pagination="true"
-                   data-side-pagination="client"
-                   data-minimum-count-columns="2"
-                   data-page-size="20"
-                   data-page-list="[20, 50, 100, 200, 500, All]"
-                   data-search="true"
-                   data-show-columns="true"
-                   data-show-export="true"
-                   data-export-types="['json', 'csv']"
-                   data-export-options='{ "fileName": "queries",
+        <div id="toolbar" class="btn-group">
+            <button type="button" class="btn btn-outline-danger"
+                    style="cursor: pointer;" onclick="remove_all_queries()">
+                <i class="fa fa-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <table id="table"
+               class="table table-hover table-condensed"
+               data-toggle="table"
+               data-toolbar="#toolbar"
+               data-pagination="true"
+               data-side-pagination="client"
+               data-minimum-count-columns="2"
+               data-page-size="20"
+               data-page-list="[20, 50, 100, 200, 500, All]"
+               data-search="true"
+               data-show-columns="true"
+               data-show-export="true"
+               data-export-types="['json', 'csv']"
+               data-export-options='{ "fileName": "queries",
                                           "worksheetName": "queries1"
                                          }'>
-                <thead>
-                <tr>
-{#                    <th data-field="state" data-checkbox="true"></th>#}
-                    <th data-sortable="true" data-sorter="stringSorter"
-                        data-field="id">query id</th>
-                    <th data-sortable="true" data-sorter="stringSorter"
-                        data-field="query_created">date created, UTC</th>
-                    <th data-sortable="true" data-sorter="stringSorter" data-visible="false"
-                        data-field="query_last_modified">date last modified, UTC</th>
-                    <th data-sortable="true" data-sorter="stringSorter"
-                        data-field="query_expires">date expires, UTC</th>
-                    <th data-sortable="true" data-sorter="stringSorter"
-                        data-field="query_status">status</th>
-                    <th data-field="query_actions">actions</th>
-                </tr>
-                </thead>
-                <tbody id="table-tbody">
-                {% for query in user_tasks %}
-                    {% set query_id = query['task_id'] %}
-                    <tr class="clickable-row" data-uniqueid="{{ query_id }}" id="{{ query_id }}">
-{#                        <td></td>#}
-                        <td>{{ query_id }}</td>
-                        {% for key in ('created', 'last_modified', 'expires')%}
-                            <td id="{{ query_id }}-{{ key }}">
-                                {{ query[key].strftime('%Y-%m-%d %H:%M:%S') }}
-                            </td>
-                        {% endfor %}
-                        <td id="{{ query_id }}-status">
-                            {% if query["status"] == "done" %}
-                                {% set query_status = 'success' %}
-                            {% endif %}
-                            {% if query["status"] == "failed" %}
-                                {% set query_status = 'danger' %}
-                            {% endif %}
-                            {% if query["status"] == "enqueued" %}
-                                {% set query_status = 'warning' %}
-                            {% endif %}
-                            <span class="badge badge-{{ query_status }}">{{ query["status"] }}</span>
-                        </td>
-                        <td id="{{ query_id }}-actions">
-                            {# remove if not enqueued #}
-                            {% if query["status"] != "enqueued" %}
-
-                                <a href="#" class="text-danger"
-                                   onclick="remove_query('{{ query_id }}')"
-                                   data-toggle="tooltip" data-placement="top" title="Remove query"><i class="fa fa-trash" aria-hidden="true"></i></a>
-                            {% endif %}
-                            {# download query #}
-                            |
-                            <a href="#" onclick="get_query('{{ query_id }}')"
-                               data-toggle="tooltip" data-placement="top" title="Get query"><i class="fa fa-tasks" aria-hidden="true"></i></a>
-                            <a href="#" onclick="get_query_view('{{ query_id }}')"
-                               data-toggle="tooltip" data-placement="top" title="View query in browser"><i class="fa fa-eye" aria-hidden="true"></i></a>
-                            {# download result #}
-                            {% if query["status"] in ["done", "failed"] %}
-                                |
-                                <a download="{{ query_id }}.result.json" href="/data/{{ user }}/{{ query_id }}.result.json"
-                                   data-toggle="tooltip" data-placement="top" title="Get result"><i class="fa fa-download" aria-hidden="true"></i></a>
-                                <a href="#" onclick="get_query_result_view('{{ query_id }}')"
-                                   data-toggle="tooltip" data-placement="top" title="View result in browser"><i class="fa fa-eye" aria-hidden="true"></i></a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-
-        </div>
-{#        <br>#}
+        </table>
 
     </div>
 
@@ -147,14 +79,109 @@
         // Fancy table stuff
         function getHeight() {
             var window_height = $(window).height();
+            {#console.log(window_height);#}
+            {#console.log(document.getElementById('table').getBoundingClientRect().top);#}
             if (window_height > 1200) {
                 var top = document.getElementById('table').getBoundingClientRect().top;
-                return Math.max(400, window_height - top - 10);
+                return Math.max(560, window_height - top - 20);
             }
             else {
-                return Math.max(400, window_height - 210);
+                var top = document.getElementById('table').getBoundingClientRect().top;
+                return Math.max(560, window_height - top - 20);
             }
         }
+
+        // build table using js
+        $('#table').bootstrapTable({
+            height: getHeight(),
+            columns: [
+                [
+                    {
+                        field: 'id',
+                        title: 'query id',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'query_created',
+                        title: 'date created, UTC',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'query_last_modified',
+                        title: 'date last modified, UTC',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'query_expires',
+                        title: 'expiration date, UTC',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'query_status',
+                        title: 'status',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'query_actions',
+                        title: 'actions',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    }
+                ]
+            ],
+            data: [
+                {% for query in user_tasks %}
+                   {% set query_id = query['task_id'] %}
+                    {% if query["status"] == "done" %}
+                        {% set query_status = 'success' %}
+                    {% endif %}
+                    {% if query["status"] == "failed" %}
+                        {% set query_status = 'danger' %}
+                    {% endif %}
+                    {% if query["status"] == "enqueued" %}
+                        {% set query_status = 'warning' %}
+                    {% endif %}
+
+                    {
+                        id: "{{ query_id }}",
+                        query_created: "{{ query['created'].strftime('%Y-%m-%d %H:%M:%S') }}",
+                        query_last_modified: "{{ query['last_modified'].strftime('%Y-%m-%d %H:%M:%S') }}",
+                        query_expires: "{{ query['expires'].strftime('%Y-%m-%d %H:%M:%S') }}",
+                        query_status: "<span class='badge badge-{{ query_status }}''>{{ query['status'] }}</span>",
+                        query_actions: {% if query["status"] != "enqueued" %}
+                            "<a href='#' class='text-danger' onclick='remove_query(\"{{-query_id-}}\")' " +
+                                "data-toggle='tooltip' data-placement='top' title='Remove query'>" +
+                                "<i class='fa fa-trash' aria-hidden='true'></i></a> | " +{% endif %}
+                            "<a href='#' onclick='get_query(\"{{-query_id-}}\")' " +
+                                "data-toggle='tooltip' data-placement='top' title='Download query'>" +
+                                "<i class='fa fa-tasks' aria-hidden='true'></i></a> " +
+                            "<a href='#' onclick='get_query_view(\"{{-query_id-}}\")' " +
+                                "data-toggle='tooltip' data-placement='top' title='View query in browser'>" +
+                                "<i class='fa fa-eye' aria-hidden='true'></i></a>"{% if query["status"] != "enqueued" %} +
+                            "| <a href='#' onclick='get_query_result(\"{{-query_id-}}\")' " +
+                                "data-toggle='tooltip' data-placement='top' title='Download query result'>" +
+                                "<i class='fa fa-download' aria-hidden='true'></i></a> " +
+                            "<a href='#' onclick='get_query_result_view(\"{{-query_id-}}\")' " +
+                                "data-toggle='tooltip' data-placement='top' title='View query result in browser'>" +
+                                "<i class='fa fa-eye' aria-hidden='true'></i></a> "{% endif %}
+                    },
+                {% endfor %}
+            ]
+        });
+
         // reset height of table with search results
         function resetTableHeight() {
             var $table = $('#table');
@@ -206,11 +233,6 @@
         $(function () {
             $('[data-toggle="tooltip"]').tooltip()
         });
-
-        {# set up socket.io #}
-        {#var socket = io();#}
-        var socket = io({transports: ['websocket']});
-        {#var socket = io.connect('https://kowalski.caltech.edu:443');#}
 
         function remove_query(query_id) {
             bootbox.confirm({

@@ -20,6 +20,9 @@ from misaka import Markdown, HtmlRenderer
 import os
 import re
 import numpy as np
+import string
+import random
+import traceback
 
 # from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
 # from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
@@ -41,12 +44,6 @@ with open('/app/secrets.json') as sjson:
 for k in secrets:
     config[k].update(secrets.get(k, {}))
 # print(config)
-
-
-# def json_response(body: dict, **kwargs):
-#     kwargs['body'] = json.dumps(body or kwargs['body']).encode('utf-8')
-#     kwargs['content_type'] = 'text/json'
-#     return web.Response(**kwargs)
 
 
 async def init_db():
@@ -534,6 +531,10 @@ def parse_query(task, save:bool=True):
     # reduce!
     task_reduced = {'user': task['user'], 'query': {}, 'kwargs': kwargs}
 
+    # fixme: this is for testing api from cl
+    if '_id' not in task_reduced['kwargs']:
+        task_reduced['kwargs']['_id'] = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+
     if task['query_type'] == 'general_search':
         # specify task type:
         task_reduced['query_type'] = 'general_search'
@@ -709,89 +710,126 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
 
     query = task_reduced
 
-    # cone search:
-    if query['query_type'] == 'cone_search':
-        # iterate over catalogs as they represent
-        for catalog in query['query']:
-            query_result[catalog] = dict()
-            # iterate over objects:
-            for obj in query['query'][catalog]:
-                # project?
-                if len(query['query'][catalog][obj][1]) > 0:
-                    _select = db[catalog].find(query['query'][catalog][obj][0],
-                                               query['query'][catalog][obj][1])
-                # return the whole documents by default
-                else:
-                    _select = db[catalog].find(query['query'][catalog][obj][0])
-                # unfortunately, mongoDB does not allow to have dots in field names,
-                # thus replace with underscores
-                query_result[catalog][obj.replace('.', '_')] = _select.to_list(length=None)
+    try:
 
-    elif query['query_type'] == 'general_search':
-        # just evaluate. I know that's dangerous, but I'm checking things in broker.py
-        qq = bytes(query['query'], 'utf-8').decode('unicode_escape')
+        # cone search:
+        if query['query_type'] == 'cone_search':
+            # iterate over catalogs as they represent
+            for catalog in query['query']:
+                query_result[catalog] = dict()
+                # iterate over objects:
+                for obj in query['query'][catalog]:
+                    # project?
+                    if len(query['query'][catalog][obj][1]) > 0:
+                        _select = db[catalog].find(query['query'][catalog][obj][0],
+                                                   query['query'][catalog][obj][1])
+                    # return the whole documents by default
+                    else:
+                        _select = db[catalog].find(query['query'][catalog][obj][0])
+                    # unfortunately, mongoDB does not allow to have dots in field names,
+                    # thus replace with underscores
+                    query_result[catalog][obj.replace('.', '_')] = _select.to_list(length=None)
 
-        _select = eval(qq)
-        # _select = eval(query['query'])
-        # _select = literal_eval(qq)
+        elif query['query_type'] == 'general_search':
+            # just evaluate. I know that's dangerous, but I'm checking things in broker.py
+            qq = bytes(query['query'], 'utf-8').decode('unicode_escape')
 
-        if '.find_one(' in qq:
-            _select = await _select
+            _select = eval(qq)
+            # _select = eval(query['query'])
+            # _select = literal_eval(qq)
 
-        # make it look like json
-        # print(list(_select))
-        if isinstance(_select, int) or isinstance(_select, float) or \
-                isinstance(_select, list) or isinstance(_select, dict):
-            query_result['query_result'] = _select
+            if '.find_one(' in qq:
+                _select = await _select
+
+            # make it look like json
+            # print(list(_select))
+            if isinstance(_select, int) or isinstance(_select, float) or \
+                    isinstance(_select, list) or isinstance(_select, dict):
+                query_result['query_result'] = _select
+            else:
+                query_result['query_result'] = await _select.to_list(length=None)
+
+        result['user'] = query['user']
+        result['status'] = 'done'
+        result['kwargs'] = query['kwargs'] if 'kwargs' in query else {}
+
+        if not save:
+            # dump result back
+            result['result_data'] = query_result
+
         else:
-            query_result['query_result'] = await _select.to_list(length=None)
+            # save task result:
+            user_tmp_path = os.path.join(config['path']['path_queries'], query['user'])
+            # print(user_tmp_path)
+            # mkdir if necessary
+            if not os.path.exists(user_tmp_path):
+                os.makedirs(user_tmp_path)
+            task_result_file = os.path.join(user_tmp_path, f'{task_hash}.result.json')
 
-    result['user'] = query['user']
-    result['status'] = 'done'
-    result['kwargs'] = query['kwargs'] if 'kwargs' in query else {}
+            # save location in db:
+            result['result'] = task_result_file
 
-    if not save:
-        # dump result back
-        result['result_data'] = query_result
+            async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
+                task_result = dumps(query_result)
+                await f_task_result_file.write(task_result)
 
-    else:
-        # save task result:
-        user_tmp_path = os.path.join(config['path']['path_queries'], query['user'])
-        # print(user_tmp_path)
-        # mkdir if necessary
-        if not os.path.exists(user_tmp_path):
-            os.makedirs(user_tmp_path)
-        task_result_file = os.path.join(user_tmp_path, f'{task_hash}.result.json')
+        # print(task_hash, result)
 
-        # save location in db:
-        result['result'] = task_result_file
+        # db book-keeping:
+        if save:
+            # mark query as done:
+            await db.queries.update_one({'user': query['user'], 'task_id': task_hash},
+                                        {'$set': {'status': result['status'],
+                                                  'last_modified': utc_now(),
+                                                  'result': result['result']}}
+                                        )
 
-        async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
-            task_result = dumps(query_result)
-            await f_task_result_file.write(task_result)
+        # return task_hash, dumps(result)
+        return task_hash, result
 
-    # print(task_hash, result)
+    except Exception as e:
+        print(str(e))
+        _err = traceback.format_exc()
+        print(_err)
 
-    # db book-keeping:
-    if save:
-        # mark query as done/failed:
-        await db.queries.update_one({'user': query['user'], 'task_id': task_hash},
-                                    {'$set': {'status': result['status'],
-                                              'last_modified': utc_now(),
-                                              'result': result['result']}}
-                                    )
+        # book-keeping:
+        if save:
+            # save task result with error message:
+            user_tmp_path = os.path.join(config['path']['path_queries'], query['user'])
+            # print(user_tmp_path)
+            # mkdir if necessary
+            if not os.path.exists(user_tmp_path):
+                os.makedirs(user_tmp_path)
+            task_result_file = os.path.join(user_tmp_path, f'{task_hash}.result.json')
 
-    # return task_hash, dumps(result)
-    return task_hash, result
+            # save location in db:
+            result['user'] = query['user']
+            result['status'] = 'failed'
+
+            query_result = dict()
+            query_result['msg'] = _err
+
+            async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
+                task_result = dumps(query_result)
+                await f_task_result_file.write(task_result)
+
+            # mark query as failed:
+            await db.queries.update_one({'user': query['user'], 'task_id': task_hash},
+                                        {'$set': {'status': result['status'],
+                                                  'last_modified': utc_now(),
+                                                  'result': None}}
+                                        )
+
+        raise Exception('Query failed')
 
 
 async def long_computation(mongo, n: int):
-    print(f"run long computation with delay: {n}")
+    print(f"run long computation {n}")
     for i in range(1000):
         catalogs = await mongo.list_collection_names()
     # asyncio.sleep(n)
     print(catalogs)
-    print(f"done long computation with delay: {n}")
+    print(f"done long computation {n}")
 
 
 @routes.put('/query')
@@ -831,6 +869,7 @@ async def query(request):
             asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
         else:
             if save:
+                # db book-keeping and saving to disk? result['result'] will contain result json location
                 task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc)
 
                 # with open(result['result'], 'rb') as f_task_result_file:
@@ -846,6 +885,7 @@ async def query(request):
 
                 return web.json_response(result, status=200, dumps=dumps)
             else:
+                # result['result_data'] will contain query result
                 task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save)
 
                 return web.json_response(result, status=200, dumps=dumps)
@@ -853,7 +893,7 @@ async def query(request):
     except Exception as _e:
         print(str(_e))
         # return str(_e)
-        return web.json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
+        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
 
 
 ''' useful stuff 
@@ -924,7 +964,7 @@ async def web_query(request):
     except Exception as _e:
         print(str(_e))
         # return str(_e)
-        return web.json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
+        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
 
 
 ''' web endpoints '''
@@ -942,7 +982,9 @@ async def my_queries_handler(request):
     session = await get_session(request)
 
     # todo: grab user tasks:
-    user_tasks = []
+    user_tasks = await request.app['mongo'].queries.find({'user': session['user_id']},
+                                                         {'task_id': 1, 'status': 1, 'created': 1, 'expires': 1,
+                                                          'last_modified': 1}).sort('created', -1).to_list(length=1000)
 
     context = {'logo': config['server']['logo'],
                'user': session['user_id'],
