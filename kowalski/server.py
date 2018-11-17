@@ -764,8 +764,9 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
         result['result'] = task_result_file
 
         # fixme ???
-        # async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
-        #     await f_task_result_file.write(dumps(query_result))
+        async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
+            task_result = dumps(query_result)
+            await f_task_result_file.write(task_result)
 
     print(task_hash, result)
 
