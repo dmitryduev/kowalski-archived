@@ -740,7 +740,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
                 isinstance(_select, list) or isinstance(_select, dict):
             query_result['query_result'] = _select
         else:
-            query_result['query_result'] = _select.to_list(length=None)
+            query_result['query_result'] = await _select.to_list(length=None)
 
     result['user'] = query['user']
     result['status'] = 'done'
