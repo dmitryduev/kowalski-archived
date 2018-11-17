@@ -1,4 +1,5 @@
 aiodns>=1.1.1
+aiofiles>=0.4.0
 aiohttp>=3.4.4
 aiohttp-jinja2>=1.1.0
 aiohttp-session>=2.7.0

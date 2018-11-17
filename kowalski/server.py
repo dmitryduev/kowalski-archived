@@ -3,6 +3,7 @@ import jinja2
 import aiohttp_jinja2
 from aiohttp_session import setup, get_session, session_middleware
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
+import aiofiles
 import json
 import base64
 from cryptography import fernet
@@ -42,10 +43,10 @@ for k in secrets:
 # print(config)
 
 
-def json_response(body: dict, **kwargs):
-    kwargs['body'] = json.dumps(body or kwargs['body']).encode('utf-8')
-    kwargs['content_type'] = 'text/json'
-    return web.Response(**kwargs)
+# def json_response(body: dict, **kwargs):
+#     kwargs['body'] = json.dumps(body or kwargs['body']).encode('utf-8')
+#     kwargs['content_type'] = 'text/json'
+#     return web.Response(**kwargs)
 
 
 async def init_db():
@@ -115,7 +116,7 @@ async def auth_middleware(request, handler):
                                  algorithms=[request.app['JWT']['JWT_ALGORITHM']])
             # print('Godny token!')
         except (jwt.DecodeError, jwt.ExpiredSignatureError):
-            return json_response({'message': 'Token is invalid'}, status=400)
+            return web.json_response({'message': 'Token is invalid'}, status=400)
 
         request.user = payload['user_id']
 
@@ -134,7 +135,7 @@ def auth_required(func):
     """
     def wrapper(request):
         if not request.user:
-            return json_response({'message': 'Auth required'}, status=401)
+            return web.json_response({'message': 'Auth required'}, status=401)
         return func(request)
     return wrapper
 
@@ -149,7 +150,7 @@ def login_required(func):
         # get session:
         session = await get_session(request)
         if 'jwt_token' not in session:
-            # return json_response({'message': 'Auth required'}, status=401)
+            # return web.json_response({'message': 'Auth required'}, status=401)
             # redirect to login page
             location = request.app.router['login'].url_for()
             # location = '/login'
@@ -157,7 +158,7 @@ def login_required(func):
         else:
             jwt_token = session['jwt_token']
             if not await token_ok(request, jwt_token):
-                # return json_response({'message': 'Auth required'}, status=401)
+                # return web.json_response({'message': 'Auth required'}, status=401)
                 # redirect to login page
                 location = request.app.router['login'].url_for()
                 # location = '/login'
@@ -188,9 +189,9 @@ async def auth(request):
     # must contain 'username' and 'password'
 
     if ('username' not in post_data) or (len(post_data['username']) == 0):
-        return json_response({'message': 'Missing "username"'}, status=400)
+        return web.json_response({'message': 'Missing "username"'}, status=400)
     if ('password' not in post_data) or (len(post_data['password']) == 0):
-        return json_response({'message': 'Missing "password"'}, status=400)
+        return web.json_response({'message': 'Missing "password"'}, status=400)
 
     # # todo: check penquins version
     # penquins_version = flask.request.json.get('penquins.__version__', None)
@@ -214,14 +215,14 @@ async def auth(request):
                                    request.app['JWT']['JWT_SECRET'],
                                    request.app['JWT']['JWT_ALGORITHM'])
 
-            return json_response({'token': jwt_token.decode('utf-8')})
+            return web.json_response({'token': jwt_token.decode('utf-8')})
 
         else:
-            return json_response({'message': 'Wrong credentials'}, status=400)
+            return web.json_response({'message': 'Wrong credentials'}, status=400)
 
     except Exception as e:
         print(str(e))
-        return json_response({'message': 'Wrong credentials'}, status=400)
+        return web.json_response({'message': 'Wrong credentials'}, status=400)
 
 
 @routes.get('/login')
@@ -251,9 +252,9 @@ async def login_post(request):
     session = await get_session(request)
 
     if ('username' not in post_data) or (len(post_data['username']) == 0):
-        return json_response({'message': 'Missing "username"'}, status=400)
+        return web.json_response({'message': 'Missing "username"'}, status=400)
     if ('password' not in post_data) or (len(post_data['password']) == 0):
-        return json_response({'message': 'Missing "password"'}, status=400)
+        return web.json_response({'message': 'Missing "password"'}, status=400)
 
     username = str(post_data['username'])
     password = str(post_data['password'])
@@ -312,13 +313,13 @@ async def logout(request):
 @routes.get('/test')
 @auth_required
 async def test_handler(request):
-    return json_response({'message': 'test ok.'}, status=200)
+    return web.json_response({'message': 'test ok.'}, status=200)
 
 
 @routes.get('/test_wrapper')
 @login_required
 async def test_wrapper_handler(request):
-    return json_response({'message': 'test ok.'}, status=200)
+    return web.json_response({'message': 'test ok.'}, status=200)
 
 
 @routes.get('/', name='root')
@@ -369,7 +370,7 @@ async def manage_users(request):
         return response
 
     else:
-        return json_response({'message': '403 Forbidden'}, status=403)
+        return web.json_response({'message': '403 Forbidden'}, status=403)
 
 
 @routes.put('/users')
@@ -392,7 +393,7 @@ async def add_user(request):
             permissions = _data['permissions'] if 'permissions' in _data else '{}'
 
             if len(username) == 0 or len(password) == 0:
-                return json_response({'message': 'username and password must be set'}, status=500)
+                return web.json_response({'message': 'username and password must be set'}, status=500)
 
             if len(permissions) == 0:
                 permissions = '{}'
@@ -405,14 +406,14 @@ async def add_user(request):
                  'last_modified': datetime.datetime.now()}
             )
 
-            return json_response({'message': 'success'}, status=200)
+            return web.json_response({'message': 'success'}, status=200)
 
         except Exception as _e:
             print(str(_e))
             # return str(_e)
-            return json_response({'message': f'Failed to add user: {str(_e)}'}, status=500)
+            return web.json_response({'message': f'Failed to add user: {str(_e)}'}, status=500)
     else:
-        return json_response({'message': '403 Forbidden'}, status=403)
+        return web.json_response({'message': '403 Forbidden'}, status=403)
 
 
 @routes.delete('/users')
@@ -433,18 +434,18 @@ async def remove_user(request):
             # get username from request
             username = _data['user'] if 'user' in _data else None
             if username == config['server']['admin_username']:
-                return json_response({'message': 'Cannot remove the superuser!'}, status=500)
+                return web.json_response({'message': 'Cannot remove the superuser!'}, status=500)
 
             # try to remove the user:
             await request.app['mongo'].users.delete_one({'_id': username})
 
-            return json_response({'message': 'success'}, status=200)
+            return web.json_response({'message': 'success'}, status=200)
 
         except Exception as _e:
             print(_e)
-            return json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
+            return web.json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
     else:
-        return json_response({'message': '403 Forbidden'}, status=403)
+        return web.json_response({'message': '403 Forbidden'}, status=403)
 
 
 @routes.post('/users')
@@ -468,10 +469,10 @@ async def edit_user(request):
             # permissions = _data['edit-permissions'] if 'edit-permissions' in _data else '{}'
 
             if _id == config['server']['admin_username'] and username != config['server']['admin_username']:
-                return json_response({'message': 'Cannot change the admin username!'}, status=500)
+                return web.json_response({'message': 'Cannot change the admin username!'}, status=500)
 
             if len(username) == 0:
-                return json_response({'message': 'username must be set'}, status=500)
+                return web.json_response({'message': 'username must be set'}, status=500)
 
             # change username:
             if _id != username:
@@ -510,13 +511,13 @@ async def edit_user(request):
             #             }
             #         )
 
-            return json_response({'message': 'success'}, status=200)
+            return web.json_response({'message': 'success'}, status=200)
 
         except Exception as _e:
             print(_e)
-            return json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
+            return web.json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
     else:
-        return json_response({'message': '403 Forbidden'}, status=403)
+        return web.json_response({'message': '403 Forbidden'}, status=403)
 
 
 ''' query API '''
@@ -691,6 +692,96 @@ def parse_query(task):
     return task_hash, task_reduced, task_doc
 
 
+async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=True):
+
+    db = mongo
+
+    if save:
+        # mark query as enqueued:
+        await db.queries.insert_one(task_doc)
+
+    result = dict()
+    query_result = dict()
+
+    query = task_reduced
+
+    # cone search:
+    if query['query_type'] == 'cone_search':
+        # iterate over catalogs as they represent
+        for catalog in query['query']:
+            query_result[catalog] = dict()
+            # iterate over objects:
+            for obj in query['query'][catalog]:
+                # project?
+                if len(query['query'][catalog][obj][1]) > 0:
+                    _select = db[catalog].find(query['query'][catalog][obj][0],
+                                               query['query'][catalog][obj][1])
+                # return the whole documents by default
+                else:
+                    _select = db[catalog].find(query['query'][catalog][obj][0])
+                # unfortunately, mongoDB does not allow to have dots in field names,
+                # thus replace with underscores
+                query_result[catalog][obj.replace('.', '_')] = _select.to_list(length=None)
+
+    elif query['query_type'] == 'general_search':
+        # just evaluate. I know that's dangerous, but I'm checking things in broker.py
+        qq = bytes(query['query'], 'utf-8').decode('unicode_escape')
+
+        _select = eval(qq)
+        # _select = eval(query['query'])
+        # _select = literal_eval(qq)
+
+        if '.find_one(' in qq:
+            _select = await _select
+
+        # make it look like json
+        # print(list(_select))
+        if isinstance(_select, int) or isinstance(_select, float) or \
+                isinstance(_select, list) or isinstance(_select, dict):
+            query_result['query_result'] = _select
+        else:
+            query_result['query_result'] = _select.to_list(length=None)
+
+    result['user'] = query['user']
+    result['status'] = 'done'
+    result['kwargs'] = query['kwargs'] if 'kwargs' in query else {}
+
+    # do not pass the result back and forth between server and here, potentially, too much overhead
+    # instead, dump here
+    if not save:
+        result['result_data'] = query_result
+
+    else:
+        # save task result:
+        user_tmp_path = os.path.join(config['path']['path_queries'], query['user'])
+        # print(user_tmp_path)
+        # mkdir if necessary
+        if not os.path.exists(user_tmp_path):
+            os.makedirs(user_tmp_path)
+        task_result_file = os.path.join(user_tmp_path, f'{task_hash}.result.json')
+
+        # save location in db:
+        result['result'] = task_result_file
+
+        # fixme ???
+        # async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
+        #     await f_task_result_file.write(dumps(query_result))
+
+    print(task_hash, result)
+
+    # db book-keeping:
+    if save:
+        # mark query as done/failed:
+        await db.queries.update_one({'user': query['user'], 'task_id': task_hash},
+                                    {'$set': {'status': result['status'],
+                                              'last_modified': utc_now(),
+                                              'result': result['result']}}
+                                    )
+
+    # return task_hash, dumps(result)
+    return task_hash, result
+
+
 async def long_computation(mongo, n: int):
     print(f"run long computation with delay: {n}")
     for i in range(1000):
@@ -709,19 +800,48 @@ async def query(request):
     :return:
     """
 
-    _data = await request.json()
-    print(_data)
+    _query = await request.json()
+    # print(_query)
 
     try:
-        # print(request.user)
-        # todo
+        # parse query
+        known_query_types = ('cone_search', 'general_search')
 
-        return json_response({'message': 'success'}, status=200)
+        assert _query['query_type'] in known_query_types, \
+            f'query_type {_query["query_type"]} not in {str(known_query_types)}'
+
+        _query['user'] = request.user
+
+        # tic = time.time()
+        task_hash, task_reduced, task_doc = parse_query(_query)
+        # toc = time.time()
+        # print(f'parsing task took {toc-tic} seconds')
+        # print(task_hash, task_reduced, task_doc)
+
+        # schedule query execution:
+        if ('enqueue_only' in task_reduced['kwargs']) and task_reduced['kwargs']['enqueue_only']:
+            # only schedule query execution:
+            asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
+        else:
+            task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc)
+
+            # with open(result['result'], 'rb') as f_task_result_file:
+            #     response = web.Response(body=f_task_result_file, headers={
+            #             'CONTENT-DISPOSITION': f'attachment; filename={f_task_result_file}'
+            #         })
+            #     response.content_type = 'text/json'
+            #     # response = web.StreamResponse(body=f_task_result_file, headers={
+            #     #     'CONTENT-DISPOSITION': f'attachment; filename={f_task_result_file}'
+            #     # })
+            #
+            #     return response
+
+            return web.json_response(result, status=200, dumps=dumps)
 
     except Exception as _e:
         print(str(_e))
         # return str(_e)
-        return json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
+        return web.json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
 
 
 ''' useful stuff 
@@ -770,7 +890,7 @@ async def web_query(request):
     print(_query)
 
     try:
-        # todo
+        # parse query
         known_query_types = ('cone_search', 'general_search')
 
         assert _query['query_type'] in known_query_types, \
@@ -778,18 +898,21 @@ async def web_query(request):
 
         _query['user'] = user
 
-        tic = time.time()
+        # tic = time.time()
         task_hash, task_reduced, task_doc = parse_query(_query)
-        toc = time.time()
-        print(f'parsing task took {toc-tic} seconds')
-        print(task_hash, task_reduced, task_doc)
+        # toc = time.time()
+        # print(f'parsing task took {toc-tic} seconds')
+        # print(task_hash, task_reduced, task_doc)
 
-        return json_response({'message': 'success'}, status=200)
+        # schedule query execution:
+        asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
+
+        return web.json_response({'message': 'success'}, status=200)
 
     except Exception as _e:
         print(str(_e))
         # return str(_e)
-        return json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
+        return web.json_response({'message': f'Failed to enqueue query: {str(_e)}'}, status=500)
 
 
 ''' web endpoints '''
