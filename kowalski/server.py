@@ -527,7 +527,7 @@ regex['collection_main'] = re.compile(r"db\[['\"](.*?)['\"]\]")
 regex['aggregate'] = re.compile(r"aggregate\((\[(?s:.*)\])")
 
 
-def parse_query(task):
+def parse_query(task, save:bool=True):
     # save auxiliary stuff
     kwargs = task['kwargs'] if 'kwargs' in task else {}
 
@@ -651,45 +651,49 @@ def parse_query(task):
                 task_reduced['query'][catalog][object_names[oi]] = ({**object_position_query, **catalog_query},
                                                                     {**catalog_projection})
 
-    # print(task_reduced)
-    # task_hashable = dumps(task)
-    task_hashable = dumps(task_reduced)
-    # compute hash for task. this is used as key in DB
-    task_hash = compute_hash(task_hashable)
+    if save:
+        # print(task_reduced)
+        # task_hashable = dumps(task)
+        task_hashable = dumps(task_reduced)
+        # compute hash for task. this is used as key in DB
+        task_hash = compute_hash(task_hashable)
 
-    # print({'user': task['user'], 'task_id': task_hash})
+        # print({'user': task['user'], 'task_id': task_hash})
 
-    # mark as enqueued in DB:
-    t_stamp = utc_now()
-    if 'query_expiration_interval' not in kwargs:
-        # default expiration interval:
-        t_expires = t_stamp + datetime.timedelta(days=int(config['misc']['query_expiration_interval']))
+        # mark as enqueued in DB:
+        t_stamp = utc_now()
+        if 'query_expiration_interval' not in kwargs:
+            # default expiration interval:
+            t_expires = t_stamp + datetime.timedelta(days=int(config['misc']['query_expiration_interval']))
+        else:
+            # custom expiration interval:
+            t_expires = t_stamp + datetime.timedelta(days=int(kwargs['query_expiration_interval']))
+
+        # dump task_hashable to file, as potentially too big to store in mongo
+        # save task:
+        user_tmp_path = os.path.join(config['path']['path_queries'], task['user'])
+        # print(user_tmp_path)
+        # mkdir if necessary
+        if not os.path.exists(user_tmp_path):
+            os.makedirs(user_tmp_path)
+        task_file = os.path.join(user_tmp_path, f'{task_hash}.task.json')
+
+        with open(task_file, 'w') as f_task_file:
+            f_task_file.write(dumps(task))
+
+        task_doc = {'task_id': task_hash,
+                    'user': task['user'],
+                    'task': task_file,
+                    'result': None,
+                    'status': 'enqueued',
+                    'created': t_stamp,
+                    'expires': t_expires,
+                    'last_modified': t_stamp}
+
+        return task_hash, task_reduced, task_doc
+
     else:
-        # custom expiration interval:
-        t_expires = t_stamp + datetime.timedelta(days=int(kwargs['query_expiration_interval']))
-
-    # dump task_hashable to file, as potentially too big to store in mongo
-    # save task:
-    user_tmp_path = os.path.join(config['path']['path_queries'], task['user'])
-    # print(user_tmp_path)
-    # mkdir if necessary
-    if not os.path.exists(user_tmp_path):
-        os.makedirs(user_tmp_path)
-    task_file = os.path.join(user_tmp_path, f'{task_hash}.task.json')
-
-    with open(task_file, 'w') as f_task_file:
-        f_task_file.write(dumps(task))
-
-    task_doc = {'task_id': task_hash,
-                'user': task['user'],
-                'task': task_file,
-                'result': None,
-                'status': 'enqueued',
-                'created': t_stamp,
-                'expires': t_expires,
-                'last_modified': t_stamp}
-
-    return task_hash, task_reduced, task_doc
+        return '', task_reduced, {}
 
 
 async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=True):
@@ -746,9 +750,8 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
     result['status'] = 'done'
     result['kwargs'] = query['kwargs'] if 'kwargs' in query else {}
 
-    # do not pass the result back and forth between server and here, potentially, too much overhead
-    # instead, dump here
     if not save:
+        # dump result back
         result['result_data'] = query_result
 
     else:
@@ -763,12 +766,11 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
         # save location in db:
         result['result'] = task_result_file
 
-        # fixme ???
         async with aiofiles.open(task_result_file, 'w') as f_task_result_file:
             task_result = dumps(query_result)
             await f_task_result_file.write(task_result)
 
-    print(task_hash, result)
+    # print(task_hash, result)
 
     # db book-keeping:
     if save:
@@ -796,7 +798,7 @@ async def long_computation(mongo, n: int):
 @auth_required
 async def query(request):
     """
-        Query DB
+        Query DB programmatic API
 
     :return:
     """
@@ -813,31 +815,40 @@ async def query(request):
 
         _query['user'] = request.user
 
+        # by default, all queries are registered in the db and the task/results are stored on disk as json files
+        # this can be overridden giving a significant execution speed up
+        save = _query['kwargs']['save'] if (('kwargs' in _query) and ('save' in _query['kwargs'])) else True
+
         # tic = time.time()
-        task_hash, task_reduced, task_doc = parse_query(_query)
+        task_hash, task_reduced, task_doc = parse_query(_query, save=save)
         # toc = time.time()
         # print(f'parsing task took {toc-tic} seconds')
         # print(task_hash, task_reduced, task_doc)
 
         # schedule query execution:
         if ('enqueue_only' in task_reduced['kwargs']) and task_reduced['kwargs']['enqueue_only']:
-            # only schedule query execution:
+            # only schedule query execution. store query and results
             asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
         else:
-            task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc)
+            if save:
+                task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc)
 
-            # with open(result['result'], 'rb') as f_task_result_file:
-            #     response = web.Response(body=f_task_result_file, headers={
-            #             'CONTENT-DISPOSITION': f'attachment; filename={f_task_result_file}'
-            #         })
-            #     response.content_type = 'text/json'
-            #     # response = web.StreamResponse(body=f_task_result_file, headers={
-            #     #     'CONTENT-DISPOSITION': f'attachment; filename={f_task_result_file}'
-            #     # })
-            #
-            #     return response
+                # with open(result['result'], 'rb') as f_task_result_file:
+                #     response = web.Response(body=f_task_result_file, headers={
+                #             'CONTENT-DISPOSITION': f'attachment; filename={f_task_result_file}'
+                #         })
+                #     response.content_type = 'text/json'
+                #     # response = web.StreamResponse(body=f_task_result_file, headers={
+                #     #     'CONTENT-DISPOSITION': f'attachment; filename={f_task_result_file}'
+                #     # })
+                #
+                #     return response
 
-            return web.json_response(result, status=200, dumps=dumps)
+                return web.json_response(result, status=200, dumps=dumps)
+            else:
+                task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save)
+
+                return web.json_response(result, status=200, dumps=dumps)
 
     except Exception as _e:
         print(str(_e))
