@@ -128,7 +128,7 @@ class Kowalski(object):
 
         return access_token
 
-    def query(self, query):
+    def query(self, query, timeout=5*3600):
 
         try:
             _query = deepcopy(query)
@@ -153,6 +153,30 @@ class Kowalski(object):
 
             return {'status': 'failed', 'message': _err}
 
+    def check_connection(self, collection='ZTF_alerts'):
+        """
+            Check connection to Kowalski with a trivial query
+        :return: True if connection ok, False otherwise
+        """
+        try:
+            _query = {"query_type": "general_search",
+                      "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+                      "kwargs": {"save": False}
+                      }
+            if self.v:
+                print(_query)
+            _result = self.query(query=_query, timeout=3)
+
+            if self.v:
+                print(_result)
+
+            return True if (('status' in _result) and (_result['status'] == 'done')) else False
+
+        except Exception as _e:
+            _err = traceback.format_exc()
+            print(_err)
+            return False
+
 
 if __name__ == '__main__':
 
@@ -171,3 +195,6 @@ if __name__ == '__main__':
             toc = time.time()
             print(toc-tic)
             # print(result)
+
+        alive = k.check_connection()
+        print(alive)
