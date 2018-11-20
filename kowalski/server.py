@@ -836,15 +836,6 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
         raise Exception('Query failed')
 
 
-async def long_computation(mongo, n: int):
-    print(f"run long computation {n}")
-    for i in range(1000):
-        catalogs = await mongo.list_collection_names()
-    # asyncio.sleep(n)
-    print(catalogs)
-    print(f"done long computation {n}")
-
-
 @routes.put('/query')
 @auth_required
 async def query(request):
@@ -956,7 +947,7 @@ async def web_query_put(request):
 
     # get query
     _query = await request.json()
-    print(_query)
+    # print(_query)
 
     try:
         # parse query
@@ -971,7 +962,7 @@ async def web_query_put(request):
         task_hash, task_reduced, task_doc = parse_query(_query)
         # toc = time.time()
         # print(f'parsing task took {toc-tic} seconds')
-        print(task_hash, task_reduced, task_doc)
+        # print(task_hash, task_reduced, task_doc)
 
         # schedule query execution:
         save = True  # always save to db when querying from the browser
@@ -1001,7 +992,7 @@ async def web_query_delete(request):
 
     # get query
     _data = await request.json()
-    print(_data)
+    # print(_data)
 
     try:
         if _data['task_id'] != 'all':

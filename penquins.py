@@ -14,6 +14,7 @@ __version__ = '1.0.0'
 
 
 Num = Union[int, float]
+QueryPart = Union['task', 'result']
 
 
 def radec_str2rad(_ra_str, _dec_str):
@@ -157,6 +158,28 @@ class Kowalski(object):
             _err = traceback.format_exc()
 
             return {'status': 'failed', 'message': _err}
+
+    def get_query(self, query_id: str, part: QueryPart = 'result'):
+        """
+            Fetch json for task or result
+        :param query_id:
+        :param part:
+        :return:
+        """
+        # todo
+        raise NotImplementedError
+
+    def delete_query(self, query_id: str):
+        """
+            Delete query by query_id
+        :param query_id:
+        :return:
+        """
+        # todo
+        if query_id == 'all':
+            pass
+
+        raise NotImplementedError
 
     def check_connection(self, collection='ZTF_alerts'):
         """
