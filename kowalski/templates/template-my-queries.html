@@ -275,29 +275,35 @@
             });
         }
 
-        function get_query(task_id, part, download) {
+        function get_query(task_id, part, save) {
             $.ajax({url: '{{-script_root-}}/web-query',
                 method: 'POST',
-                data: JSON.stringify({"task_id": task_id, "part": part, "download": download}),
+                data: JSON.stringify({"task_id": task_id, "part": part}),
                 processData: false,
                 contentType: 'application/json',
                 success: function(data) {
-                    if (data['status'] === 'success') {
-                        if (part === "task") {
-                            // fetch task
-                            console.log("task");
+                    if (!data.hasOwnProperty('message')) {
+                        if (save === false){
+                            $("#modal-query-id").html(task_id);
+                            $("#modal-body-code").html(JSONbig.stringify(JSONbig.parse(data), null, 2));
+                            // show if not shown already
+                            if (!($("#modal").data('bs.modal') || {})._isShown ) {
+                                $('#modal').modal('show');
+                            }
                         }
                         else {
-                            // fetch result
-                            console.log("result");
+                            let task_result = part === 'task' ? 'query' : 'result';
+                            download(JSONbig.stringify(JSONbig.parse(data), null, 2),
+                                     task_id + '.' + task_result + '.json', 'text/plain');
                         }
+                        {#console.log(data);#}
                     }
                     else {
-                        showFlashingMessage('Info:', 'Failed to get query' + data['message'], 'danger');
+                        showFlashingMessage('Info:', 'Failed to get query: ' + data['message'], 'danger');
                     }
                 },
                 error: function(data) {
-                    showFlashingMessage('Info:', 'Failed to delete query.', 'danger');
+                    showFlashingMessage('Info:', 'Failed to get query.', 'danger');
                 }
             });
         }

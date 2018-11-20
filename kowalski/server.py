@@ -1027,24 +1027,28 @@ async def web_query_grab(request):
 
     # get query
     _data = await request.json()
-    print(_data)
+    # print(_data)
 
     try:
         task_id = _data['task_id']
         part = _data['part']
-        download = _data['download']
 
-        # if _data['task_id'] != 'all':
-        #     await request.app['mongo'].queries.delete_one({'user': user, 'task_id': {'$eq': _data['task_id']}})
-        #
-        #     # remove files containing task and result
-        #     for p in pathlib.Path(os.path.join(config['path']['path_queries'], user)).glob(f'{_data["task_id"]}*'):
-        #         p.unlink()
-        #
-        # else:
-        #     pass
+        query = await request.app['mongo'].queries.find_one({'user': user, 'task_id': {'$eq': task_id}})
+        # print(query)
 
-        return web.json_response({'message': 'success'}, status=200)
+        if part == 'task':
+            task_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.task.json')
+            # with open(task_file, 'r') as f_task_file:
+            async with aiofiles.open(task_file, 'r') as f_task_file:
+                return web.json_response(await f_task_file.read(), status=200)
+
+        elif part == 'result':
+            task_result_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.result.json')
+            async with aiofiles.open(task_result_file, 'r') as f_task_result_file:
+                return web.json_response(await f_task_result_file.read(), status=200)
+
+        else:
+            return web.json_response({'message': f'Failure: part not recognized'}, status=500)
 
     except Exception as _e:
         print(str(_e))
