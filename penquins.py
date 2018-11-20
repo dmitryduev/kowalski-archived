@@ -63,7 +63,7 @@ class Kowalski(object):
         Query ZTF TDA databases
     """
 
-    def __init__(self, protocol='http', host='localhost', port=8000, verbose=False,
+    def __init__(self, protocol='http', host='127.0.0.1', port=8000, verbose=False,
                  username=None, password=None):
 
     # def __init__(self, protocol='https', host='kowalski.caltech.edu', port=443, verbose=False,
@@ -139,7 +139,7 @@ class Kowalski(object):
         if '_id' not in query['kwargs']:
             query['kwargs']['_id'] = _id
 
-        resp = self.session.post(os.path.join(f'{self.base_url}', 'query'), data=query, headers=self.headers)
+        resp = self.session.put(os.path.join(f'{self.base_url}', 'query'), json=query, headers=self.headers)
 
         print(resp)
 
@@ -151,7 +151,8 @@ if __name__ == '__main__':
     with Kowalski(username='admin', password='admin', verbose=True) as k:
         qu = {"query_type": "general_search",
               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-              "kwargs": {"save": False}}
+              "kwargs": {"save": True}}
 
+        # for i in range(5):
         result = k.query(qu)
         print(result)
