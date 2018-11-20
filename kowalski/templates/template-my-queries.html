@@ -257,8 +257,13 @@
                             contentType: 'application/json',
                             success: function(data) {
                                 if (data['message'] === 'success') {
-                                    location.reload(true);
-                                    {#showFlashingMessage('Info:', 'Running query.', 'success');#}
+                                    if (task_id === 'all') {
+                                        location.reload(true);
+                                    }
+                                    else {
+                                        remove_query_from_table(task_id);
+                                        showFlashingMessage('Info:', 'Successfully deleted query.', 'success');
+                                    }
                                 }
                                 else {
                                     showFlashingMessage('Info:', 'Failed to delete query: ' + data['message'], 'danger');

@@ -91,7 +91,9 @@ async def add_admin(_mongo):
                                            'last_modified': utc_now()
                                            })
         except Exception as e:
-            print(e)
+            print(f'Got error: {str(e)}')
+            _err = traceback.format_exc()
+            print(_err)
 
 
 routes = web.RouteTableDef()
@@ -180,7 +182,9 @@ async def auth(request):
     try:
         post_data = await request.json()
     except Exception as _e:
-        print(str(_e))
+        print(f'Cannot extract json() from request, trying post(): {str(_e)}')
+        # _err = traceback.format_exc()
+        # print(_err)
         post_data = await request.post()
 
     # print(post_data)
@@ -220,7 +224,9 @@ async def auth(request):
             return web.json_response({'message': 'Wrong credentials'}, status=400)
 
     except Exception as e:
-        print(str(e))
+        print(f'Got error: {str(e)}')
+        _err = traceback.format_exc()
+        print(_err)
         return web.json_response({'message': 'Wrong credentials'}, status=400)
 
 
@@ -408,9 +414,10 @@ async def add_user(request):
             return web.json_response({'message': 'success'}, status=200)
 
         except Exception as _e:
-            print(str(_e))
-            # return str(_e)
-            return web.json_response({'message': f'Failed to add user: {str(_e)}'}, status=500)
+            print(f'Got error: {str(_e)}')
+            _err = traceback.format_exc()
+            print(_err)
+            return web.json_response({'message': f'Failed to add user: {_err}'}, status=500)
     else:
         return web.json_response({'message': '403 Forbidden'}, status=403)
 
@@ -441,8 +448,10 @@ async def remove_user(request):
             return web.json_response({'message': 'success'}, status=200)
 
         except Exception as _e:
-            print(_e)
-            return web.json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
+            print(f'Got error: {str(_e)}')
+            _err = traceback.format_exc()
+            print(_err)
+            return web.json_response({'message': f'Failed to remove user: {_err}'}, status=500)
     else:
         return web.json_response({'message': '403 Forbidden'}, status=403)
 
@@ -513,8 +522,10 @@ async def edit_user(request):
             return web.json_response({'message': 'success'}, status=200)
 
         except Exception as _e:
-            print(_e)
-            return web.json_response({'message': f'Failed to remove user: {str(_e)}'}, status=500)
+            print(f'Got error: {str(_e)}')
+            _err = traceback.format_exc()
+            print(_err)
+            return web.json_response({'message': f'Failed to remove user: {_err}'}, status=500)
     else:
         return web.json_response({'message': '403 Forbidden'}, status=403)
 
@@ -526,7 +537,7 @@ regex['collection_main'] = re.compile(r"db\[['\"](.*?)['\"]\]")
 regex['aggregate'] = re.compile(r"aggregate\((\[(?s:.*)\])")
 
 
-def parse_query(task, save:bool=True):
+def parse_query(task, save: bool=False):
     # save auxiliary stuff
     kwargs = task['kwargs'] if 'kwargs' in task else {}
 
@@ -534,8 +545,8 @@ def parse_query(task, save:bool=True):
     task_reduced = {'user': task['user'], 'query': {}, 'kwargs': kwargs}
 
     # fixme: this is for testing api from cl
-    if '_id' not in task_reduced['kwargs']:
-        task_reduced['kwargs']['_id'] = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+    # if '_id' not in task_reduced['kwargs']:
+    #     task_reduced['kwargs']['_id'] = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
 
     if task['query_type'] == 'general_search':
         # specify task type:
@@ -621,7 +632,7 @@ def parse_query(task, save:bool=True):
 
             # construct projection
             # catalog_projection = dict()
-            # FIXME:always return standardized coordinates?
+            # FIXME: always return standardized coordinates?
             # catalog_projection = {'coordinates.epoch': 1, 'coordinates.radec_str': 1, 'coordinates.radec': 1}
             catalog_projection = literal_eval(task['catalogs'][catalog]['projection'].strip())
 
@@ -699,7 +710,7 @@ def parse_query(task, save:bool=True):
         return '', task_reduced, {}
 
 
-async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=True):
+async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=False):
 
     db = mongo
 
@@ -790,7 +801,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
         return task_hash, result
 
     except Exception as e:
-        print(str(e))
+        print(f'Got error: {str(e)}')
         _err = traceback.format_exc()
         print(_err)
 
@@ -855,9 +866,9 @@ async def query(request):
 
         _query['user'] = request.user
 
-        # by default, all queries are registered in the db and the task/results are stored on disk as json files
-        # this can be overridden giving a significant execution speed up
-        save = _query['kwargs']['save'] if (('kwargs' in _query) and ('save' in _query['kwargs'])) else True
+        # by default, all queries are not registered in the db and the task/results are stored on disk as json files
+        # giving a significant execution speed up. this behaviour can be overridden.
+        save = _query['kwargs']['save'] if (('kwargs' in _query) and ('save' in _query['kwargs'])) else False
 
         # tic = time.time()
         task_hash, task_reduced, task_doc = parse_query(_query, save=save)
@@ -868,11 +879,11 @@ async def query(request):
         # schedule query execution:
         if ('enqueue_only' in task_reduced['kwargs']) and task_reduced['kwargs']['enqueue_only']:
             # only schedule query execution. store query and results
-            asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
+            asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save))
         else:
             if save:
                 # db book-keeping and saving to disk? result['result'] will contain result json location
-                task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc)
+                task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save)
 
                 # with open(result['result'], 'rb') as f_task_result_file:
                 #     response = web.Response(body=f_task_result_file, headers={
@@ -893,9 +904,10 @@ async def query(request):
                 return web.json_response(result, status=200, dumps=dumps)
 
     except Exception as _e:
-        print(str(_e))
-        # return str(_e)
-        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
 ''' useful stuff 
@@ -962,14 +974,16 @@ async def web_query_put(request):
         print(task_hash, task_reduced, task_doc)
 
         # schedule query execution:
-        asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
+        save = True  # always save to db when querying from the browser
+        asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save))
 
         return web.json_response({'message': 'success'}, status=200)
 
     except Exception as _e:
-        print(str(_e))
-        # return str(_e)
-        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
 @routes.delete('/web-query')
@@ -1007,9 +1021,10 @@ async def web_query_delete(request):
         return web.json_response({'message': 'success'}, status=200)
 
     except Exception as _e:
-        print(str(_e))
-        # return str(_e)
-        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
 @routes.post('/web-query')
@@ -1060,9 +1075,10 @@ async def web_query_grab(request):
             return web.json_response({'message': f'Failure: part not recognized'}, status=500)
 
     except Exception as _e:
-        print(str(_e))
-        # return str(_e)
-        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
 ''' web endpoints '''

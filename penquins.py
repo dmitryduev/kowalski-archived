@@ -4,7 +4,7 @@ import traceback
 import time
 import requests
 import os
-from bson.json_util import loads
+from copy import deepcopy
 import numpy as np
 
 
@@ -107,12 +107,11 @@ class Kowalski(object):
             Authenticate user, return access token
         :return:
         """
-        access_token = None
 
         # try:
         # post username and password, get access token
         auth = requests.post(f'{self.base_url}/auth',
-                             data={"username": self.username, "password": self.password,
+                             json={"username": self.username, "password": self.password,
                                    "penquins.__version__": __version__})
 
         if self.v:
@@ -132,17 +131,18 @@ class Kowalski(object):
     def query(self, query):
 
         try:
-            if ('kwargs' in query) and ('save' in query['kwargs']) and (query['kwargs']['save']):
-                # generate a unique hash id and store it in query if saving query in db on Kowalski
-                _id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                              for _ in range(32)).lower()
+            _query = deepcopy(query)
+            if ('kwargs' in _query) and ('save' in _query['kwargs']) and (_query['kwargs']['save']):
+                if 'kwargs' not in _query:
+                    _query['kwargs'] = dict()
+                if '_id' not in _query['kwargs']:
+                    # generate a unique hash id and store it in query if saving query in db on Kowalski is requested
+                    _id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                  for _ in range(32)).lower()
 
-                if 'kwargs' not in query:
-                    query['kwargs'] = dict()
-                if '_id' not in query['kwargs']:
-                    query['kwargs']['_id'] = _id
+                    _query['kwargs']['_id'] = _id
 
-            resp = self.session.put(os.path.join(f'{self.base_url}', 'query'), json=query, headers=self.headers)
+            resp = self.session.put(os.path.join(f'{self.base_url}', 'query'), json=_query, headers=self.headers)
 
             # print(resp)
 
@@ -156,14 +156,18 @@ class Kowalski(object):
 
 if __name__ == '__main__':
 
-    with Kowalski(username='admin', password='admin', verbose=True) as k:
+    with Kowalski(username='admin', password='admin', verbose=False) as k:
         qu = {"query_type": "general_search",
               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
               "kwargs": {"save": False}}
+        qu2 = {"query_type": "general_search",
+               "query": "db['ZTF_alerts'].find_one({})",
+               "kwargs": {"save": False}}
 
         for i in range(5):
             tic = time.time()
+            # result = k.query(qu2)
             result = k.query(qu)
             toc = time.time()
             print(toc-tic)
-        print(result)
+            # print(result)
