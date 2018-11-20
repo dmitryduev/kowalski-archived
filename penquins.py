@@ -137,7 +137,16 @@ class Kowalski(object):
 
         try:
             _query = deepcopy(query)
-            if ('kwargs' in _query) and ('save' in _query['kwargs']) and (_query['kwargs']['save']):
+
+            # by default, [unless enqueue_only is requested]
+            # all queries are not registered in the db and the task/results are stored on disk as json files
+            # giving a significant execution speed up. this behaviour can be overridden.
+            if ('kwargs' in _query) and ('enqueue_only' in _query['kwargs']) and _query['kwargs']['enqueue_only']:
+                save = True
+            else:
+                save = _query['kwargs']['save'] if (('kwargs' in _query) and ('save' in _query['kwargs'])) else False
+
+            if save:
                 if 'kwargs' not in _query:
                     _query['kwargs'] = dict()
                 if '_id' not in _query['kwargs']:
@@ -213,16 +222,16 @@ if __name__ == '__main__':
               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
               "kwargs": {"save": False}}
         qu2 = {"query_type": "general_search",
-               "query": "db['ZTF_alerts'].find_one({})",
-               "kwargs": {"save": False}}
+               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
+               "kwargs": {"enqueue_only": True}}
 
         for i in range(5):
             tic = time.time()
             result = k.query(query=qu, timeout=0.1)
-            # result = k.query(query=qu2, timeout=1)
+            # result = k.query(query=qu2, timeout=0.1)
             toc = time.time()
             print(toc-tic)
-            # print(result)
+            print(result)
 
         alive = k.check_connection()
         print(alive)

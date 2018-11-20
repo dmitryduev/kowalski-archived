@@ -857,9 +857,13 @@ async def query(request):
 
         _query['user'] = request.user
 
-        # by default, all queries are not registered in the db and the task/results are stored on disk as json files
+        # by default, [unless enqueue_only is requested]
+        # all queries are not registered in the db and the task/results are stored on disk as json files
         # giving a significant execution speed up. this behaviour can be overridden.
-        save = _query['kwargs']['save'] if (('kwargs' in _query) and ('save' in _query['kwargs'])) else False
+        if ('kwargs' in _query) and ('enqueue_only' in _query['kwargs']) and _query['kwargs']['enqueue_only']:
+            save = True
+        else:
+            save = _query['kwargs']['save'] if (('kwargs' in _query) and ('save' in _query['kwargs'])) else False
 
         # tic = time.time()
         task_hash, task_reduced, task_doc = parse_query(_query, save=save)
@@ -869,8 +873,9 @@ async def query(request):
 
         # schedule query execution:
         if ('enqueue_only' in task_reduced['kwargs']) and task_reduced['kwargs']['enqueue_only']:
-            # only schedule query execution. store query and results
+            # only schedule query execution. store query and results, return query id to user
             asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save))
+            return web.json_response({'status': 'enqueued', 'query_id': task_hash}, status=200, dumps=dumps)
         else:
             if save:
                 # db book-keeping and saving to disk? result['result'] will contain result json location
