@@ -1044,8 +1044,17 @@ async def web_query_grab(request):
 
         elif part == 'result':
             task_result_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.result.json')
-            async with aiofiles.open(task_result_file, 'r') as f_task_result_file:
-                return web.json_response(await f_task_result_file.read(), status=200)
+
+            # check result file size in bytes:
+            task_result_file_size = os.path.getsize(task_result_file)
+
+            if task_result_file_size / 1e6 < 10:
+                async with aiofiles.open(task_result_file, 'r') as f_task_result_file:
+                    return web.json_response(await f_task_result_file.read(), status=200)
+            else:
+                return web.json_response({'message': f'query {task_id} result size of ' +
+                                                     f'{task_result_file_size/1e6} MB too large for browser'},
+                                         status=200)
 
         else:
             return web.json_response({'message': f'Failure: part not recognized'}, status=500)
