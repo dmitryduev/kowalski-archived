@@ -6,10 +6,14 @@ import requests
 import os
 from copy import deepcopy
 import numpy as np
+from typing import Union
 
 
 ''' PENQUINS - Processing ENormous Queries of ztf Users INStantaneously '''
 __version__ = '1.0.0'
+
+
+Num = Union[int, float]
 
 
 def radec_str2rad(_ra_str, _dec_str):
@@ -128,7 +132,7 @@ class Kowalski(object):
 
         return access_token
 
-    def query(self, query, timeout=5*3600):
+    def query(self, query, timeout: Num=5*3600):
 
         try:
             _query = deepcopy(query)
@@ -142,7 +146,8 @@ class Kowalski(object):
 
                     _query['kwargs']['_id'] = _id
 
-            resp = self.session.put(os.path.join(f'{self.base_url}', 'query'), json=_query, headers=self.headers)
+            resp = self.session.put(os.path.join(f'{self.base_url}', 'query'),
+                                    json=_query, headers=self.headers, timeout=timeout)
 
             # print(resp)
 
@@ -190,8 +195,8 @@ if __name__ == '__main__':
 
         for i in range(5):
             tic = time.time()
-            # result = k.query(qu2)
-            result = k.query(qu)
+            result = k.query(query=qu, timeout=0.1)
+            # result = k.query(query=qu2, timeout=1)
             toc = time.time()
             print(toc-tic)
             # print(result)
