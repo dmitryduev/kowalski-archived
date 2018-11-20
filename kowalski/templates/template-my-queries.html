@@ -18,7 +18,7 @@
 
         <div id="toolbar" class="btn-group">
             <button type="button" class="btn btn-outline-danger"
-                    style="cursor: pointer;" onclick="remove_all_queries()">
+                    style="cursor: pointer;" onclick="remove_query('', true)">
                 <i class="fa fa-trash" aria-hidden="true"></i>
             </button>
         </div>
@@ -162,19 +162,19 @@
                         query_expires: "{{ query['expires'].strftime('%Y-%m-%d %H:%M:%S') }}",
                         query_status: "<span class='badge badge-{{ query_status }}''>{{ query['status'] }}</span>",
                         query_actions: {% if query["status"] != "enqueued" %}
-                            "<a href='#' class='text-danger' onclick='remove_query(\"{{-query_id-}}\")' " +
+                            "<a href='#' class='text-danger' onclick='remove_query(\"{{-query_id-}}\", false)' " +
                                 "data-toggle='tooltip' data-placement='top' title='Remove query'>" +
                                 "<i class='fa fa-trash' aria-hidden='true'></i></a> | " +{% endif %}
-                            "<a href='#' onclick='get_query(\"{{-query_id-}}\")' " +
+                            "<a href='#' onclick='get_query(\"{{-query_id-}}\", \"task\", true)' " +
                                 "data-toggle='tooltip' data-placement='top' title='Download query'>" +
                                 "<i class='fa fa-tasks' aria-hidden='true'></i></a> " +
-                            "<a href='#' onclick='get_query_view(\"{{-query_id-}}\")' " +
+                            "<a href='#' onclick='get_query(\"{{-query_id-}}\", \"task\", false)' " +
                                 "data-toggle='tooltip' data-placement='top' title='View query in browser'>" +
                                 "<i class='fa fa-eye' aria-hidden='true'></i></a>"{% if query["status"] != "enqueued" %} +
-                            "| <a href='#' onclick='get_query_result(\"{{-query_id-}}\")' " +
+                            "| <a href='#' onclick='get_query(\"{{-query_id-}}\", \"result\", true)' " +
                                 "data-toggle='tooltip' data-placement='top' title='Download query result'>" +
                                 "<i class='fa fa-download' aria-hidden='true'></i></a> " +
-                            "<a href='#' onclick='get_query_result_view(\"{{-query_id-}}\")' " +
+                            "<a href='#' onclick='get_query(\"{{-query_id-}}\", \"result\", false)' " +
                                 "data-toggle='tooltip' data-placement='top' title='View query result in browser'>" +
                                 "<i class='fa fa-eye' aria-hidden='true'></i></a> "{% endif %}
                     },
@@ -234,9 +234,9 @@
             $('[data-toggle="tooltip"]').tooltip()
         });
 
-        function remove_query(query_id) {
+        function remove_query(query_id, remove_all) {
             bootbox.confirm({
-                message: "Do you want to remove the query?",
+                message: remove_all ? "Do you want to remove all your queries?" : "Do you want to remove the query?",
                 buttons: {
                     cancel: {
                         label: '<i class="fa fa-times"></i> Cancel'
@@ -249,53 +249,57 @@
                     // console.log('This was logged in the callback: ' + result);
                     // confirmed? emit remove_query event:
                     if (result) {
-                        // emit remove_query event on click
-                        {# TODO #}
-                    }
-                }
-            });
-        }
-
-        function remove_all_queries() {
-            bootbox.confirm({
-                message: "Do you want to remove all queries on this page?",
-                buttons: {
-                    cancel: {
-                        label: '<i class="fa fa-times"></i> Cancel'
-                    },
-                    confirm: {
-                        label: '<i class="fa fa-check"></i> Confirm'
-                    }
-                },
-                callback: function (result) {
-                    // console.log('This was logged in the callback: ' + result);
-                    // confirmed? emit remove_query event:
-                    if (result) {
-                        // remove all queries event on click
-                        // loop over tr's in table-tbody
-                        $("#table-tbody tr").each(function() {
-                            {# TODO #}
+                        var task_id = remove_all ? 'all' : query_id;
+                        $.ajax({url: '{{-script_root-}}/web-query',
+                            method: 'DELETE',
+                            data: JSON.stringify({"task_id": task_id}),
+                            processData: false,
+                            contentType: 'application/json',
+                            success: function(data) {
+                                if (data['message'] === 'success') {
+                                    location.reload(true);
+                                    {#showFlashingMessage('Info:', 'Running query.', 'success');#}
+                                }
+                                else {
+                                    showFlashingMessage('Info:', 'Failed to delete query: ' + data['message'], 'danger');
+                                }
+                            },
+                            error: function(data) {
+                                showFlashingMessage('Info:', 'Failed to delete query.', 'danger');
+                            }
                         });
-
+                        bootbox.hideAll();
+                        return false;
                     }
                 }
             });
         }
 
-        function get_query(query_id) {
-            {# TODO #}
-        }
-
-        function get_query_result(query_id) {
-            {# TODO #}
-        }
-
-        function get_query_view(query_id) {
-            {# TODO #}
-        }
-
-        function get_query_result_view(query_id) {
-            {# TODO #}
+        function get_query(task_id, part, download) {
+            $.ajax({url: '{{-script_root-}}/web-query',
+                method: 'POST',
+                data: JSON.stringify({"task_id": task_id, "part": part, "download": download}),
+                processData: false,
+                contentType: 'application/json',
+                success: function(data) {
+                    if (data['status'] === 'success') {
+                        if (part === "task") {
+                            // fetch task
+                            console.log("task");
+                        }
+                        else {
+                            // fetch result
+                            console.log("result");
+                        }
+                    }
+                    else {
+                        showFlashingMessage('Info:', 'Failed to get query' + data['message'], 'danger');
+                    }
+                },
+                error: function(data) {
+                    showFlashingMessage('Info:', 'Failed to delete query.', 'danger');
+                }
+            });
         }
 
         {# actions #}

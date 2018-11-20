@@ -15,9 +15,11 @@ import time
 from ast import literal_eval
 from async_timeout import timeout
 import asyncio
-import concurrent.futures
+# import concurrent.futures
 from misaka import Markdown, HtmlRenderer
 import os
+import pathlib
+import shutil
 import re
 import numpy as np
 import string
@@ -543,7 +545,7 @@ def parse_query(task, save:bool=True):
             go_on = True in [s in str(task['query']) for s in ['.aggregate(',
                                                                '.map_reduce(',
                                                                '.distinct(',
-                                                               '.count(',
+                                                               '.count_documents(',
                                                                '.find_one(',
                                                                '.find(']] and \
                     True not in [s in str(task['query']) for s in ['import',
@@ -728,7 +730,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
                         _select = db[catalog].find(query['query'][catalog][obj][0])
                     # unfortunately, mongoDB does not allow to have dots in field names,
                     # thus replace with underscores
-                    query_result[catalog][obj.replace('.', '_')] = _select.to_list(length=None)
+                    query_result[catalog][obj.replace('.', '_')] = await _select.to_list(length=None)
 
         elif query['query_type'] == 'general_search':
             # just evaluate. I know that's dangerous, but I'm checking things in broker.py
@@ -738,7 +740,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Tru
             # _select = eval(query['query'])
             # _select = literal_eval(qq)
 
-            if '.find_one(' in qq:
+            if ('.find_one(' in qq) or ('.count_documents(' in qq):
                 _select = await _select
 
             # make it look like json
@@ -923,12 +925,15 @@ done, _ = await asyncio.wait(tasks)
 '''
 
 
+''' API for the browser '''
+# Uses sessions => needs additional middleware => slightly slower if were used together with @auth_required
+
+
 @routes.put('/web-query')
 @login_required
-async def web_query(request):
+async def web_query_put(request):
     """
         Query DB from the browser.
-        Uses sessions => needs additional middleware => slightly slower if implemented together with @auth_required
 
     :return:
     """
@@ -954,10 +959,90 @@ async def web_query(request):
         task_hash, task_reduced, task_doc = parse_query(_query)
         # toc = time.time()
         # print(f'parsing task took {toc-tic} seconds')
-        # print(task_hash, task_reduced, task_doc)
+        print(task_hash, task_reduced, task_doc)
 
         # schedule query execution:
         asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc))
+
+        return web.json_response({'message': 'success'}, status=200)
+
+    except Exception as _e:
+        print(str(_e))
+        # return str(_e)
+        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
+
+
+@routes.delete('/web-query')
+@login_required
+async def web_query_delete(request):
+    """
+        Delete Query from DB from the browser.
+
+    :return:
+    """
+
+    # get session:
+    session = await get_session(request)
+    user = session['user_id']
+
+    # get query
+    _data = await request.json()
+    print(_data)
+
+    try:
+        if _data['task_id'] != 'all':
+            await request.app['mongo'].queries.delete_one({'user': user, 'task_id': {'$eq': _data['task_id']}})
+
+            # remove files containing task and result
+            for p in pathlib.Path(os.path.join(config['path']['path_queries'], user)).glob(f'{_data["task_id"]}*'):
+                p.unlink()
+
+        else:
+            await request.app['mongo'].queries.delete_many({'user': user})
+
+            # remove all files containing task and result
+            if os.path.exists(os.path.join(config['path']['path_queries'], user)):
+                shutil.rmtree(os.path.join(config['path']['path_queries'], user))
+
+        return web.json_response({'message': 'success'}, status=200)
+
+    except Exception as _e:
+        print(str(_e))
+        # return str(_e)
+        return web.json_response({'message': f'Failure: {str(_e)}'}, status=500)
+
+
+@routes.post('/web-query')
+@login_required
+async def web_query_grab(request):
+    """
+        Grab Query / result from DB from the browser.
+
+    :return:
+    """
+
+    # get session:
+    session = await get_session(request)
+    user = session['user_id']
+
+    # get query
+    _data = await request.json()
+    print(_data)
+
+    try:
+        task_id = _data['task_id']
+        part = _data['part']
+        download = _data['download']
+
+        # if _data['task_id'] != 'all':
+        #     await request.app['mongo'].queries.delete_one({'user': user, 'task_id': {'$eq': _data['task_id']}})
+        #
+        #     # remove files containing task and result
+        #     for p in pathlib.Path(os.path.join(config['path']['path_queries'], user)).glob(f'{_data["task_id"]}*'):
+        #         p.unlink()
+        #
+        # else:
+        #     pass
 
         return web.json_response({'message': 'success'}, status=200)
 
