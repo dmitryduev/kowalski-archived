@@ -1,6 +1,7 @@
 import string
 import random
 import traceback
+import time
 import requests
 import os
 from bson.json_util import loads
@@ -130,20 +131,27 @@ class Kowalski(object):
 
     def query(self, query):
 
-        # generate a unique hash id and store it in query (for further query identification)
-        _id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                      for _ in range(32)).lower()
+        try:
+            if ('kwargs' in query) and ('save' in query['kwargs']) and (query['kwargs']['save']):
+                # generate a unique hash id and store it in query if saving query in db on Kowalski
+                _id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                              for _ in range(32)).lower()
 
-        if 'kwargs' not in query:
-            query['kwargs'] = dict()
-        if '_id' not in query['kwargs']:
-            query['kwargs']['_id'] = _id
+                if 'kwargs' not in query:
+                    query['kwargs'] = dict()
+                if '_id' not in query['kwargs']:
+                    query['kwargs']['_id'] = _id
 
-        resp = self.session.put(os.path.join(f'{self.base_url}', 'query'), json=query, headers=self.headers)
+            resp = self.session.put(os.path.join(f'{self.base_url}', 'query'), json=query, headers=self.headers)
 
-        print(resp)
+            # print(resp)
 
-        return resp.json()
+            return resp.json()
+
+        except Exception as _e:
+            _err = traceback.format_exc()
+
+            return {'status': 'failed', 'message': _err}
 
 
 if __name__ == '__main__':
@@ -151,8 +159,11 @@ if __name__ == '__main__':
     with Kowalski(username='admin', password='admin', verbose=True) as k:
         qu = {"query_type": "general_search",
               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-              "kwargs": {"save": True}}
+              "kwargs": {"save": False}}
 
-        # for i in range(5):
-        result = k.query(qu)
+        for i in range(5):
+            tic = time.time()
+            result = k.query(qu)
+            toc = time.time()
+            print(toc-tic)
         print(result)
