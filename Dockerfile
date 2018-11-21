@@ -43,6 +43,9 @@ WORKDIR /app
 #RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
 #fixme:
 
+# run tests
+#RUN python -m pytest -s server.py
+
 # run container
 #CMD /usr/local/bin/supervisord -n -c supervisord.conf
 #CMD cron && crontab /etc/cron.d/fetch-cron && /bin/bash

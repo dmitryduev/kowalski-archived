@@ -1,6 +1,9 @@
 import os
 import inspect
 import hashlib
+import random
+import string
+
 import numpy as np
 import datetime
 import pytz
@@ -112,3 +115,7 @@ def compute_hash(_task):
     hsh = ht.hexdigest()
 
     return hsh
+
+
+def random_alphanumeric_str(length: int=8):
+    return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(length)).lower()

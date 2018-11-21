@@ -26,9 +26,7 @@ import string
 import random
 import traceback
 
-# from kowalski.utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
-# from .utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
-from utils import utc_now, jd, radec_str2geojson, generate_password_hash, check_password_hash, compute_hash
+from utils import *
 
 
 ''' markdown rendering '''
@@ -251,50 +249,57 @@ async def login_post(request):
     :param request:
     :return:
     """
-    post_data = await request.post()
+    try:
+        try:
+            post_data = await request.json()
+        except Exception as _e:
+            print(f'Cannot extract json() from request, trying post(): {str(_e)}')
+            # _err = traceback.format_exc()
+            # print(_err)
+            post_data = await request.post()
 
-    # get session:
-    session = await get_session(request)
+        # get session:
+        session = await get_session(request)
 
-    if ('username' not in post_data) or (len(post_data['username']) == 0):
-        return web.json_response({'message': 'Missing "username"'}, status=400)
-    if ('password' not in post_data) or (len(post_data['password']) == 0):
-        return web.json_response({'message': 'Missing "password"'}, status=400)
+        if ('username' not in post_data) or (len(post_data['username']) == 0):
+            return web.json_response({'message': 'Missing "username"'}, status=400)
+        if ('password' not in post_data) or (len(post_data['password']) == 0):
+            return web.json_response({'message': 'Missing "password"'}, status=400)
 
-    username = str(post_data['username'])
-    password = str(post_data['password'])
+        username = str(post_data['username'])
+        password = str(post_data['password'])
 
-    # print(username, password)
-    print(f'User {username} logged in.')
+        # print(username, password)
+        print(f'User {username} logged in.')
 
-    # user exists and passwords match?
-    select = await request.app['mongo'].users.find_one({'_id': username})
-    if check_password_hash(select['password'], password):
-        payload = {
-            'user_id': username,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(
-                seconds=request.app['JWT']['JWT_EXP_DELTA_SECONDS'])
-        }
-        jwt_token = jwt.encode(payload,
-                               request.app['JWT']['JWT_SECRET'],
-                               request.app['JWT']['JWT_ALGORITHM'])
+        # user exists and passwords match?
+        select = await request.app['mongo'].users.find_one({'_id': username})
+        if check_password_hash(select['password'], password):
+            payload = {
+                'user_id': username,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(
+                    seconds=request.app['JWT']['JWT_EXP_DELTA_SECONDS'])
+            }
+            jwt_token = jwt.encode(payload,
+                                   request.app['JWT']['JWT_SECRET'],
+                                   request.app['JWT']['JWT_ALGORITHM'])
 
-        # store the token, will need it
-        session['jwt_token'] = jwt_token.decode('utf-8')
-        session['user_id'] = username
+            # store the token, will need it
+            session['jwt_token'] = jwt_token.decode('utf-8')
+            session['user_id'] = username
 
-        print('LOGIN', session)
+            print('LOGIN', session)
 
-        location = '/'
-        raise web.HTTPFound(location=location)
+            return web.json_response({'message': 'success'}, status=200)
 
-    else:
-        context = {'logo': config['server']['logo'],
-                   'messages': [(u'Failed to log in.', u'danger')]}
-        response = aiohttp_jinja2.render_template('template-login.html',
-                                                  request,
-                                                  context)
-        return response
+        else:
+            raise Exception('Bad credentials')
+
+    except Exception as _e:
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failed to login user: {_err}'}, status=401)
 
 
 @routes.get('/logout', name='logout')
@@ -317,13 +322,13 @@ async def logout(request):
 
 @routes.get('/test')
 @auth_required
-async def test_handler(request):
+async def handler_test(request):
     return web.json_response({'message': 'test ok.'}, status=200)
 
 
 @routes.get('/test_wrapper')
 @login_required
-async def test_wrapper_handler(request):
+async def wrapper_handler_test(request):
     return web.json_response({'message': 'test ok.'}, status=200)
 
 
@@ -962,15 +967,15 @@ async def web_query_put(request):
             f'query_type {_query["query_type"]} not in {str(known_query_types)}'
 
         _query['user'] = user
+        save = True  # always save to db when querying from the browser
 
         # tic = time.time()
-        task_hash, task_reduced, task_doc = parse_query(_query)
+        task_hash, task_reduced, task_doc = parse_query(_query, save=save)
         # toc = time.time()
         # print(f'parsing task took {toc-tic} seconds')
         # print(task_hash, task_reduced, task_doc)
 
         # schedule query execution:
-        save = True  # always save to db when querying from the browser
         asyncio.ensure_future(execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save))
 
         return web.json_response({'message': 'success'}, status=200)
@@ -1292,6 +1297,83 @@ async def app_factory(_config):
     app.add_routes([web.static('/data', '/data')])
 
     return app
+
+
+''' Tests '''
+
+
+class TestAPIs(object):
+    # python -m pytest -s server.py
+    # python -m pytest server.py
+
+    # test user management API for admin
+    async def test_users(self, aiohttp_client):
+        client = await aiohttp_client(await app_factory(_config=config))
+
+        login = await client.post('/login', json={"username": config['server']['admin_username'],
+                                                  "password": config['server']['admin_password']})
+        # print(login)
+        assert login.status == 200
+
+        # test = await client.get('/lab/ztf-alerts')
+        # print(test)
+
+        # adding a user
+        resp = await client.put('/users', json={'user': 'test_user', 'password': random_alphanumeric_str(6)})
+        assert resp.status == 200
+        # text = await resp.text()
+        # text = await resp.json()
+
+        # editing user credentials
+        resp = await client.post('/users', json={'_user': 'test_user',
+                                                 'edit-user': 'test_user',
+                                                 'edit-password': random_alphanumeric_str(6)})
+        assert resp.status == 200
+        resp = await client.post('/users', json={'_user': 'test_user',
+                                                 'edit-user': 'test_user_edited',
+                                                 'edit-password': ''})
+        assert resp.status == 200
+
+        # deleting a user
+        resp = await client.delete('/users', json={'user': 'test_user_edited'})
+        assert resp.status == 200
+
+    # test programmatic query API
+    async def test_query_admin(self, aiohttp_client):
+        client = await aiohttp_client(await app_factory(_config=config))
+
+        # check JWT authorization
+        auth = await client.post(f'/auth',
+                                 json={"username": config['server']['admin_username'],
+                                       "password": config['server']['admin_password']})
+        assert auth.status == 200
+        # print(await auth.text())
+        # print(await auth.json())
+        credentials = await auth.json()
+        assert 'token' in credentials
+
+        access_token = credentials['token']
+
+        headers = {'Authorization': access_token}
+
+        collection = 'ZTF_alerts'
+
+        # check query without book-keeping
+        qu = {"query_type": "general_search",
+              "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+              "kwargs": {"save": False}
+              }
+        print(qu)
+        resp = await client.put('/query', json=qu, headers=headers, timeout=2)
+        assert resp.status == 200
+        result = await resp.json()
+        assert result['status'] == 'done'
+
+        # todo: check query with book-keeping
+
+        async def test_query_user(self, aiohttp_client):
+            # todo
+            pass
 
 
 if __name__ == '__main__':
