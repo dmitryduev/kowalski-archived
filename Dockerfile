@@ -7,11 +7,11 @@ RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get 
 
 # Kafka:
 RUN mkdir -p /kafka
-#fixme:
+#fixme: vvv
 #ADD http://apache.claz.org/kafka/1.1.0/kafka_2.11-1.1.0.tgz /kafka
 #RUN tar -xzf /kafka/kafka_2.11-1.1.0.tgz
 #RUN pip install confluent-kafka==0.11.4
-#fixme:
+#fixme: ^^^
 
 # place to keep our app and the data:
 RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data
@@ -38,9 +38,9 @@ ADD kowalski/ /app/
 # change working directory to /app
 WORKDIR /app
 
-#fixme:
+#fixme: vvv
 #RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
-#fixme:
+#fixme: ^^^
 
 # generate keys
 RUN python generate_secrets.py

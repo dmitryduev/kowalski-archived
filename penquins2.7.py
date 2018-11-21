@@ -1,10 +1,8 @@
 import string
 import random
 import traceback
-import time
 import os
 from copy import deepcopy
-from typing import Union
 import requests
 from bson.json_util import loads
 
@@ -13,17 +11,10 @@ from bson.json_util import loads
 __version__ = '1.0.0'
 
 
-Num = Union[int, float]
-QueryPart = Union['task', 'result']
-
-
 class Kowalski(object):
     """
         Query ZTF TDA databases
     """
-
-    # def __init__(self, protocol='http', host='127.0.0.1', port=8000, verbose=False,
-    #              username=None, password=None):
 
     def __init__(self, protocol='https', host='kowalski.caltech.edu', port=443, verbose=False,
                  username=None, password=None):
@@ -39,7 +30,7 @@ class Kowalski(object):
         self.host = host
         self.port = port
 
-        self.base_url = f'{self.protocol}://{self.host}:{self.port}'
+        self.base_url = '{:s}://{:s}:{:d}'.format(self.protocol, self.host, self.port)
 
         self.username = username
         self.password = password
@@ -68,7 +59,7 @@ class Kowalski(object):
 
         # try:
         # post username and password, get access token
-        auth = requests.post(f'{self.base_url}/auth',
+        auth = requests.post('{:s}/auth'.format(self.base_url),
                              json={"username": self.username, "password": self.password,
                                    "penquins.__version__": __version__})
 
@@ -86,7 +77,7 @@ class Kowalski(object):
 
         return access_token
 
-    def query(self, query, timeout: Num=5*3600):
+    def query(self, query, timeout=5*3600):
 
         try:
             _query = deepcopy(query)
@@ -121,7 +112,7 @@ class Kowalski(object):
 
             return {'status': 'failed', 'message': _err}
 
-    def get_query(self, query_id: str, part: QueryPart = 'result'):
+    def get_query(self, query_id, part='result'):
         """
             Fetch json for task or result by query id
         :param query_id:
@@ -141,7 +132,7 @@ class Kowalski(object):
 
             return {'status': 'failed', 'message': _err}
 
-    def delete_query(self, query_id: str):
+    def delete_query(self, query_id):
         """
             Delete query by query_id
         :param query_id:
@@ -183,35 +174,3 @@ class Kowalski(object):
             _err = traceback.format_exc()
             print(_err)
             return False
-
-
-if __name__ == '__main__':
-
-    with Kowalski(protocol='http', host='127.0.0.1', port=8000,
-                  username='admin', password='admin', verbose=False) as k:
-        qu = {"query_type": "general_search",
-              "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-              "kwargs": {"save": False}}
-        qu2 = {"query_type": "general_search",
-               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-               "kwargs": {"enqueue_only": True}}
-
-        for i in range(5):
-            tic = time.time()
-            result = k.query(query=qu, timeout=0.1)
-            toc = time.time()
-            print(toc-tic)
-            print(result)
-
-        alive = k.check_connection()
-        print(alive)
-
-        result = k.query(query=qu2, timeout=0.1)
-        time.sleep(0.15)
-        # print(result)
-        qid = result['query_id']
-        result = k.get_query(query_id=qid, part='result')
-        print(result)
-
-        result = k.delete_query(query_id=qid)
-        print(result)

@@ -971,7 +971,7 @@ async def query_grab(request):
         task_id = _data['task_id']
         part = _data['part']
 
-        query = await request.app['mongo'].queries.find_one({'user': user, 'task_id': {'$eq': task_id}})
+        query = await request.app['mongo'].queries.find_one({'user': user, 'task_id': {'$eq': task_id}}, {'status': 1})
         # print(query)
 
         if part == 'task':
@@ -981,6 +981,9 @@ async def query_grab(request):
                 return web.json_response(await f_task_file.read(), status=200)
 
         elif part == 'result':
+            if query['status'] == 'enqueued':
+                return web.json_response({'message': f'query not finished yet'}, status=200)
+
             task_result_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.result.json')
 
             async with aiofiles.open(task_result_file, 'r') as f_task_result_file:
