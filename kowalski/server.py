@@ -911,7 +911,47 @@ async def query(request):
         return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
-''' useful stuff 
+@routes.delete('/query')
+@auth_required
+async def query_delete(request):
+    """
+        Delete Query from DB programmatically.
+
+    :return:
+    """
+
+    # get user:
+    user = request.user
+
+    # get query
+    _data = await request.json()
+    # print(_data)
+
+    try:
+        if _data['task_id'] != 'all':
+            await request.app['mongo'].queries.delete_one({'user': user, 'task_id': {'$eq': _data['task_id']}})
+
+            # remove files containing task and result
+            for p in pathlib.Path(os.path.join(config['path']['path_queries'], user)).glob(f'{_data["task_id"]}*'):
+                p.unlink()
+
+        else:
+            await request.app['mongo'].queries.delete_many({'user': user})
+
+            # remove all files containing task and result
+            if os.path.exists(os.path.join(config['path']['path_queries'], user)):
+                shutil.rmtree(os.path.join(config['path']['path_queries'], user))
+
+        return web.json_response({'message': 'success'}, status=200)
+
+    except Exception as _e:
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failure: {_err}'}, status=500)
+
+
+''' useful async stuff 
 
 tasks = [
     asyncio.ensure_future(long_computation(request.app['mongo'], 1)),
@@ -1339,7 +1379,7 @@ class TestAPIs(object):
         assert resp.status == 200
 
     # test programmatic query API
-    async def test_query_admin(self, aiohttp_client):
+    async def test_query(self, aiohttp_client):
         client = await aiohttp_client(await app_factory(_config=config))
 
         # check JWT authorization
@@ -1363,17 +1403,29 @@ class TestAPIs(object):
               "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
               "kwargs": {"save": False}
               }
-        print(qu)
-        resp = await client.put('/query', json=qu, headers=headers, timeout=2)
+        # print(qu)
+        resp = await client.put('/query', json=qu, headers=headers, timeout=1)
         assert resp.status == 200
         result = await resp.json()
         assert result['status'] == 'done'
 
         # todo: check query with book-keeping
+        qu = {"query_type": "general_search",
+              "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+              "kwargs": {"enqueue_only": True, "_id": random_alphanumeric_str(32)}
+              }
+        # print(qu)
+        resp = await client.put('/query', json=qu, headers=headers, timeout=0.15)
+        assert resp.status == 200
+        result = await resp.json()
+        # print(result)
+        assert result['status'] == 'enqueued'
 
-        async def test_query_user(self, aiohttp_client):
-            # todo
-            pass
+        # remove enqueued query
+        resp = await client.delete('/query', json={'task_id': result['query_id']}, headers=headers, timeout=1)
+        assert resp.status == 200
+        result = await resp.json()
+        assert result['message'] == 'success'
 
 
 if __name__ == '__main__':
