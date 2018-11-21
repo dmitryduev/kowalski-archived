@@ -951,6 +951,51 @@ async def query_delete(request):
         return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
+@routes.post('/query')
+@auth_required
+async def query_grab(request):
+    """
+        Grab Query / result from DB from the browser.
+
+    :return:
+    """
+
+    # get user:
+    user = request.user
+
+    # get query
+    _data = await request.json()
+    # print(_data)
+
+    try:
+        task_id = _data['task_id']
+        part = _data['part']
+
+        query = await request.app['mongo'].queries.find_one({'user': user, 'task_id': {'$eq': task_id}})
+        # print(query)
+
+        if part == 'task':
+            task_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.task.json')
+            # with open(task_file, 'r') as f_task_file:
+            async with aiofiles.open(task_file, 'r') as f_task_file:
+                return web.json_response(await f_task_file.read(), status=200)
+
+        elif part == 'result':
+            task_result_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.result.json')
+
+            async with aiofiles.open(task_result_file, 'r') as f_task_result_file:
+                return web.json_response(await f_task_result_file.read(), status=200)
+
+        else:
+            return web.json_response({'message': f'Failure: part not recognized'}, status=500)
+
+    except Exception as _e:
+        print(f'Got error: {str(_e)}')
+        _err = traceback.format_exc()
+        print(_err)
+        return web.json_response({'message': f'Failure: {_err}'}, status=500)
+
+
 ''' useful async stuff 
 
 tasks = [

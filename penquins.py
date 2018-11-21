@@ -6,6 +6,7 @@ import requests
 import os
 from copy import deepcopy
 import numpy as np
+from bson.json_util import loads
 from typing import Union
 
 
@@ -161,7 +162,7 @@ class Kowalski(object):
 
             # print(resp)
 
-            return resp.json()
+            return loads(resp.text)
 
         except Exception as _e:
             _err = traceback.format_exc()
@@ -170,13 +171,23 @@ class Kowalski(object):
 
     def get_query(self, query_id: str, part: QueryPart = 'result'):
         """
-            Fetch json for task or result
+            Fetch json for task or result by query id
         :param query_id:
         :param part:
         :return:
         """
-        # todo
-        raise NotImplementedError
+        try:
+            result = self.session.post(os.path.join(f'{self.base_url}', 'query'),
+                                       json={'task_id': query_id, 'part': part}, headers=self.headers)
+
+            _result = {'task_id': query_id, 'result': loads(result.text)}
+
+            return _result
+
+        except Exception as _e:
+            _err = traceback.format_exc()
+
+            return {'status': 'failed', 'message': _err}
 
     def delete_query(self, query_id: str):
         """
@@ -235,3 +246,6 @@ if __name__ == '__main__':
 
         alive = k.check_connection()
         print(alive)
+
+        result = k.get_query(query_id='9b291e10bcc2de4ac212a92541453bd1', part='result')
+        print(result)
