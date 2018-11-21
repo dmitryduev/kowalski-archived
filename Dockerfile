@@ -14,8 +14,7 @@ RUN mkdir -p /kafka
 #fixme:
 
 # place to keep our app and the data:
-RUN mkdir -p /app
-RUN mkdir -p /data
+RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data
 
 ## Add crontab file in the cron directory
 #ADD code/crontab /etc/cron.d/fetch-cron
@@ -42,6 +41,9 @@ WORKDIR /app
 #fixme:
 #RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
 #fixme:
+
+# generate keys
+RUN python generate_secrets.py
 
 # run tests
 #RUN python -m pytest -s server.py

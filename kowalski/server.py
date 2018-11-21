@@ -5,8 +5,6 @@ from aiohttp_session import setup, get_session, session_middleware
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 import aiofiles
 import json
-import base64
-from cryptography import fernet
 import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson.json_util import loads, dumps
@@ -1181,7 +1179,7 @@ async def my_queries_handler(request):
     # get session:
     session = await get_session(request)
 
-    # todo: grab user tasks:
+    # grab user tasks:
     user_tasks = await request.app['mongo'].queries.find({'user': session['user_id']},
                                                          {'task_id': 1, 'status': 1, 'created': 1, 'expires': 1,
                                                           'last_modified': 1}).sort('created', -1).to_list(length=1000)
@@ -1206,7 +1204,7 @@ async def query_cone_search_handler(request):
     # get session:
     session = await get_session(request)
 
-    # todo: get available catalog names
+    # get available catalog names
     catalogs = await request.app['mongo'].list_collection_names()
     catalogs = [c for c in catalogs if c not in (config['database']['collection_users'],
                                                  config['database']['collection_queries'],
@@ -1322,10 +1320,9 @@ print(cm.expired)
 '''
 
 
-async def app_factory(_config):
+async def app_factory():
     """
         App Factory
-    :param _config:
     :return:
     """
 
@@ -1346,11 +1343,9 @@ async def app_factory(_config):
     # store mongo connection
     app['mongo'] = mongo
 
-    # todo: mark all enqueued tasks failed on shutdown
-    async def mark_enqueued_tasks_failed(app):
-        pass
-
-    app.on_cleanup.append(mark_enqueued_tasks_failed)
+    # mark all enqueued tasks failed on startup
+    await app['mongo'].queries.update_many({'status': 'enqueued'},
+                                           {'$set': {'status': 'failed', 'last_modified': utc_now()}})
 
     # graciously close mongo client on shutdown
     async def close_mongo(app):
@@ -1367,7 +1362,7 @@ async def app_factory(_config):
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./templates'))
 
     # set up browser sessions
-    fernet_key = fernet.Fernet.generate_key()
+    fernet_key = config['misc']['fernet_key'].encode()
     secret_key = base64.urlsafe_b64decode(fernet_key)
     setup(app, EncryptedCookieStorage(secret_key))
 
@@ -1454,7 +1449,7 @@ class TestAPIs(object):
         result = await resp.json()
         assert result['status'] == 'done'
 
-        # todo: check query with book-keeping
+        # check query with book-keeping
         qu = {"query_type": "general_search",
               "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
               "kwargs": {"enqueue_only": True, "_id": random_alphanumeric_str(32)}
@@ -1475,4 +1470,4 @@ class TestAPIs(object):
 
 if __name__ == '__main__':
 
-    web.run_app(app_factory(config), port=config['server']['port'])
+    web.run_app(app_factory(), port=config['server']['port'])
