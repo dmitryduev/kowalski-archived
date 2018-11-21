@@ -36,6 +36,7 @@
     },
 
   "misc": {
+    "supported_penquins_versions": ["1.0.0"],
     "query_expiration_interval": 5,
     "logging_level": "debug"
   }

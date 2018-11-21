@@ -192,11 +192,13 @@ async def auth(request):
     if ('password' not in post_data) or (len(post_data['password']) == 0):
         return web.json_response({'message': 'Missing "password"'}, status=400)
 
-    # # todo: check penquins version
-    # penquins_version = flask.request.json.get('penquins.__version__', None)
-    # if penquins_version is None or penquins_version not in config['misc']['supported_penquins_versions']:
-    #     return flask.jsonify({"msg": "Unsupported version of penquins. " +
-    #                                  "Please install the latest version + read current tutorial on Kowalski!"}), 400
+    # connecting from penquins: check penquins version
+    if 'penquins.__version__' in post_data:
+        penquins_version = post_data['penquins.__version__']
+        if penquins_version not in config['misc']['supported_penquins_versions']:
+            return web.json_response({'message': 'Unsupported version of penquins. ' +
+                                                 "Please install the latest version + read current docs on Kowalski!"
+                                      }, status=400)
 
     username = str(post_data['username'])
     password = str(post_data['password'])
