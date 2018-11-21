@@ -70,11 +70,11 @@ class Kowalski(object):
         Query ZTF TDA databases
     """
 
-    def __init__(self, protocol='http', host='127.0.0.1', port=8000, verbose=False,
-                 username=None, password=None):
-
-    # def __init__(self, protocol='https', host='kowalski.caltech.edu', port=443, verbose=False,
+    # def __init__(self, protocol='http', host='127.0.0.1', port=8000, verbose=False,
     #              username=None, password=None):
+
+    def __init__(self, protocol='https', host='kowalski.caltech.edu', port=443, verbose=False,
+                 username=None, password=None):
 
         assert username is not None, 'username must be specified'
         assert password is not None, 'password must be specified'
@@ -195,11 +195,18 @@ class Kowalski(object):
         :param query_id:
         :return:
         """
-        # todo
-        if query_id == 'all':
-            pass
+        try:
+            result = self.session.delete(os.path.join(f'{self.base_url}', 'query'),
+                                         json={'task_id': query_id}, headers=self.headers)
 
-        raise NotImplementedError
+            _result = loads(result.text)
+
+            return _result
+
+        except Exception as _e:
+            _err = traceback.format_exc()
+
+            return {'status': 'failed', 'message': _err}
 
     def check_connection(self, collection='ZTF_alerts'):
         """
@@ -228,7 +235,8 @@ class Kowalski(object):
 
 if __name__ == '__main__':
 
-    with Kowalski(username='admin', password='admin', verbose=False) as k:
+    with Kowalski(protocol='http', host='127.0.0.1', port=8000,
+                  username='admin', password='admin', verbose=False) as k:
         qu = {"query_type": "general_search",
               "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
               "kwargs": {"save": False}}
@@ -239,7 +247,6 @@ if __name__ == '__main__':
         for i in range(5):
             tic = time.time()
             result = k.query(query=qu, timeout=0.1)
-            # result = k.query(query=qu2, timeout=0.1)
             toc = time.time()
             print(toc-tic)
             print(result)
@@ -247,5 +254,12 @@ if __name__ == '__main__':
         alive = k.check_connection()
         print(alive)
 
-        result = k.get_query(query_id='9b291e10bcc2de4ac212a92541453bd1', part='result')
+        result = k.query(query=qu2, timeout=0.1)
+        time.sleep(0.15)
+        # print(result)
+        qid = result['query_id']
+        result = k.get_query(query_id=qid, part='result')
+        print(result)
+
+        result = k.delete_query(query_id=qid)
         print(result)
