@@ -172,7 +172,7 @@ q = { "query_type": "general_search",
 ```python
 q = { "query_type": "general_search", 
 "query": "db['ZTF_alerts'].aggregate([
-                                      {'$match': {'coordinates.radec_geojson': {'$geoWithin': { '$box': [[70.0 - 180.0, -20.0], [110.0 - 180.0, 50.0]] }}}},
+                                      {'$match': {'coordinates.radec_geojson': {'$geoWithin': { '$box': [[70.0 - 180.0, 48.0], [70.0005 - 180.0, 48.0005]] }}}},
                                       {'$group' : { '_id': {'objectId': '$objectId', 'ra': '$candidate.ra', 'dec': '$candidate.dec'},
                                                     'count': { '$sum': { '$cond': [ { '$and': [ { '$in': [ '$candidate.fid', [1, 2, 3] ] }, 
                                                                                                 { '$gt': [ '$candidate.rb', 0.5 ] } 
@@ -242,7 +242,7 @@ It is possible to use the general search interface to execute "spatial" queries,
 cone, box, and polygon searches.
 
 The `coordinates.radec_geojson` field defined for every object in the database (for all catalogs) has an
-associated spherical 2D index, which allows for extremely fast positional queries. `MongoDB` supports many
+associated spherical 2D index, which allows for fast positional queries. `MongoDB` supports many
 query operators, see [here](https://docs.mongodb.com/manual/reference/operator/query-geospatial/) 
 for more details. The caveat to keep in mind is the following: `MongoDB` uses `GeoJSON` objects to represent `2D`
 positions on the sphere. Both the longitude (RA) and latitude (Dec) must be expressed in decimal degrees, and the
