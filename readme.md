@@ -33,7 +33,7 @@ Create `secrets.json` with confidential/secret data:
     "bootstrap.servers": "IP1:PORT,IP2:PORT"
   },
   "kafka-topics": {
-    "zookeeper": "134.4.57.64:2181"
+    "zookeeper": "IP:PORT"
   }
 }
 ```
