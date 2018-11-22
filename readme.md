@@ -1,7 +1,8 @@
 # Kowalski 1.0
 
-The legendary penguin got `docker`ized! Under the hood, it switched from `flask` to `aiohttp` and ditched 
-the task queue to improve performance and robustness.
+The legendary `ZTF` penguin got `docker`ized! 
+Under the hood, it switched from `flask` to `aiohttp` and ditched 
+the redis/rq-based task queue to improve performance and robustness.
 
 ## Production service  
 
@@ -19,8 +20,6 @@ Create `secrets.json` with confidential/secret data:
 ```json
 {
   "server" : {
-    "SECRET_KEY": "secret_key",
-    "JWT_SECRET_KEY": "jwt_secret_key",
     "admin_username": "ADMIN",
     "admin_password": "PASSWORD"
   },
@@ -31,14 +30,10 @@ Create `secrets.json` with confidential/secret data:
     "pwd": "pwd"
   },
   "kafka": {
-    "bootstrap.servers": "IP1:PORT,IP2:PORT",
-    "default.topic.config": {
-      "auto.offset.reset": "earliest"
-    },
-    "group": "kowalski.caltech.edu",
-    "cmd": {
-      "zookeeper": "IP:PORT"
-    }
+    "bootstrap.servers": "IP1:PORT,IP2:PORT"
+  },
+  "kafka-topics": {
+    "zookeeper": "134.4.57.64:2181"
   }
 }
 ```

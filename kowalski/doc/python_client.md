@@ -113,7 +113,7 @@ qu = {"query_type": "general_search",
 
 #### Error management
 
-<span class="badge badge-secondary">Note</span> `kowalski` will refuse connection if it your installed version of `penquins` is outdated.
+<span class="badge badge-secondary">Note</span> `kowalski` will refuse connection if your installed version of `penquins` is outdated.
 
 In case a query fails, the result will contain the traceback error message. Using our running example query, if you, 
 for example, made a typo in the query like this (forgot the bracket at the end):
