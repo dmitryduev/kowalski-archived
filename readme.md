@@ -80,9 +80,9 @@ docker run -d --restart always --name kowalski-mongo -p 27023:27017 -v kowalski_
 Build and launch the app container:
 ```bash
 docker build --rm -t kowalski:latest -f Dockerfile .
-docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski_data:/data --link kowalski-mongo:mongo kowalski:latest
+docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski-mongo:mongo kowalski:latest
 # test mode:
-docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data --link kowalski-mongo:mongo kowalski:latest
+docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski-mongo:mongo kowalski:latest
 
 ```
 
