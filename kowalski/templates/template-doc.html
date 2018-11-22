@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block css %}
+    <script src="{{-script_root-}}/static/js/run_prettify.js"></script>
 {#    <link rel="stylesheet" href="{{-script_root-}}/static/css/github-v2.css">#}
     <link rel="stylesheet" href="{{-script_root-}}/static/css/tranquil-heart.css">
 {% endblock %}
@@ -13,9 +14,7 @@
 
     <div class="container">
 
-        <h3>Tutorials</h3><br>
-
-        <h4>{{ title }}</h4><br>
+        <h3>{{ title }}</h3><br>
 
         {{ content | safe }}
 
@@ -28,5 +27,4 @@
     <script>
         $("pre").addClass("prettyprint")
     </script>
-    <script src="{{-script_root-}}/static/js/run_prettify.js"></script>
 {% endblock %}

@@ -1,6 +1,7 @@
-### PENQUINS - Processing ENormous Queries of ztf Users INStantaneously
+*PENQUINS - Processing ENormous Queries of ztf Users INStantaneously*
 
-In this tutorial, I will demonstrate how to programmatically query the database collections with `python >3.6`.
+This tutorial will demonstrate how to programmatically query the database collections with `python >3.6`.
+<br>
 
 #### Installation
 
@@ -12,8 +13,9 @@ pip install git+https://github.com/dmitryduev/kowalski.git
 ```
 
 `penuquins` is very lightweight and only depends on `pymongo` and `requests`. 
+<br>
 
-#### Basic usage
+#### Quick start
 
 Now you can import the library in your script:
 
@@ -34,7 +36,7 @@ Connect to `kowalski`:
 k = Kowalski(username=username, password=password, verbose=False)
 ```
 
-Note: `Kowalski` object is a context manager, so can be used with a `with` statement:
+<span class="badge badge-secondary">Note</span> `Kowalski` object is a context manager, so can be used with a `with` statement:
 ```python
 with Kowalski(username=username, password=password, verbose=False) as k:
     # do stuff
@@ -100,15 +102,18 @@ result = k.delete_query(query_id=qid)
 ```
 
 By default, the queries/results stored on `kowalski` are deleted after five days. 
-To override this, set a manual `query_expiration_interval` in days:
+To override this, set a manual expiration interval in days:
 
 ```python
 qu = {"query_type": "general_search", 
       "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
       "kwargs": {"query_expiration_interval": 30}}
 ```
+<br>
 
 #### Error management
+
+<span class="badge badge-secondary">Note</span> `kowalski` will refuse connection if it your installed version of `penquins` is outdated.
 
 In case a query fails, the result will contain the traceback error message. Using our running example query, if you, 
 for example, made a typo in the query like this (forgot the bracket at the end):
@@ -131,25 +136,12 @@ Traceback (most recent call last):
                                            ^
 SyntaxError: unexpected EOF while parsing
 ```
-
 <br>
-
-#### Auxiliary stuff
-
-By default, a query/result will expire and be deleted in 30 days. If you want to set a custom expiration interval
-in days, do it like this:
-
-```python
-q = {"query_type": "general_search",
-     "query": "db['ZTF_alerts'].count()",
-     "kwargs": {"query_expiration_interval": 1}
-     }
-```
 
 #### Migrating from `penquins==0.4.x`
 
 The main things to keep in mind when migrating from an older version of `penquins`:
 
 - Queries are not saved to db/disk by default anymore. 
-- Filter/projection in cone searches
+- Filter/projection syntax in cone searches
 - query_sync deprecated, use query

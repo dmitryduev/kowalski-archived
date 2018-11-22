@@ -1,20 +1,17 @@
 This tutorial presents a collection of query examples.
 
-The current version of the DB access API supports two types of queries: cone search and general search.
-The API uses a queue system to execute queries on the server, which runs a `MongoDB` `NoQSL` database.
-The query syntax might look unusual if you're experienced in `SQL`, but feels quite natural if you're using `python`. 
+The DB access API supports two types of queries: `cone search` and `general search`.
+We are using a `MongoDB` `NoQSL` database on the backend.
+The query syntax might look unusual if you are experienced in `SQL`, but feels quite natural if you are using `python`. 
 If you have a query in mind, but only know how to express it in English or in `SQL`, 
 email that to Dima <a href="mailto:duev@caltech.edu">`duev@caltech.edu`</a>, you will get help 
 for converting that into something understandable by the API.
 
-Both the query itself and the query result are stored on the server and can be accessed/retrieved 
-at any time. Please note that queries expire and are removed after 30 days.
-
-If a query failed, the result will contain the traceback error message to help with query debugging.
 
 #### Cone search
 
-Please note that the user can use the cone search web interface to construct a query (click `Get query`).
+<span class="badge badge-success">Note</span> Use the cone search web interface to construct a query (click `Get query`) 
+that can be used with `penquins`.
 
 The user can run the cone search around an arbitrary number of sky positions. 
 The (objects) coordinates are passed to the API as a string, but they must be written as a valid `python` expression,
@@ -29,9 +26,10 @@ When specifying which catalogs to search, use the `"filter"` key to define the c
 `"projection"` key to specify which catalog fields to retain in the query results (see examples below). 
 By default, only the object catalog id and the coordinates are returned.
 
-You can see all the catalog field names on the cone search web page. 
+You can see all the catalog field names in the documentation. *todo* 
 
-The optional `"kwargs"` key may be used to store auxiliary data with the query (for example, for personal bookkeeping). 
+The optional `"kwargs"` key may be used to change the default behavior, and/or to store auxiliary data with the query 
+(for example, for personal bookkeeping). 
 
 *Sample cone search 1:*
 Get all objects from the `PanSTARRS` catalog within `10` arcseconds from `('01h05m00.9631s', '-34d06m33.3505s')`
@@ -46,7 +44,7 @@ q = {"query_type": "cone_search",
          "cone_search_unit": "arcsec"
      },
      "catalogs": {
-         "PanSTARRS": {"filter": {"nDetections": "1,100"}, "projection": {}}
+         "PanSTARRS": {"filter": {"nDetections": {"$gt": 1, "$lt": 100}}, "projection": {}}
      },
      "kwargs": {
          "alert-id": "ZTF18omgalrt"}
@@ -86,35 +84,12 @@ q = {"query_type": "cone_search",
 
 The general search interface allows the user to execute queries of arbitrary complexity.
 The following `pymongo` operations are supported: 
-`aggregate`, `map_reduce`, `distinct`, `count`, `find_one`, `find`.
+`aggregate`, `map_reduce`, `distinct`, `count_documents`, `find_one`, `find`.
 
-##### Spatial (positional) queries
 
-It is possible to use the general search interface to execute "spatial" queries, including (and not limited to)
-cone, box, and polygon searches.
+<span class="badge badge-success">Note</span> In the web interface, you should only type in the "destringed" 
+`q['query']` value. (You can think of it as of the result of `eval(q['query'])`) 
 
-The `coordinates.radec_geojson` field defined for every object in the database (for all catalogs) has an
-associated spherical 2D index, which allows for extremely fast positional queries. `MongoDB` supports many
-query operators, see [here](https://docs.mongodb.com/manual/reference/operator/query-geospatial/) 
-for more details. The caveat to keep in mind is the following: `MongoDB` uses `GeoJSON` objects to represent `2D`
-positions on the sphere. Both the longitude (RA) and latitude (Dec) must be expressed in decimal degrees, and the
-valid longitude values are between `-180` and `180`, both inclusive, so you must subtract 180.0 degrees from your RA value.
-
----
-
-*Find all ZTF alerts inside a box on the sky and return objectId, candidate.fid, coordinates.radec_str for each object found*
-
-You must specify the bottom left and upper right coordinates of the box. 
-
-```python
-q = {"query_type": "general_search", 
-     "query": "db['ZTF_alerts'].find({'coordinates.radec_geojson': {'$geoWithin': { '$box': [[70.0 - 180.0, -20.0], [110.0 - 180.0, 50.0]] }}}, {'objectId': 1, 'candidate.fid': 1, 'coordinates.radec_str': 1})"  
-     }
-```
-
----
-
-##### Other queries
 
 *Find all ZTF alerts with a given objectId*
 
@@ -122,6 +97,11 @@ q = {"query_type": "general_search",
 q = {"query_type": "general_search", 
      "query": "db['ZTF_alerts'].find({'objectId': {'$eq': 'ZTF18aabcyiy'}})" 
      }
+```
+
+<span class="badge badge-success">Note</span> In the web interface, you should only type:
+```python
+db['ZTF_alerts'].find({'objectId': {'$eq': 'ZTF18aabcyiy'}})
 ```
 
 ---
@@ -133,13 +113,6 @@ q = {"query_type": "general_search",
      "query": "db['ZTF_alerts'].find({'objectId': {'$in': ['ZTF18aabcyiy', 'ZTF18aabexxf']}})" 
      }
 ```
-
-Note that if you're using the web interface, you should type in the following part into the textarea
-(i.e. "destring" `q['query']` value):
-
-```python
-db['ZTF_alerts'].find({'objectId': {'$in': ['ZTF18aabcyiy', 'ZTF18aabexxf']}})
-``` 
 
 ---
 
@@ -259,6 +232,31 @@ db['PanSTARRS'].find({'gMeanPSFMag': {'$ne': -999}, 'rMeanPSFMag': {'$ne': -999}
 ```python
 db['Gaia_DR2'].find({'parallax': {'$gt': 0}, '$expr': {'$gt': [{'$add': [{'$subtract': ['$phot_g_mean_mag', {'$multiply': [5, {'$log10': {'$divide': [1000.0, '$parallax']}}]}]}, 5]}, {'$add': [{'$multiply': [2.5, '$bp_rp']}, 7.5]}]}},
                     {'_id': 1, 'phot_g_mean_mag': 1, 'bp_rp': 1, 'coordinates': 1})
+```
+
+
+##### Spatial (positional) queries
+
+It is possible to use the general search interface to execute "spatial" queries, including (and not limited to)
+cone, box, and polygon searches.
+
+The `coordinates.radec_geojson` field defined for every object in the database (for all catalogs) has an
+associated spherical 2D index, which allows for extremely fast positional queries. `MongoDB` supports many
+query operators, see [here](https://docs.mongodb.com/manual/reference/operator/query-geospatial/) 
+for more details. The caveat to keep in mind is the following: `MongoDB` uses `GeoJSON` objects to represent `2D`
+positions on the sphere. Both the longitude (RA) and latitude (Dec) must be expressed in decimal degrees, and the
+valid longitude values are between `-180` and `180`, both inclusive, so you must subtract 180.0 degrees from your RA value.
+
+---
+
+*Find all ZTF alerts inside a box on the sky and return objectId, candidate.fid, coordinates.radec_str for each object found*
+
+You must specify the bottom left and upper right coordinates of the box. 
+
+```python
+q = {"query_type": "general_search", 
+     "query": "db['ZTF_alerts'].find({'coordinates.radec_geojson': {'$geoWithin': { '$box': [[70.0 - 180.0, 48.0], [70.0005 - 180.0, 48.0005]] }}}, {'objectId': 1, 'candidate.fid': 1, 'coordinates.radec_str': 1})"  
+     }
 ```
 
 ---
