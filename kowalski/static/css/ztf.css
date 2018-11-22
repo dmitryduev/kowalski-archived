@@ -21,9 +21,6 @@ pre {
 code {
     background-color: #e7e8ea;
 }
-pre > code {
-    background-color: #2f3640 !important;
-}
 
 .navbar {
     padding: 0.2rem 2rem !important;
