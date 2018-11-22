@@ -100,6 +100,7 @@ q = {"query_type": "general_search",
 ```
 
 <span class="badge badge-success">Note</span> In the web interface, you should only type:
+
 ```python
 db['ZTF_alerts'].find({'objectId': {'$eq': 'ZTF18aabcyiy'}})
 ```
