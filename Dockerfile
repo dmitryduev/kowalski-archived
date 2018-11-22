@@ -9,8 +9,8 @@ RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get 
 RUN mkdir -p /kafka
 #fixme: vvv
 #switch back to 1.1.0 or whatever?
-ADD http://apache.claz.org/kafka/2.1.0/kafka_2.11-2.1.0.tgz /kafka
-RUN tar -xzf /kafka/kafka_2.11-2.1.0.tgz
+ADD http://apache.claz.org/kafka/1.1.1/kafka_2.11-1.1.1.tgz /kafka
+RUN tar -xzf /kafka/kafka_2.11-1.1.1.tgz
 #fixme: ^^^
 
 # place to keep our app and the data:
