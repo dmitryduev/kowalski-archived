@@ -626,7 +626,7 @@ def listener(topic, bootstrap_servers='', offset_reset='earliest',
     datestr = topic.split('_')[1]
 
     # Start consumer and print alert stream
-    stream_reader = AlertConsumer(topic, schema_files, config, **conf)
+    stream_reader = AlertConsumer(topic, schema_files, **conf)
 
     while True:
         try:
@@ -691,10 +691,10 @@ def main(_obs_date=None):
                     path_alerts = config['path']['path_alerts']
                     # topics_on_watch[t] = threading.Thread(target=listener,
                     #                                       args=(t, bootstrap_servers,
-                    #                                             offset_reset, group, path_alerts, config))
+                    #                                             offset_reset, group, path_alerts))
                     topics_on_watch[t] = multiprocessing.Process(target=listener,
                                                                  args=(t, bootstrap_servers,
-                                                                       offset_reset, group, path_alerts, config))
+                                                                       offset_reset, group, path_alerts))
                     topics_on_watch[t].daemon = True
                     topics_on_watch[t].start()
 
