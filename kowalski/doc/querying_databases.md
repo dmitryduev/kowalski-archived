@@ -33,7 +33,7 @@ The optional `"kwargs"` key may be used to change the default behavior, and/or t
 
 *Sample cone search 1:*
 Get all objects from the `PanSTARRS` catalog within `10` arcseconds from `('01h05m00.9631s', '-34d06m33.3505s')`
-that were detected `N` times, where `1 <= N <= 100`, and return only the default fields. For the bookkeeping purposes,
+that were detected `N` times, where `1 < N < 100`, and return only the default fields. For the bookkeeping purposes,
 specify the following key-value pair under `kwargs`: `"alert-id": "ZTF18omgalrt"`.
 
 ```python
@@ -88,7 +88,7 @@ The following `pymongo` operations are supported:
 
 
 <span class="badge badge-success">Note</span> In the web interface, you should only type in the "destringed" 
-`q['query']` value. (You can think of it as of the result of `eval(q['query'])`) 
+`q['query']` value. You can think of it as of the result of `eval(q['query'])`. 
 
 
 *Find all ZTF alerts with a given objectId*

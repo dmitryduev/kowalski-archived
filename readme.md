@@ -1,4 +1,4 @@
-# Kowalski 2.0
+# Kowalski 1.0
 
 The legendary penguin got `docker`ized! Under the hood, it switched from `flask` to `aiohttp` and ditched 
 the task queue to improve performance and robustness.
@@ -65,14 +65,14 @@ If you want to use `docker run` instead:
 
 Create a persistent Docker volume for MongoDB and to store data:
 ```bash
-docker volume create kowalski-mongo-volume
-docker volume create kowalski-volume
+docker volume create kowalski_mongodb
+docker volume create kowalski_data
 ```
 
 Launch the MongoDB container. Feel free to change u/p for the admin, 
-but make sure to change `config.json` correspondingly.
+but make sure to change `secrets.json` and `docker-compose.yml` correspondingly.
 ```bash
-docker run -d --restart always --name kowalski-mongo -p 27023:27017 -v kowalski-mongo-volume:/data/db \
+docker run -d --restart always --name kowalski-mongo -p 27023:27017 -v kowalski_mongodb:/data/db \
        -e MONGO_INITDB_ROOT_USERNAME=mongoadmin -e MONGO_INITDB_ROOT_PASSWORD=mongoadminsecret \
        mongo:latest
 ```
@@ -80,9 +80,9 @@ docker run -d --restart always --name kowalski-mongo -p 27023:27017 -v kowalski-
 Build and launch the app container:
 ```bash
 docker build --rm -t kowalski:latest -f Dockerfile .
-docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski-volume:/data --link kowalski-mongo:mongo kowalski:latest
+docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski_data:/data --link kowalski-mongo:mongo kowalski:latest
 # test mode:
-docker run -it --rm --name kowalski -p 8000:4000 -v kowalski-volume:/data --link kowalski-mongo:mongo kowalski:latest
+docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data --link kowalski-mongo:mongo kowalski:latest
 
 ```
 

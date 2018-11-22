@@ -12,7 +12,8 @@
     "path_logs": "/app/logs/",
     "path_data": "/data/",
     "path_alerts": "/data/alerts/",
-    "path_queries": "/data/queries/"
+    "path_queries": "/data/queries/",
+    "path_tmp": "/_tmp/"
   },
 
   "database": {
@@ -32,7 +33,7 @@
   },
 
   "kafka-topics": {
-      "cmd": "/kafka_2.11-1.1.0/bin/kafka-topics.sh"
+      "cmd": "/kafka_2.12-2.1.0/bin/kafka-topics.sh"
     },
 
   "misc": {

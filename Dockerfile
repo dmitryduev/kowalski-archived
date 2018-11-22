@@ -8,13 +8,12 @@ RUN apt-get update && apt-get -y install apt-file && apt-file update && apt-get 
 # Kafka:
 RUN mkdir -p /kafka
 #fixme: vvv
-#ADD http://apache.claz.org/kafka/1.1.0/kafka_2.11-1.1.0.tgz /kafka
-#RUN tar -xzf /kafka/kafka_2.11-1.1.0.tgz
-#RUN pip install confluent-kafka==0.11.4
+ADD http://apache.claz.org/kafka/2.1.0/kafka_2.12-2.1.0.tgz /kafka
+RUN tar -xzf /kafka/kafka_2.12-2.1.0.tgz
 #fixme: ^^^
 
 # place to keep our app and the data:
-RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data
+RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data && mkdir -p /_tmp
 
 ## Add crontab file in the cron directory
 #ADD code/crontab /etc/cron.d/fetch-cron
@@ -39,7 +38,7 @@ ADD kowalski/ /app/
 WORKDIR /app
 
 #fixme: vvv
-#RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
+RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
 #fixme: ^^^
 
 # generate keys
