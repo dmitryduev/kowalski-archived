@@ -260,6 +260,6 @@ q = {"query_type": "general_search",
      }
 ```
 
----
+##### Misc
 
 <a href="https://docs.mongodb.com/manual/reference/sql-aggregation-comparison/" target="_blank">SQL to MongoDB Aggregation Mapping Chart <i class="fa fa-external-link" aria-hidden="true"></i></a>
