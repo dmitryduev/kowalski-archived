@@ -47,7 +47,7 @@ with Kowalski(username=username, password=password, verbose=False) as k:
 Set `verbose=True` if you want more feedback from Kowalski.
 
 Now let us construct a simple query and run it. _Please refer to the documentation for more info 
-on available query types and how to (efficiently) construct them_. 
+on the available query types and how to (efficiently) construct them_. 
 
 ```python
 qu = {"query_type": "general_search", "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})"}
