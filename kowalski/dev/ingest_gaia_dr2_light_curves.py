@@ -1,20 +1,15 @@
 import csv
 import os
 import glob
-import time
 # from astropy.coordinates import Angle
 import numpy as np
 import pymongo
-import inspect
 import json
 import argparse
-# import timeout_decorator
-import signal
 import traceback
 import datetime
 import pytz
 from numba import jit
-# import fastavro as avro
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 import time
