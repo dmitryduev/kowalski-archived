@@ -72,6 +72,12 @@ docker run -d --restart always --name kowalski-mongo -p 27023:27017 -v kowalski_
        mongo:latest
 ```
 
+To connect to the db:
+```bash
+docker exec -it kowalski-mongo /bin/bash
+mongo -u mongoadmin -p mongoadminsecret --authenticationDatabase admin
+```
+
 Build and launch the app container:
 ```bash
 docker build --rm -t kowalski:latest -f Dockerfile .
