@@ -37,6 +37,7 @@ k = Kowalski(username=username, password=password, verbose=False)
 ```
 
 <span class="badge badge-secondary">Note</span> `Kowalski` object is a context manager, so can be used with a `with` statement:
+
 ```python
 with Kowalski(username=username, password=password, verbose=False) as k:
     # do stuff
