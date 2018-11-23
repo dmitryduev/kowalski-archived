@@ -144,9 +144,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='')
 
-    parser.add_argument('config_file', metavar='config_file',
-                        action='store', help='path to config file.', type=str)
-
     args = parser.parse_args()
 
     # connect to MongoDB:
