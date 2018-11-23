@@ -93,7 +93,7 @@ result = k.get_query(query_id=qid, part='result')
 You can also retrieve the original query:
 
 ```python
-result = k.get_query(query_id=qid, part='result')
+result = k.get_query(query_id=qid, part='task')
 ```
 
 Or delete the query from Kowalski:
