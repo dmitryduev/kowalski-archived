@@ -189,7 +189,7 @@ if __name__ == '__main__':
         print(field_names)
         print(field_data_types)
         # print({k: v for k, v in zip(field_names, field_data_types)})
-        input()
+        # input()
 
         for ci, cf in enumerate(hdu[1].data):
             print(f'processing entry #{ci+1} of {total}')
