@@ -234,7 +234,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                 try:
                     doc = {column_name[0]: val for column_name, val in zip(column_names, row)}
 
-                    doc['_id'] = doc['ID']
+                    doc['_id'] = doc['objID']
 
                     # convert
                     for col_name, col_type in column_names:
