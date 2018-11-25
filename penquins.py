@@ -185,6 +185,18 @@ class Kowalski(object):
             return False
 
 
+class TestKowalski(object):
+
+    def test_authenticate(self, username, password):
+        pass
+
+    def test_query(self, username, password, q=None):
+        # query: enqueue_only, save=True, save=False
+        # fetch enqueued/saved query
+        # delete saved query
+        pass
+
+
 if __name__ == '__main__':
 
     pass
