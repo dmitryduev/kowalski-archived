@@ -8,6 +8,7 @@ import argparse
 import traceback
 import datetime
 import pytz
+import time
 from numba import jit
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
@@ -269,7 +270,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     _radec_geojson = [_ra - 180.0, _dec]
                     doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                            'coordinates': _radec_geojson}
-                    # radians:
+                    # radians and degrees:
                     doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
                     doc['coordinates']['radec_deg'] = [_ra, _dec]
 
@@ -280,7 +281,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     # time.sleep(1)
 
                     # insert batch, then flush
-                    if len(documents) == _batch_size:
+                    if len(documents) % batch_size == 0:
                         print(f'inserting batch #{batch_num}')
                         if not _dry_run:
                             insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
@@ -298,10 +299,21 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
         print(e)
 
     # stuff left from the last file?
-    if len(documents) > 0:
-        print(f'inserting batch #{batch_num}')
-        if not _dry_run:
-            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+    while len(documents) > 0:
+        try:
+            # In case mongo crashed and disconnected, docs will accumulate in documents
+            # keep on trying to insert them until successful
+            print(f'inserting batch #{batch_num}')
+            if not _dry_run:
+                insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                # flush:
+                documents = []
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            print('Failed, waiting 5 seconds to retry')
+            time.sleep(5)
 
     # disconnect from db:
     try:
@@ -345,7 +357,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(20)
+    pool = ProcessPoolExecutor(10)
 
     # for ff in files[::-1]:
     for ff in sorted(files):

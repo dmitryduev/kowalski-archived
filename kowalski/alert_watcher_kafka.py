@@ -307,16 +307,6 @@ class AlertConsumer(object):
                                                             ('candidate.programid', pymongo.ASCENDING)],
                                                            background=True)
 
-    # def on_assign(self, consumer, partitions):
-    #     # force-reset offsets when subscribing to a topic:
-    #     self.num_partitions = 0
-    #     for part in partitions:
-    #         # -2 stands for beginning and -1 for end
-    #         part.offset = -2
-    #         # keep number of partitions. when reaching  end of last partition, kill thread and start from beginning
-    #         self.num_partitions += 1
-    #         print(consumer.get_watermark_offsets(part))
-
     def connect_to_db(self):
         """
             Connect to Robo-AO's MongoDB-powered database
@@ -404,7 +394,7 @@ class AlertConsumer(object):
 
         doc = dict(alert)
 
-        # candid+objectId should be a unique combination:
+        # candid+objectId is a unique combination:
         doc['_id'] = f"{alert['candid']}_{alert['objectId']}"
 
         # GeoJSON for 2D indexing
@@ -423,8 +413,9 @@ class AlertConsumer(object):
         _radec_geojson = [_ra - 180.0, _dec]
         doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                'coordinates': _radec_geojson}
-        # radians:
-        doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+        # radians and degrees:
+        doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+        doc['coordinates']['radec_deg'] = [_ra, _dec]
 
         return doc
 
@@ -471,11 +462,13 @@ class AlertConsumer(object):
 
                     # ingest decoded avro packet into db
                     # math: 2M alerts in 8 h results in ~70 inserts/s.
-                    # with document-level locking with wiredtiger should be easy to handle
-                    # tested in production!
+                    # with document-level locking with wiredtiger is easy to handle: tested in production!
                     # ...
                     alert = self.alert_mongify(record)
                     # TODO: cross-match with all available catalogs?
+
+                    # todo: notify alert filters
+
                     print(*time_stamps(), 'ingesting {:s} into db'.format(alert['_id']))
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
 
@@ -493,10 +486,14 @@ class AlertConsumer(object):
                     # note: msg.value()'s size overhead = size of empty <type 'bytes'> object
                     # remove saved file
                     os.remove(path_avro)
+                    print(*time_stamps(), 'removed {:s}: bad file size'.format(alert['_id']))
+
                     # re-ingest into db
                     alert = self.alert_mongify(record)
                     # TODO: cross-match with all available catalogs!
-                    print(*time_stamps(), 'removed {:s}: bad file size'.format(alert['_id']))
+
+                    # todo: notify alert filters
+
                     print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['_id']))
                     self.replace_db_entry(_collection=self.collection_alerts,
                                           _filter={'_id': alert['_id']}, _db_entry=alert)
@@ -625,8 +622,11 @@ def listener(topic, bootstrap_servers='', offset_reset='earliest',
     # date string:
     datestr = topic.split('_')[1]
 
-    # Start consumer and print alert stream
+    # Start alert stream consumer
     stream_reader = AlertConsumer(topic, schema_files, **conf)
+
+    # todo: Subscribe alert filters to stream_readers
+    # todo: they will be notified when an alert arrived/got x-matched
 
     while True:
         try:

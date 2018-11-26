@@ -6,6 +6,7 @@ import argparse
 import traceback
 import datetime
 import pytz
+import time
 from numba import jit
 import fastavro as avro
 
@@ -241,7 +242,7 @@ if __name__ == '__main__':
                 # input()
 
                 # insert batch, then flush
-                if len(documents) == batch_size:
+                if len(documents) % batch_size == 0:
                     print(f'inserting batch #{batch_num}')
                     insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
                     # flush:
@@ -253,10 +254,21 @@ if __name__ == '__main__':
                 print(e)
                 continue
 
-        # stuff left from the last file?
-        if len(documents) > 0:
-            print(f'inserting batch #{batch_num}')
-            insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+            # stuff left from the last file?
+            while len(documents) > 0:
+                try:
+                    # In case mongo crashed and disconnected, docs will accumulate in documents
+                    # keep on trying to insert them until successful
+                    print(f'inserting batch #{batch_num}')
+                    insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+                    # flush:
+                    documents = []
+
+                except Exception as e:
+                    traceback.print_exc()
+                    print(e)
+                    print('Failed, waiting 5 seconds to retry')
+                    time.sleep(5)
 
         # # create 2d index:
         # print('Creating 2d index')
