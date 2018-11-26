@@ -40,6 +40,8 @@ services:
     image: mongo
     expose:
       - "27017"
+    ports:
+      - "27023:27017"
     environment:
       - MONGO_INITDB_ROOT_USERNAME=mongoadmin
       - MONGO_INITDB_ROOT_PASSWORD=mongoadminsecret
