@@ -22,6 +22,7 @@ services:
     build: .
     volumes:
       - data:/data
+      - /data/ztf/tmp/:/_tmp
     expose:
       - "4000"
     links:
