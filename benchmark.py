@@ -1,3 +1,4 @@
+import argparse
 from penquins import Kowalski
 import numpy as np
 import time
@@ -8,7 +9,7 @@ def query(username: str, password: str, num_queries: int=10):
 
     # with Kowalski(protocol='http', host='127.0.0.1', port=8000,
     #               username=username, password=password) as k:
-    with Kowalski(protocol='http', host='kowalski.caltech.edu', port=8000,
+    with Kowalski(protocol='https', host='kowalski.caltech.edu', port=443,
                   username=username, password=password) as k:
         qs = []
         for nq in range(num_queries):
@@ -48,4 +49,11 @@ def benchmark_throughput(username, password, num_clients=1, num_queries=10):
 
 
 if __name__ == '__main__':
-    benchmark_throughput('USERNAME', 'PASSWORD')
+    parser = argparse.ArgumentParser(description='Benchmark Kowalski')
+    parser.add_argument('-u', help='username', default='USERNAME')
+    parser.add_argument('-p', help='password', default='PASSWORD')
+
+    args = parser.parse_args()
+    print(args)
+
+    benchmark_throughput(args.u, args.p)

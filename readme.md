@@ -4,6 +4,19 @@ The legendary `ZTF` penguin got `docker`ized!
 Under the hood, it switched from `flask` to `aiohttp` and ditched 
 the redis/rq-based task queue to improve performance and robustness.
 
+## Python client `penquins`
+
+Install the client library [penquins.py](https://github.com/dmitryduev/kowalski/blob/master/penquins.py), 
+with `pip` into your environment:
+
+```bash
+pip install git+https://github.com/dmitryduev/kowalski.git
+```
+
+`penuquins` is very lightweight and only depends on `pymongo` and `requests`.
+
+---
+
 ## Production service  
 
 ### Set-up instructions
