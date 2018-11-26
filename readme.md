@@ -67,23 +67,23 @@ docker volume create kowalski_data
 Launch the MongoDB container. Feel free to change u/p for the admin, 
 but make sure to change `secrets.json` and `docker-compose.yml` correspondingly.
 ```bash
-docker run -d --restart always --name kowalski-mongo -p 27023:27017 -v kowalski_mongodb:/data/db \
+docker run -d --restart always --name kowalski_mongo_1 -p 27023:27017 -v kowalski_mongodb:/data/db \
        -e MONGO_INITDB_ROOT_USERNAME=mongoadmin -e MONGO_INITDB_ROOT_PASSWORD=mongoadminsecret \
        mongo:latest
 ```
 
 To connect to the db:
 ```bash
-docker exec -it kowalski-mongo /bin/bash
+docker exec -it kowalski_mongo_1 /bin/bash
 mongo -u mongoadmin -p mongoadminsecret --authenticationDatabase admin
 ```
 
 Build and launch the app container:
 ```bash
 docker build --rm -t kowalski:latest -f Dockerfile .
-docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski-mongo:mongo kowalski:latest
+docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski_mongo_1:mongo kowalski:latest
 # test mode:
-docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski-mongo:mongo kowalski:latest
+docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski_mongo_1:mongo kowalski:latest
 
 ```
 
