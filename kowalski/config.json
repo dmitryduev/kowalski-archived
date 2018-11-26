@@ -11,7 +11,7 @@
     "path_docs": "/app/doc/",
     "path_logs": "/app/logs/",
     "path_data": "/data/",
-    "path_alerts": "/data/alerts/",
+    "path_alerts": "/_tmp/ztf_alerts/",
     "path_queries": "/data/queries/",
     "path_tmp": "/_tmp/"
   },

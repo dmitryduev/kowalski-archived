@@ -1,4 +1,6 @@
 from astropy.io import fits
+import os
+import glob
 import numpy as np
 import pymongo
 import json
@@ -7,6 +9,10 @@ import traceback
 import datetime
 import pytz
 from numba import jit
+# import fastavro as avro
+# from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
+import time
 
 
 ''' load config and secrets '''
@@ -139,6 +145,131 @@ def deg2dms(x):
     return dms
 
 
+def process_file(_fits_file, _collection, _batch_size=2048, verbose=False):
+
+    # connect to MongoDB:
+    if verbose:
+        print('Connecting to DB')
+    _, _db = connect_to_db()
+    if verbose:
+        print('Successfully connected')
+
+    print(f'processing {_fits_file}')
+    documents = []
+    batch_num = 1
+
+    with fits.open(_fits_file) as hdu:
+        if verbose:
+            print(hdu.info())
+            print(repr(hdu[0].header))
+            print('\n\n')
+            print(repr(hdu[1].header))
+
+        field_names = hdu[1].columns.names
+        field_data_types = []
+
+        for fi, ff in enumerate(field_names):
+            ftype = hdu[1].header[f'TFORM{fi+1}'].strip()
+            # print(ftype)
+            if ftype in ('D', 'E'):
+                field_data_types.append(float)
+            elif ftype in ('I', 'J', 'K'):
+                field_data_types.append(int)
+            elif ftype == 'L':
+                field_data_types.append(bool)
+            elif 'A' in ftype:
+                field_data_types.append(str)
+
+        total = len(hdu[1].data)
+        # print(field_names)
+        # print(field_data_types)
+        # print({k: v for k, v in zip(field_names, field_data_types)})
+        # input()
+
+        for ci, cf in enumerate(hdu[1].data):
+            if verbose:
+                print(f'processing entry #{ci+1} of {total}')
+
+            try:
+                # print(cf)
+                doc = {k: v for k, v in zip(field_names, cf)}
+                # print(doc)
+                # input()
+
+                # tic = time.time()
+                for ii, kk in enumerate(field_names):
+                    if doc[kk] == 'N/A':
+                        doc[kk] = None
+                    else:
+                        if field_data_types[ii] in (float, int, bool):
+                            doc[kk] = field_data_types[ii](doc[kk])
+                        else:
+                            doc[kk] = str(doc[kk]).strip()
+                # print(time.time() - tic)
+
+                # there are duplicates! so don't do that
+                # doc['_id'] = doc['sourceID']
+                # print(doc)
+                # input()
+
+                # GeoJSON for 2D indexing
+                doc['coordinates'] = {}
+                # doc['coordinates']['epoch'] = doc['jd']
+                _ra = doc['ra']
+                _dec = doc['dec']
+                _radec = [_ra, _dec]
+                # string format: H:M:S, D:M:S
+                # tic = time.time()
+                _radec_str = [deg2hms(_ra), deg2dms(_dec)]
+                # print(time.time() - tic)
+                # print(_radec_str)
+                doc['coordinates']['radec_str'] = _radec_str
+                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                _radec_geojson = [_ra - 180.0, _dec]
+                doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                       'coordinates': _radec_geojson}
+                # radians and degrees:
+                doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                doc['coordinates']['radec_deg'] = [_ra, _dec]
+
+                # print(doc['coordinates'])
+
+                documents.append(doc)
+
+                # insert batch, then flush
+                if len(documents) == _batch_size:
+                    print(f'inserting batch #{batch_num} from {_fits_file}')
+                    insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                    # flush:
+                    documents = []
+                    batch_num += 1
+
+                # time.sleep(1)
+                # print(doc)
+                # input('paused')
+
+            except Exception as e:
+                traceback.print_exc()
+                print(e)
+                continue
+
+        # stuff left from the last file?
+        while len(documents) > 0:
+            try:
+                # In case mongo crashed and disconnected, docs will accumulate in documents
+                # keep on trying to insert them until successful
+                print(f'inserting batch #{batch_num}')
+                insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                # flush:
+                documents = []
+
+            except Exception as e:
+                traceback.print_exc()
+                print(e)
+                print('Failed, waiting 5 seconds to retry')
+                time.sleep(5)
+
+
 if __name__ == '__main__':
     ''' Create command line argument parser '''
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -151,110 +282,30 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    _collection = 'FIRST_20141217'
+    collection = 'IPHAS_DR2'
+
+    # create 2d index:
+    print('Creating 2d index')
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
 
     # number of records to insert
     batch_size = 2048
-    batch_num = 1
-    documents = []
 
-    cat_fits = '/_tmp/first/first_14dec17.fits'
+    _location = '/_tmp/iphas/'
 
-    with fits.open(cat_fits) as hdu:
-        print(hdu.info())
-        print(repr(hdu[0].header))
-        print('\n\n')
-        print(repr(hdu[1].header))
+    fits_files = glob.glob(os.path.join(_location, 'iphas*fits'))
 
-        field_names_orig = hdu[1].columns.names
-        field_names = hdu[1].columns.names
-        # field_names = [fn.replace(' ', '_') for fn in field_names]
-        # field_names[0] = 'RA'
-        # field_names[1] = 'DEC'
-        field_data_types = []
+    print(f'# files to process: {len(fits_files)}')
 
-        for fi, ff in enumerate(field_names):
-            ftype = hdu[1].header[f'TFORM{fi+1}'].strip()
-            # print(ftype)
-            if 'E' in ftype or 'D' in ftype:
-                field_data_types.append(float)
-            if 'I' in ftype or 'J' in ftype or 'K' in ftype:
-                field_data_types.append(int)
-            elif 'A' in ftype:
-                field_data_types.append(str)
+    # init threaded operations
+    # pool = ThreadPoolExecutor(4)
+    pool = ProcessPoolExecutor(10)
 
-        total = len(hdu[1].data)
-        print(field_names)
-        print(field_data_types)
-        # print({k: v for k, v in zip(field_names, field_data_types)})
-        # input()
+    for fits_file in fits_files[::-1]:
+        pool.submit(process_file, _fits_file=fits_file, _collection=collection, _batch_size=batch_size, verbose=True)
+        # process_file(_fits_file=fits_file, _collection=collection, _batch_size=batch_size, verbose=True)
 
-        for ci, cf in enumerate(hdu[1].data):
-            print(f'processing entry #{ci+1} of {total}')
+    # wait for everything to finish
+    pool.shutdown(wait=True)
 
-            try:
-                # print(cf)
-                doc = {k: v for k, v in zip(field_names, cf)}
-                # print(cf)
-
-                for ii, kk in enumerate(field_names):
-                    if doc[kk] == 'N/A':
-                        doc[kk] = None
-                    else:
-                        if field_data_types[ii] in (float, int):
-                            doc[kk] = field_data_types[ii](doc[kk])
-                        else:
-                            doc[kk] = str(doc[kk]).strip()
-
-                # doc['_id'] = doc['CLUID']
-
-                # GeoJSON for 2D indexing
-                doc['coordinates'] = {}
-                doc['coordinates']['epoch'] = doc['MJD']
-                _ra = doc['RA']
-                _dec = doc['DEC']
-                _radec = [_ra, _dec]
-                # string format: H:M:S, D:M:S
-                # tic = time.time()
-                _radec_str = [deg2hms(_ra), deg2dms(_dec)]
-                # print(time.time() - tic)
-                # print(_radec_str)
-                doc['coordinates']['radec_str'] = _radec_str
-                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-                _radec_geojson = [_ra - 180.0, _dec]
-                doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                       'coordinates': _radec_geojson}
-                # radians:
-                doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-
-                # print(doc['coordinates'])
-
-                documents.append(doc)
-
-                # time.sleep(1)
-                # print(doc)
-                # input()
-
-                # insert batch, then flush
-                if len(documents) == batch_size:
-                    print(f'inserting batch #{batch_num}')
-                    insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-                    # flush:
-                    documents = []
-                    batch_num += 1
-
-            except Exception as e:
-                traceback.print_exc()
-                print(e)
-                continue
-
-        # stuff left from the last file?
-        if len(documents) > 0:
-            print(f'inserting batch #{batch_num}')
-            insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-
-        # create 2d index:
-        print('Creating 2d index')
-        db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
-
-        print('All done')
+    print('All done')

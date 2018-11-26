@@ -41,6 +41,7 @@ services:
     image: mongo
     expose:
       - "27017"
+    # fixme:
     ports:
       - "27023:27017"
     environment:

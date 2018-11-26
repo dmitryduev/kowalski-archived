@@ -1,6 +1,6 @@
-import h5py
 import os
 import glob
+import time
 import numpy as np
 import pymongo
 import json
@@ -9,6 +9,7 @@ import traceback
 import datetime
 import pytz
 from numba import jit
+import fastavro as avro
 # from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 
@@ -143,7 +144,7 @@ def deg2dms(x):
     return dms
 
 
-def process_file(_file, _collection, _batch_size=2048, verbose=False):
+def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=False):
 
     # connect to MongoDB:
     if verbose:
@@ -152,87 +153,92 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False):
     if verbose:
         print('Successfully connected')
 
-    print(f'processing {_file}')
+    print(f'processing {_date}')
     documents = []
     batch_num = 1
 
-    with h5py.File(_file, 'r') as f:
-        # print(list(f.keys()))
-        dset = f['class_table']
-        # for table in dset:
-        #     print(table)
-        #     print(dset[table].shape, dset[table].dtype)
-        #     print(dset[table][0:5])
-        #     input()
+    # location/YYYMMDD/ALERTS/candid.avro:
+    avros = glob.glob(os.path.join(_path_alerts, f'{_date}/*/*.avro'))
 
-        total_entries = dset['axis1'].shape[0]
+    print(f'{_date}:: # files to process: {len(avros)}')
 
-        for ei, entry in enumerate(dset['block0_values']):
-            if verbose:
-                print(f'processing entry #{ei+1} of {total_entries}')
+    for ci, cf in enumerate(avros):
+        print(f'{_date}:: processing file #{ci+1} of {len(avros)}: {os.path.basename(cf)}')
 
+        try:
+            with open(cf, 'rb') as f:
+                reader = avro.reader(f)
+                for alert in reader:
+                    try:
+                        doc = dict(alert)
+
+                        # GeoJSON for 2D indexing
+                        doc['coordinates'] = {}
+                        doc['coordinates']['epoch'] = doc['candidate']['jd']
+                        _ra = doc['candidate']['ra']
+                        _dec = doc['candidate']['dec']
+                        _radec = [_ra, _dec]
+                        # string format: H:M:S, D:M:S
+                        # tic = time.time()
+                        _radec_str = [deg2hms(_ra), deg2dms(_dec)]
+                        # print(time.time() - tic)
+                        # print(_radec_str)
+                        doc['coordinates']['radec_str'] = _radec_str
+                        # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                        _radec_geojson = [_ra - 180.0, _dec]
+                        doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                               'coordinates': _radec_geojson}
+                        # radians and degrees:
+                        doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                        doc['coordinates']['radec_deg'] = [_ra, _dec]
+
+                        # print(doc['coordinates'])
+
+                        documents.append(doc)
+
+                        # time.sleep(1)
+
+                        # insert batch, then flush
+                        if len(documents) % batch_size == 0:
+                            print(f'inserting batch #{batch_num}')
+                            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                            # flush:
+                            documents = []
+                            batch_num += 1
+
+                    except Exception as e:
+                        traceback.print_exc()
+                        print(e)
+                        continue
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            continue
+
+        # stuff left from the last file?
+        while len(documents) > 0:
             try:
-                ra, dec, rf_score = entry
-                objid, flag = dset['block1_values'][ei][0], dset['block2_values'][ei][0]
-                # print(ra, dec, rf_score, objid, flag)
-                # input()
-
-                doc = dict()
-                doc['objid'] = int(objid)
-                doc['ra'] = float(ra)
-                doc['dec'] = float(dec)
-                doc['rf_score'] = float(rf_score)
-                doc['flag'] = int(flag)
-
-                # GeoJSON for 2D indexing
-                doc['coordinates'] = {}
-                # doc['coordinates']['epoch'] = doc['jd']
-                _ra = doc['ra']
-                _dec = doc['dec']
-                _radec = [_ra, _dec]
-                # string format: H:M:S, D:M:S
-                # tic = time.time()
-                _radec_str = [deg2hms(_ra), deg2dms(_dec)]
-                # print(time.time() - tic)
-                # print(_radec_str)
-                doc['coordinates']['radec_str'] = _radec_str
-                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-                _radec_geojson = [_ra - 180.0, _dec]
-                doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                       'coordinates': _radec_geojson}
-                # radians:
-                doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-
-                # print(doc['coordinates'])
-
-                # insert into collection. don't do that! too much overhead if one-by-one
-                # db[_collection].insert_one(doc)
-                # insert_db_entry(db, _collection=_collection, _db_entry=doc)
-                documents.append(doc)
-
-                # insert batch, then flush
-                if len(documents) == _batch_size:
-                    print(f'inserting batch #{batch_num} from {_file}')
-                    insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
-                    # flush:
-                    documents = []
-                    batch_num += 1
+                # In case mongo crashed and disconnected, docs will accumulate in documents
+                # keep on trying to insert them until successful
+                print(f'inserting batch #{batch_num}')
+                insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                # flush:
+                documents = []
 
             except Exception as e:
                 traceback.print_exc()
                 print(e)
-                continue
-
-        # stuff left from the last file?
-        if len(documents) > 0:
-            print(f'inserting batch #{batch_num} from {_fits_file}')
-            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                print('Failed, waiting 5 seconds to retry')
+                time.sleep(5)
 
 
 if __name__ == '__main__':
     ''' Create command line argument parser '''
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description='')
+                                     description='Ingest avro-packets with ZTF alerts')
+
+    parser.add_argument('--obsdate', help='observing date')
 
     args = parser.parse_args()
 
@@ -241,28 +247,36 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    collection = 'AMSG_20180302'
+    location = '/_tmp/ztf_alerts'
 
-    # create 2d index:
-    print('Creating 2d index')
-    db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+    dates = glob.glob(location) if not args.obsdate else args.obsdate
+    print(dates)
 
-    # number of records to insert
+    # number of records to insert per loop iteration
     batch_size = 2048
 
-    _location = '/_tmp/sgcat/'
+    # collection name
+    collection = 'ZTF_alerts'
 
-    files = glob.glob(os.path.join(_location, 'dec*.h5'))
-
-    print(f'# files to process: {len(files)}')
+    # indexes
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+    db[collection].create_index([('objectId', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candid', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.field', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.fwhm', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.magpsf', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.rb', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.jd', pymongo.ASCENDING), ('candidate.programid', pymongo.ASCENDING)],
+                                background=True)
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(12)
+    pool = ProcessPoolExecutor(1)
 
-    for ff in files[::-1]:
-        pool.submit(process_file, _file=ff, _collection=collection, _batch_size=batch_size, verbose=True)
-        # process_file(_file=ff, _collection=collection, _batch_size=batch_size, verbose=True)
+    for date in sorted(dates):
+        pool.submit(process_file, _date=date, _path_alerts=location,
+                    _collection=collection, _batch_size=2048, verbose=True)
 
     # wait for everything to finish
     pool.shutdown(wait=True)

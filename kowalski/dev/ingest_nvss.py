@@ -76,7 +76,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
     assert _collection is not None, 'Must specify collection'
     assert _db_entries is not None, 'Must specify documents'
     try:
-        _db[_collection].insert_many(_db_entries)
+        _db[_collection].insert_many(_db_entries, ordered=False)
     except pymongo.errors.BulkWriteError as bwe:
         print(bwe.details)
     except Exception as _e:
