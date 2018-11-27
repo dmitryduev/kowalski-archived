@@ -57,8 +57,21 @@ class Kowalski(object):
     def __exit__(self, *exc):
         # print('Finishing')
         # run shut down procedure
-        self.session.close()
+        self.close()
         return False
+
+    def close(self):
+        """
+            Shutdown session gracefully
+        :return:
+        """
+        try:
+            self.session.close()
+            return True
+        except Exception as e:
+            if self.v:
+                print(e)
+            return False
 
     def authenticate(self):
         """
