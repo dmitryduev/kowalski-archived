@@ -253,21 +253,21 @@ def process_file(_fits_file, _collection, _batch_size=2048, verbose=False):
                 print(e)
                 continue
 
-        # stuff left from the last file?
-        while len(documents) > 0:
-            try:
-                # In case mongo crashed and disconnected, docs will accumulate in documents
-                # keep on trying to insert them until successful
-                print(f'inserting batch #{batch_num}')
-                insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
-                # flush:
-                documents = []
+    # stuff left from the last file?
+    while len(documents) > 0:
+        try:
+            # In case mongo crashed and disconnected, docs will accumulate in documents
+            # keep on trying to insert them until successful
+            print(f'inserting batch #{batch_num}')
+            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+            # flush:
+            documents = []
 
-            except Exception as e:
-                traceback.print_exc()
-                print(e)
-                print('Failed, waiting 5 seconds to retry')
-                time.sleep(5)
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            print('Failed, waiting 5 seconds to retry')
+            time.sleep(5)
 
 
 if __name__ == '__main__':

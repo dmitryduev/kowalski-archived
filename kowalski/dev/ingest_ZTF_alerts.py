@@ -144,26 +144,35 @@ def deg2dms(x):
     return dms
 
 
+def find_files(root_dir):
+    for dir_name, subdir_list, file_list in os.walk(root_dir, followlinks=True):
+        for f_name in file_list:
+            if f_name.endswith('.avro'):
+                yield os.path.join(dir_name, f_name)
+
+
 def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=False):
 
     # connect to MongoDB:
     if verbose:
-        print('Connecting to DB')
-    _, _db = connect_to_db()
+        print(f'{_date} :: Connecting to DB')
+    _client, _db = connect_to_db()
     if verbose:
-        print('Successfully connected')
+        print(f'{_date} :: Successfully connected')
 
-    print(f'processing {_date}')
+    print(f'{_date} :: processing {_date}')
     documents = []
     batch_num = 1
 
     # location/YYYMMDD/ALERTS/candid.avro:
-    avros = glob.glob(os.path.join(_path_alerts, f'{_date}/*/*.avro'))
+    # avros = glob.glob(os.path.join(_path_alerts, f'{_date}/*/*.avro'))
 
-    print(f'{_date}:: # files to process: {len(avros)}')
+    # print(f'{_date} :: # files to process: {len(avros)}')
 
-    for ci, cf in enumerate(avros):
-        print(f'{_date}:: processing file #{ci+1} of {len(avros)}: {os.path.basename(cf)}')
+    ci = 1
+    for cf in find_files(os.path.join(_path_alerts, _date)):
+        # print(f'{_date} :: processing file #{ci+1} of {len(avros)}: {os.path.basename(cf)}')
+        print(f'{_date} :: processing file #{ci}: {os.path.basename(cf)}')
 
         try:
             with open(cf, 'rb') as f:
@@ -199,8 +208,8 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
                         # time.sleep(1)
 
                         # insert batch, then flush
-                        if len(documents) % batch_size == 0:
-                            print(f'inserting batch #{batch_num}')
+                        if len(documents) % _batch_size == 0:
+                            print(f'{_date} :: inserting batch #{batch_num}')
                             insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
                             # flush:
                             documents = []
@@ -216,21 +225,30 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
             print(e)
             continue
 
-        # stuff left from the last file?
-        while len(documents) > 0:
-            try:
-                # In case mongo crashed and disconnected, docs will accumulate in documents
-                # keep on trying to insert them until successful
-                print(f'inserting batch #{batch_num}')
-                insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
-                # flush:
-                documents = []
+        ci += 1
 
-            except Exception as e:
-                traceback.print_exc()
-                print(e)
-                print('Failed, waiting 5 seconds to retry')
-                time.sleep(5)
+    # stuff left from the last file?
+    while len(documents) > 0:
+        try:
+            # In case mongo crashed and disconnected, docs will accumulate in documents
+            # keep on trying to insert them until successful
+            print(f'{_date} :: inserting batch #{batch_num}')
+            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+            # flush:
+            documents = []
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            print(f'{_date} :: Failed, waiting 5 seconds to retry')
+            time.sleep(5)
+
+    # disconnect from db:
+    try:
+        _client.close()
+    finally:
+        if verbose:
+            print(f'{_date} :: Successfully disconnected from db')
 
 
 if __name__ == '__main__':
@@ -249,7 +267,8 @@ if __name__ == '__main__':
 
     location = '/_tmp/ztf_alerts'
 
-    dates = glob.glob(location) if not args.obsdate else args.obsdate
+    dates = os.listdir(location) if not args.obsdate else [args.obsdate]
+    dates = [d for d in dates if os.path.isdir(os.path.join(location, d))]
     print(dates)
 
     # number of records to insert per loop iteration
@@ -272,11 +291,12 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(1)
+    pool = ProcessPoolExecutor(5)
 
     for date in sorted(dates):
         pool.submit(process_file, _date=date, _path_alerts=location,
                     _collection=collection, _batch_size=2048, verbose=True)
+        # process_file(_date=date, _path_alerts=location, _collection=collection, _batch_size=batch_size, verbose=True)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
