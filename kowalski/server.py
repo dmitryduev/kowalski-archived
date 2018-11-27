@@ -1211,9 +1211,9 @@ async def query_cone_search_handler(request):
 
     # get available catalog names
     catalogs = await request.app['mongo'].list_collection_names()
-    catalogs = [c for c in catalogs if c not in (config['database']['collection_users'],
-                                                 config['database']['collection_queries'],
-                                                 config['database']['collection_stats'])]
+    catalogs = [c for c in sorted(catalogs)[::-1] if c not in (config['database']['collection_users'],
+                                                               config['database']['collection_queries'],
+                                                               config['database']['collection_stats'])]
 
     context = {'logo': config['server']['logo'],
                'user': session['user_id'],
