@@ -275,7 +275,7 @@ if __name__ == '__main__':
     print(dates)
 
     # number of records to insert per loop iteration
-    batch_size = 2048
+    batch_size = 1024
 
     # collection name
     collection = 'ZTF_alerts'
