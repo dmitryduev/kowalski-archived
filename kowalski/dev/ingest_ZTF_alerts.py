@@ -294,7 +294,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(5)
+    pool = ProcessPoolExecutor(min(len(dates), 3))
 
     for date in sorted(dates):
         pool.submit(process_file, _date=date, _path_alerts=location,
