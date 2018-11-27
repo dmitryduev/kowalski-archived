@@ -181,6 +181,9 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
                     try:
                         doc = dict(alert)
 
+                        # candid+objectId is a unique combination:
+                        doc['_id'] = f"{doc['candid']}_{doc['objectId']}"
+
                         # GeoJSON for 2D indexing
                         doc['coordinates'] = {}
                         doc['coordinates']['epoch'] = doc['candidate']['jd']
