@@ -173,7 +173,7 @@ class Kowalski(object):
 
             return {'status': 'failed', 'message': _err}
 
-    def check_connection(self, collection='ZTF_alerts'):
+    def check_connection(self, collection='ZTF_alerts') -> bool:
         """
             Check connection to Kowalski with a trivial query
         :return: True if connection ok, False otherwise
@@ -196,67 +196,3 @@ class Kowalski(object):
             _err = traceback.format_exc()
             print(_err)
             return False
-
-
-class TestKowalski(object):
-
-    def test_authenticate(self, username, password):
-        pass
-
-    def test_query(self, username, password, q=None):
-        # query: enqueue_only, save=True, save=False
-        # fetch enqueued/saved query
-        # delete saved query
-        pass
-
-
-if __name__ == '__main__':
-
-    pass
-
-    # with Kowalski(protocol='http', host='127.0.0.1', port=8000,
-    #               username='admin', password='admin', verbose=False) as k:
-    #     qu = {"query_type": "general_search",
-    #           "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-    #           "kwargs": {"save": False}}
-    #     qu2 = {"query_type": "general_search",
-    #            "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-    #            "kwargs": {"enqueue_only": True}}
-    #
-    #     for i in range(5):
-    #         tic = time.time()
-    #         result = k.query(query=qu, timeout=0.1)
-    #         toc = time.time()
-    #         print(toc-tic)
-    #         print(result)
-    #
-    #     alive = k.check_connection()
-    #     print(alive)
-    #
-    #     result = k.query(query=qu2, timeout=0.1)
-    #     time.sleep(0.15)
-    #     # print(result)
-    #     qid = result['query_id']
-    #     result = k.get_query(query_id=qid, part='result')
-    #     print(result)
-    #
-    #     result = k.delete_query(query_id=qid)
-    #     print(result)
-
-    # with Kowalski(protocol='http', host='kowalski.caltech.edu', port=8000,
-    #               username='admin', password='admin', verbose=False) as k:
-    #     qu = {"query_type": "general_search",
-    #           "query": "db['TNS'].find_one({}, {'_id': 1, 'ra': 1, 'dec': 1})",
-    #           "kwargs": {"save": True}}
-    #
-    #     qu2 = {"query_type": "cone_search",
-    #            "object_coordinates": {"radec": "[('07:05:53.44', '12:53:34.69')]", "cone_search_radius": "1",
-    #                                   "cone_search_unit": "arcsec"},
-    #            "catalogs": {"TNS": {"filter": "{}", "projection": "{'_id': 1, 'ra': 1, 'dec': 1}"}}}
-    #
-    #     for i in range(5):
-    #         tic = time.time()
-    #         result = k.query(query=qu2, timeout=0.1)
-    #         toc = time.time()
-    #         print(toc-tic)
-    #         print(result)
