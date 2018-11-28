@@ -211,7 +211,7 @@ if __name__ == '__main__':
                 doc['coordinates'] = {}
                 # doc['coordinates']['epoch'] = doc['jd']
                 _ra = doc['RA']
-                _dec = doc['Dec']
+                _dec = doc['DEC']
                 _radec = [_ra, _dec]
                 # string format: H:M:S, D:M:S
                 # tic = time.time()
