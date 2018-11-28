@@ -285,6 +285,7 @@ if __name__ == '__main__':
     db[collection].create_index([('objectId', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candid', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.nid', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candidate.field', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candidate.fwhm', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candidate.magpsf', pymongo.ASCENDING)], background=True)
@@ -298,7 +299,7 @@ if __name__ == '__main__':
 
     for date in sorted(dates):
         pool.submit(process_file, _date=date, _path_alerts=location,
-                    _collection=collection, _batch_size=2048, verbose=True)
+                    _collection=collection, _batch_size=batch_size, verbose=True)
         # process_file(_date=date, _path_alerts=location, _collection=collection, _batch_size=batch_size, verbose=True)
 
     # wait for everything to finish
