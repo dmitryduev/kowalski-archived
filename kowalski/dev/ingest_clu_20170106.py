@@ -151,6 +151,11 @@ if __name__ == '__main__':
 
     _collection = 'CLU_20170106'
 
+    # create 2d index:
+    print('Creating 2d index')
+    # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)], background=True)
+    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+
     # number of records to insert
     batch_size = 2048
     batch_num = 1
@@ -249,10 +254,5 @@ if __name__ == '__main__':
         if len(documents) > 0:
             print(f'inserting batch #{batch_num}')
             insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-
-        # create 2d index:
-        print('Creating 2d index')
-        # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)], background=True)
-        db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
 
         print('All done')
