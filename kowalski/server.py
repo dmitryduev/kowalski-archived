@@ -912,6 +912,13 @@ async def query(request):
         return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
+@routes.patch('/query')
+@auth_required
+async def query_abort(request):
+    # todo: abort an enqueued query
+    pass
+
+
 @routes.delete('/query')
 @auth_required
 async def query_delete(request):
@@ -1115,6 +1122,13 @@ async def web_query_delete(request):
         _err = traceback.format_exc()
         print(_err)
         return web.json_response({'message': f'Failure: {_err}'}, status=500)
+
+
+@routes.patch('/web-query')
+@login_required
+async def web_query_abort(request):
+    # todo: abort an enqueued query
+    pass
 
 
 @routes.post('/web-query')
