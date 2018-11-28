@@ -137,6 +137,9 @@ q = {"query_type": "general_search",
 
 Contact Dima if you need a field indexed.
 
+<span class="badge badge-warning">Tip</span> When running aggregation pipelines, use `allowDiskUse=True` if you get the
+"exceeded memory limit" error.
+
 ##### Examples
 
 <span class="badge badge-success">Note</span> In the web interface, you should only type in the "de-stringed" 
@@ -309,6 +312,17 @@ You must specify the bottom left and upper right coordinates of the box.
 q = {"query_type": "general_search", 
      "query": "db['ZTF_alerts'].find({'coordinates.radec_geojson': {'$geoWithin': { '$box': [[70.0 - 180.0, 48.0], [70.0005 - 180.0, 48.0005]] }}}, {'objectId': 1, 'candidate.fid': 1, 'coordinates.radec_str': 1})"  
      }
+```
+
+*Run a complicated query, remove the 'cordinates' field from the result, and select a random sample from it*
+
+```
+q = {"query_type": "general_search", 
+     "query": "db['ZTF_alerts'].aggregate([{'$match': {'candidate.jd': {'$gt': 2458322.500000}, 'candidate.isdiffpos': 't', 'candidate.programid': 1, 
+                                                       'candidate.rb': {'$gt': 0.3, '$lt': 0.65}, '$expr': {'$gt': [{'$abs': '$candidate.ssdistnr'}, 8]}} }, 
+                                           {'$project': {'coordinates': 0}}, {'$sample': { 'size': 100 }} ], allowDiskUse=True)"
+     }
+
 ```
 
 ##### Misc
