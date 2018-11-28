@@ -272,8 +272,6 @@ db['Gaia_DR2_light_curves'].find({'source_id': 1796422062134294656, 'band': 'G'}
 
 *Find all PanSTARRS objects with g-r < -0.1, return source id's, colors, and positions*
 
-Note that in the `Gaia_DR2_light_curves`, `source_id` field is `int64`.
-
 ```python
 db['PanSTARRS'].find({'gMeanPSFMag': {'$ne': -999}, 'rMeanPSFMag': {'$ne': -999}, '$expr': {'$gt': [{'$subtract': ['$gMeanPSFMag', '$rMeanPSFMag']}, -0.1]}},
                      {'_id': 1, 'gMeanPSFMag': 1, 'rMeanPSFMag': 1, 'raMean': 1, 'decMean': 1})
