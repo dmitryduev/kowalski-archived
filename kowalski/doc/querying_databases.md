@@ -90,12 +90,57 @@ The following `pymongo` operations are supported:
 
 ##### Recommendations
 
-<span class="badge badge-warning">Tip</span> If you are unsure about the size of the query result, it is a good  
+Kowalski gives a lot of power to the users, so it is expected that it is used responsibly.
 
-<span class="badge badge-success">Note</span> In the web interface, you should only type in the "de-stringed" 
-`q['query']` value. You can think of it as of the result of `eval(q['query'])`. 
+<span class="badge badge-warning">Tip</span> It is always a good idea to test a query before running it "full steam" by
+limiting the number of returned documents. For example, the following query will return at most 3 documents:
+
+```python
+q = {"query_type": "general_search", 
+     "query": "db['ZTF_alerts'].find({'candidate.rb': {'$gt': 0.5}}).limit(3)" 
+     }
+``` 
+
+Without this limitation, the output will be many TB in size.
+
+<span class="badge badge-warning">Tip</span> If you are unsure about the size of the query result, you can try counting 
+the number of returned documents first:
+
+```python
+q = {"query_type": "general_search", 
+     "query": "db['ZTF_alerts'].count_documents({'candidate.rb': {'$gt': 0.99}})" 
+     }
+```
+
+<span class="badge badge-warning">Tip</span> Use projections to ditch the fields that you do not need in the result and
+reduce its size:
+
+```python
+q = {"query_type": "general_search", 
+     "query": "db['ZTF_alerts'].find({'candidate.rb': {'$gt': 0.99}}, {'candid': 1, 'objectId': 1, 'candidate.rb': 1}).limit(3)" 
+     }
+```
+
+You can either specify which fields to return by saying `{'FIELD_1': 1, 'FIELD_2': 1, ...}`,
+or which ones to leave out keeping all the rest: `{'FIELD_1': 0, 'FIELD_2': 0, ...}`.
+
+<span class="badge badge-warning">Tip</span> You get the fastest execution time if the field(s) that you are querying
+are indexed. In this case, the database needs to only perform a fast search in the index that in most cases fits
+into Kowalski's memory. If there is no index available, the database will have to load all the actual documents into 
+the memory, which may take a lot of time. You can check the available indexes like this:
+
+```python
+q = {"query_type": "general_search", 
+     "query": "db['ZTF_alerts'].index_information()" 
+     }
+```
+
+Contact Dima if you need a field indexed.
 
 ##### Examples
+
+<span class="badge badge-success">Note</span> In the web interface, you should only type in the "de-stringed" 
+`q['query']` value. You can think of it as of the result of `eval(q['query'])`.
 
 *Find all ZTF alerts with a given objectId*
 
