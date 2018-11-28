@@ -562,6 +562,7 @@ def parse_query(task, save: bool=False):
                                                                '.map_reduce(',
                                                                '.distinct(',
                                                                '.count_documents(',
+                                                               '.index_information(',
                                                                '.find_one(',
                                                                '.find(']] and \
                     True not in [s in str(task['query']) for s in ['import',
@@ -756,7 +757,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             # _select = eval(query['query'])
             # _select = literal_eval(qq)
 
-            if ('.find_one(' in qq) or ('.count_documents(' in qq):
+            if ('.find_one(' in qq) or ('.count_documents(' in qq) or ('.index_information(' in qq):
                 _select = await _select
 
             # make it look like json

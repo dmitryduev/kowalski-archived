@@ -29,7 +29,9 @@ By default, only the object catalog id and the coordinates are returned.
 You can see all the catalog field names in the documentation. *todo* 
 
 The optional `"kwargs"` key may be used to change the default behavior, and/or to store auxiliary data with the query 
-(for example, for personal bookkeeping). 
+(for example, for personal bookkeeping).
+
+##### Examples 
 
 *Sample cone search 1:*
 Get all objects from the `PanSTARRS` catalog within `10` arcseconds from `('01h05m00.9631s', '-34d06m33.3505s')`
@@ -86,10 +88,14 @@ The general search interface allows the user to execute queries of arbitrary com
 The following `pymongo` operations are supported: 
 `aggregate`, `map_reduce`, `distinct`, `count_documents`, `find_one`, `find`.
 
+##### Recommendations
 
-<span class="badge badge-success">Note</span> In the web interface, you should only type in the "destringed" 
+<span class="badge badge-warning">Tip</span> If you are unsure about the size of the query result, it is a good  
+
+<span class="badge badge-success">Note</span> In the web interface, you should only type in the "de-stringed" 
 `q['query']` value. You can think of it as of the result of `eval(q['query'])`. 
 
+##### Examples
 
 *Find all ZTF alerts with a given objectId*
 
