@@ -1,8 +1,7 @@
 # Kowalski 1.0
 
-The legendary `ZTF` penguin got `docker`ized! 
-Under the hood, it switched from `flask` to `aiohttp` and ditched 
-the redis/rq-based task queue to improve performance and robustness.
+The legendary [`ZTF`](hhtps://ztf.caltech.edu) time domain astronomy penguin: 
+`docker`-ized and powered by `aiohttp` and `mongodb` to deliver improved performance and robustness.
 
 ## Python client `penquins`
 

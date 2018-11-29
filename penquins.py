@@ -1,7 +1,6 @@
 import string
 import random
 import traceback
-import time
 import os
 from copy import deepcopy
 from typing import Union
@@ -31,7 +30,7 @@ class Kowalski(object):
         assert username is not None, 'username must be specified'
         assert password is not None, 'password must be specified'
 
-        # Kowalski, status!
+        # Status, Kowalski!
         self.v = verbose
 
         self.protocol = protocol
