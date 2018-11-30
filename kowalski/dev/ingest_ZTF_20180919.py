@@ -167,7 +167,7 @@ if __name__ == '__main__':
 
     clu_fits = '/_tmp/ZTF_20180919.fits'
 
-    with fits.open(clu_fits) as hdu:
+    with fits.open(clu_fits, memmap=True) as hdu:
         print(hdu.info())
         print(repr(hdu[0].header))
         print('\n\n')
