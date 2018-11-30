@@ -172,7 +172,7 @@ def process_psc(_file, _collection, _batch_size=2048, verbose=False):
                     'nopt_mchs', 'ext_key', 'scan_key', 'coadd_key', 'coadd']
 
     try:
-        with open(cf) as f:
+        with open(_file) as f:
             reader = csv.reader(f, delimiter='|')
             # skip header:
             f.readline()
@@ -241,9 +241,9 @@ def process_psc(_file, _collection, _batch_size=2048, verbose=False):
                     # time.sleep(1)
 
                     # insert batch, then flush
-                    if len(documents) == batch_size:
+                    if len(documents) % _batch_size == 0:
                         print(f'inserting batch #{batch_num}')
-                        insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+                        insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
                         # flush:
                         documents = []
                         batch_num += 1
@@ -317,7 +317,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(1)
+    pool = ProcessPoolExecutor(4)
 
     # for ff in files[::-1]:
     for ff in sorted(csvs):
