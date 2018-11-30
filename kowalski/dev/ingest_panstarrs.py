@@ -83,10 +83,12 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
     try:
         _db[_collection].insert_many(_db_entries, ordered=False)
     except pymongo.errors.BulkWriteError as bwe:
-        print(bwe.details)
+        # print(bwe.details)
+        print('insertion error')
     except Exception as _e:
-        traceback.print_exc()
-        print(_e)
+        # traceback.print_exc()
+        # print(_e)
+        print('insertion error')
 
 
 @jit
