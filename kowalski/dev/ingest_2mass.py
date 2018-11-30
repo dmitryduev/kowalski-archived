@@ -1,138 +1,55 @@
 import csv
 import os
 import glob
-import time
-from astropy.coordinates import Angle
 import numpy as np
 import pymongo
-import inspect
 import json
 import argparse
-# import timeout_decorator
-import signal
 import traceback
 import datetime
 import pytz
 from numba import jit
+import time
+from concurrent.futures import ProcessPoolExecutor
+
+
+''' load config and secrets '''
+with open('/app/config.json') as cjson:
+    config = json.load(cjson)
+
+with open('/app/secrets.json') as sjson:
+    secrets = json.load(sjson)
+
+for k in secrets:
+    config[k].update(secrets.get(k, {}))
 
 
 def utc_now():
     return datetime.datetime.now(pytz.utc)
 
 
-class TimeoutError(Exception):
-    def __init__(self, value='Operation timed out'):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-def timeout(seconds_before_timeout):
-    """
-        A decorator that raises a TimeoutError error if a function/method runs longer than seconds_before_timeout
-    :param seconds_before_timeout:
-    :return:
-    """
-    def decorate(f):
-        def handler(signum, frame):
-            raise TimeoutError()
-
-        def new_f(*args, **kwargs):
-            old = signal.signal(signal.SIGALRM, handler)
-            old_time_left = signal.alarm(seconds_before_timeout)
-            if 0 < old_time_left < seconds_before_timeout:  # never lengthen existing timer
-                signal.alarm(old_time_left)
-            start_time = time.time()
-            try:
-                result = f(*args, **kwargs)
-            finally:
-                if old_time_left > 0:  # deduct f's run time from the saved timer
-                    old_time_left -= time.time() - start_time
-                signal.signal(signal.SIGALRM, old)
-                signal.alarm(old_time_left)
-            return result
-        new_f.__name__ = f.__name__
-        return new_f
-    return decorate
-
-
-def get_config(_config_file='config.json'):
-    """
-        load config data in json format
-    """
-    try:
-        ''' script absolute location '''
-        abs_path = os.path.dirname(inspect.getfile(inspect.currentframe()))
-
-        if _config_file[0] not in ('/', '~'):
-            if os.path.isfile(os.path.join(abs_path, _config_file)):
-                config_path = os.path.join(abs_path, _config_file)
-            else:
-                raise IOError('Failed to find config file')
-        else:
-            if os.path.isfile(_config_file):
-                config_path = _config_file
-            else:
-                raise IOError('Failed to find config file')
-
-        with open(config_path) as cjson:
-            config_data = json.load(cjson)
-            # config must not be empty:
-            if len(config_data) > 0:
-                return config_data
-            else:
-                raise Exception('Failed to load config file')
-
-    except Exception as _e:
-        print(_e)
-        raise Exception('Failed to read in the config file')
-
-
-def connect_to_db(_config):
+def connect_to_db():
     """ Connect to the mongodb database
 
     :return:
     """
     try:
         # there's only one instance of DB, it's too big to be replicated
-        _client = pymongo.MongoClient(host=_config['database']['host'],
-                                      port=_config['database']['port'])
+        _client = pymongo.MongoClient(host=config['database']['host'],
+                                      port=config['database']['port'])
         # grab main database:
-        _db = _client[_config['database']['db']]
+        _db = _client[config['database']['db']]
     except Exception as _e:
         raise ConnectionRefusedError
     try:
         # authenticate
-        _db.authenticate(_config['database']['user'], _config['database']['pwd'])
+        _db.authenticate(config['database']['user'], config['database']['pwd'])
     except Exception as _e:
         raise ConnectionRefusedError
 
-    # catalogs:
-    _catalogs = dict()
-    for catalog in _config['catalogs']:
-        if catalog == 'help':
-            continue
-        try:
-            # get collection with Pan-STARRS catalog
-            _coll_cat = _db[catalog]
-            _catalogs[catalog] = _coll_cat
-        except Exception as _e:
-            raise NameError
-
-    # ...
-
-    try:
-        # get collection with user access credentials
-        _coll_usr = _db[_config['database']['collection_pwd']]
-    except Exception as _e:
-        raise NameError
-
-    return _client, _db, _catalogs, _coll_usr
+    return _client, _db
 
 
-# @timeout_decorator.timeout(60, use_signals=False)
-@timeout(seconds_before_timeout=60)
 def insert_db_entry(_db, _collection=None, _db_entry=None):
     """
         Insert a document _doc to collection _collection in DB.
@@ -147,10 +64,10 @@ def insert_db_entry(_db, _collection=None, _db_entry=None):
         _db[_collection].insert_one(_db_entry)
     except Exception as _e:
         print('Error inserting {:s} into {:s}'.format(str(_db_entry['_id']), _collection))
+        traceback.print_exc()
         print(_e)
 
 
-@timeout(seconds_before_timeout=60)
 def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
     """
         Insert a document _doc to collection _collection in DB.
@@ -163,9 +80,14 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
     assert _collection is not None, 'Must specify collection'
     assert _db_entries is not None, 'Must specify documents'
     try:
-        _db[_collection].insert_many(_db_entries)
+        _db[_collection].insert_many(_db_entries, ordered=False)
+    except pymongo.errors.BulkWriteError as bwe:
+        # print(bwe.details)
+        print('insertion error')
     except Exception as _e:
-        print(_e)
+        # traceback.print_exc()
+        # print(_e)
+        print('insertion error')
 
 
 @jit
@@ -223,36 +145,17 @@ def deg2dms(x):
     return dms
 
 
-if __name__ == '__main__':
-    ''' Create command line argument parser '''
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description='Manage data archive for Robo-AO')
-
-    parser.add_argument('config_file', metavar='config_file',
-                        action='store', help='path to config file.', type=str)
-
-    args = parser.parse_args()
-
-    # parse config file:
-    config = get_config(_config_file=args.config_file)
-
+def process_psc(_file, _collection, _batch_size=2048, verbose=False):
     # connect to MongoDB:
-    print('Connecting to DB')
-    client, db, catalogs, coll_usr = connect_to_db(config)
-    print('Successfully connected')
-    print(f'Catalogs: {catalogs.keys()}')
+    if verbose:
+        print('Connecting to DB')
+    _client, _db = connect_to_db()
+    if verbose:
+        print('Successfully connected')
 
-    # _location = '/Users/dmitryduev/_caltech/python/broker/dev'
-    _location = '/data/ztf/tmp/twomass'
-
-    # number of records to insert
-    batch_size = 8192
-    batch_num = 1
+    print(f'processing {_file}')
     documents = []
-
-    ''' point source data '''
-    _collection = '2MASS_PSC'
-    csvs = glob.glob(os.path.join(_location, 'psc_*'))
+    batch_num = 1
 
     # column names:
     column_names = ['ra', 'decl', 'err_maj', 'err_min', 'err_ang', 'designation',
@@ -268,110 +171,170 @@ if __name__ == '__main__':
                     'use_src', 'a', 'dist_opt', 'phi_opt', 'b_m_opt', 'vr_m_opt',
                     'nopt_mchs', 'ext_key', 'scan_key', 'coadd_key', 'coadd']
 
-    # print(csvs)
-    print(f'# files to process: {len(csvs)}')
+    try:
+        with open(cf) as f:
+            reader = csv.reader(f, delimiter='|')
+            # skip header:
+            f.readline()
+            for row in reader:
+                try:
+                    doc = {column_name: val for column_name, val in zip(column_names, row)}
 
-    for ci, cf in enumerate(csvs):
-        print(f'processing file #{ci+1} of {len(csvs)}: {os.path.basename(cf)}')
-        # with open(cf, newline='') as f:
+                    doc['_id'] = doc['designation']
+
+                    # convert ints
+                    for col in ['err_ang', 'pxpa', 'pxcntr', 'gal_contam', 'mp_flg', 'pts_key', 'scan',
+                                'dist_edge_ns', 'dist_edge_ew', 'dup_src', 'use_src', 'phi_opt',
+                                'nopt_mchs', 'ext_key', 'scan_key', 'coadd_key', 'coadd']:
+                        try:
+                            if doc[col] == '\\N':
+                                doc[col] = None
+                            else:
+                                doc[col] = int(doc[col])
+                        except Exception as e:
+                            traceback.print_exc()
+                            print(e)
+
+                    # convert floats
+                    for col in ['ra', 'decl', 'err_maj', 'err_min',
+                                'j_m', 'j_cmsig', 'j_msigcom', 'j_snr',
+                                'h_m', 'h_cmsig', 'h_msigcom', 'h_snr',
+                                'k_m', 'k_cmsig', 'k_msigcom', 'k_snr',
+                                'prox', 'glon', 'glat', 'x_scan', 'jdate',
+                                'j_psfchi', 'h_psfchi', 'k_psfchi', 'j_m_stdap', 'j_msig_stdap',
+                                'h_m_stdap', 'h_msig_stdap', 'k_m_stdap', 'k_msig_stdap',
+                                'dist_opt', 'b_m_opt', 'vr_m_opt']:
+                        try:
+                            if doc[col] == '\\N':
+                                doc[col] = None
+                            else:
+                                doc[col] = float(doc[col])
+                        except Exception as e:
+                            traceback.print_exc()
+                            print(e)
+
+                    doc['coordinates'] = {}
+                    doc['coordinates']['epoch'] = doc['date']
+                    _ra = doc['ra']
+                    _dec = doc['decl']
+                    _radec = [_ra, _dec]
+                    # string format: H:M:S, D:M:S
+                    # tic = time.time()
+                    _radec_str = [deg2hms(_ra), deg2dms(_dec)]
+                    # print(time.time() - tic)
+                    # print(_radec_str)
+                    doc['coordinates']['radec_str'] = _radec_str
+                    # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                    _radec_geojson = [_ra - 180.0, _dec]
+                    doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                           'coordinates': _radec_geojson}
+                    # radians:
+                    doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+
+                    # print(doc['coordinates'])
+
+                    # insert into PanSTARRS collection. don't do that! too much overhead
+                    # db[_collection].insert_one(doc)
+                    # insert_db_entry(db, _collection=_collection, _db_entry=doc)
+                    documents.append(doc)
+
+                    # time.sleep(1)
+
+                    # insert batch, then flush
+                    if len(documents) == batch_size:
+                        print(f'inserting batch #{batch_num}')
+                        insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+                        # flush:
+                        documents = []
+                        batch_num += 1
+
+                except Exception as e:
+                    traceback.print_exc()
+                    print(e)
+                    continue
+
+    except Exception as e:
+        traceback.print_exc()
+        print(e)
+
+    # stuff left from the last file?
+    while len(documents) > 0:
         try:
-            with open(cf) as f:
-                reader = csv.reader(f, delimiter='|')
-                # skip header:
-                f.readline()
-                for row in reader:
-                    try:
-                        doc = {column_name: val for column_name, val in zip(column_names, row)}
-
-                        doc['_id'] = doc['designation']
-
-                        # convert ints
-                        for col in ['err_ang', 'pxpa', 'pxcntr', 'gal_contam', 'mp_flg', 'pts_key', 'scan',
-                                    'dist_edge_ns', 'dist_edge_ew', 'dup_src', 'use_src', 'phi_opt',
-                                    'nopt_mchs', 'ext_key', 'scan_key', 'coadd_key', 'coadd']:
-                            try:
-                                if doc[col] == '\\N':
-                                    doc[col] = None
-                                else:
-                                    doc[col] = int(doc[col])
-                            except Exception as e:
-                                traceback.print_exc()
-                                print(e)
-
-                        # convert floats
-                        for col in ['ra', 'decl', 'err_maj', 'err_min',
-                                    'j_m', 'j_cmsig', 'j_msigcom', 'j_snr',
-                                    'h_m', 'h_cmsig', 'h_msigcom', 'h_snr',
-                                    'k_m', 'k_cmsig', 'k_msigcom', 'k_snr',
-                                    'prox', 'glon', 'glat', 'x_scan', 'jdate',
-                                    'j_psfchi', 'h_psfchi', 'k_psfchi', 'j_m_stdap', 'j_msig_stdap',
-                                    'h_m_stdap', 'h_msig_stdap', 'k_m_stdap', 'k_msig_stdap',
-                                    'dist_opt', 'b_m_opt', 'vr_m_opt']:
-                            try:
-                                if doc[col] == '\\N':
-                                    doc[col] = None
-                                else:
-                                    doc[col] = float(doc[col])
-                            except Exception as e:
-                                traceback.print_exc()
-                                print(e)
-
-                        doc['coordinates'] = {}
-                        doc['coordinates']['epoch'] = doc['date']
-                        _ra = doc['ra']
-                        _dec = doc['decl']
-                        _radec = [_ra, _dec]
-                        # string format: H:M:S, D:M:S
-                        # tic = time.time()
-                        _radec_str = [deg2hms(_ra), deg2dms(_dec)]
-                        # print(time.time() - tic)
-                        # print(_radec_str)
-                        doc['coordinates']['radec_str'] = _radec_str
-                        # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-                        _radec_geojson = [_ra - 180.0, _dec]
-                        doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                               'coordinates': _radec_geojson}
-                        # radians:
-                        doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-
-                        # print(doc['coordinates'])
-
-                        # insert into PanSTARRS collection. don't do that! too much overhead
-                        # db[_collection].insert_one(doc)
-                        # insert_db_entry(db, _collection=_collection, _db_entry=doc)
-                        documents.append(doc)
-
-                        # time.sleep(1)
-
-                        # insert batch, then flush
-                        if len(documents) == batch_size:
-                            print(f'inserting batch #{batch_num}')
-                            insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-                            # flush:
-                            documents = []
-                            batch_num += 1
-
-                    except Exception as e:
-                        traceback.print_exc()
-                        print(e)
-                        continue
+            # In case mongo crashed and disconnected, docs will accumulate in documents
+            # keep on trying to insert them until successful
+            print(f'inserting batch #{batch_num}')
+            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+            # flush:
+            documents = []
 
         except Exception as e:
             traceback.print_exc()
             print(e)
-            continue
+            print('Failed, waiting 5 seconds to retry')
+            time.sleep(5)
 
-    # stuff left from the last file?
-    if len(documents) > 0:
-        insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+    # disconnect from db:
+    try:
+        _client.close()
+    finally:
+        if verbose:
+            print('Successfully disconnected from db')
+
+
+def process_xsc(_file, _collection, _batch_size=2048, verbose=False):
+    pass
+
+
+if __name__ == '__main__':
+    ''' Create command line argument parser '''
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='')
+    args = parser.parse_args()
+
+    # connect to MongoDB:
+    print('Connecting to DB')
+    client, db = connect_to_db()
+    print('Successfully connected')
+
+    _location = '/_tmp/twomass'
+
+    # number of records to insert
+    batch_size = 8192
+    batch_num = 1
+    documents = []
+
+    ''' point source data '''
+    collection = '2MASS_PSC'
+    print(collection)
 
     # create 2d index:
     print('Creating 2d index')
     # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)])
-    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')])
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+
+    csvs = glob.glob(os.path.join(_location, 'psc_*'))
+    print(f'# files to process: {len(csvs)}')
+
+    # init threaded operations
+    # pool = ThreadPoolExecutor(2)
+    pool = ProcessPoolExecutor(1)
+
+    # for ff in files[::-1]:
+    for ff in sorted(csvs):
+        pool.submit(process_psc, _file=ff, _collection=collection, _batch_size=batch_size, verbose=True)
+
+    # wait for everything to finish
+    pool.shutdown(wait=True)
 
     ''' extended source data '''
     _collection = '2MASS_XSC'
+    print(_collection)
+
+    # create 2d index:
+    print('Creating 2d index')
+    # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)])
+    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+
     csvs = glob.glob(os.path.join(_location, 'xsc_*'))
 
     documents = []
@@ -557,8 +520,9 @@ if __name__ == '__main__':
                         _radec_geojson = [_ra - 180.0, _dec]
                         doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                                'coordinates': _radec_geojson}
-                        # radians:
-                        doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                        # radians and degrees:
+                        doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                        doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                         # print(doc['coordinates'])
 
@@ -570,7 +534,7 @@ if __name__ == '__main__':
                         # time.sleep(1)
 
                         # insert batch, then flush
-                        if len(documents) == batch_size:
+                        if len(documents) % batch_size == 0:
                             print(f'inserting batch #{batch_num}')
                             insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
                             # flush:
@@ -587,13 +551,8 @@ if __name__ == '__main__':
             print(e)
             continue
 
-    # stuff left from the last file?
-    if len(documents) > 0:
-        insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-
-    # create 2d index:
-    print('Creating 2d index')
-    # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)])
-    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')])
+        # stuff left?
+        if len(documents) > 0:
+            insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
 
     print('All done')
