@@ -227,8 +227,9 @@ if __name__ == '__main__':
                 _radec_geojson = [_ra - 180.0, _dec]
                 doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                        'coordinates': _radec_geojson}
-                # radians:
-                doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                # radians and degrees:
+                doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                 # print(doc['coordinates'])
 
@@ -252,23 +253,25 @@ if __name__ == '__main__':
             except Exception as e:
                 traceback.print_exc()
                 print(e)
+                print('Failed, waiting 5 seconds to retry')
+                time.sleep(5)
                 continue
 
-            # stuff left from the last file?
-            while len(documents) > 0:
-                try:
-                    # In case mongo crashed and disconnected, docs will accumulate in documents
-                    # keep on trying to insert them until successful
-                    print(f'inserting batch #{batch_num}')
-                    insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-                    # flush:
-                    documents = []
+        # stuff left from the last file?
+        while len(documents) > 0:
+            try:
+                # In case mongo crashed and disconnected, docs will accumulate in documents
+                # keep on trying to insert them until successful
+                print(f'inserting batch #{batch_num}')
+                insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+                # flush:
+                documents = []
 
-                except Exception as e:
-                    traceback.print_exc()
-                    print(e)
-                    print('Failed, waiting 5 seconds to retry')
-                    time.sleep(5)
+            except Exception as e:
+                traceback.print_exc()
+                print(e)
+                print('Failed, waiting 5 seconds to retry')
+                time.sleep(5)
 
         # # create 2d index:
         # print('Creating 2d index')
