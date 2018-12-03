@@ -158,7 +158,7 @@ def process_file(_fits_file, _collection, _batch_size=2048, verbose=False):
     documents = []
     batch_num = 1
 
-    with fits.open(_fits_file) as hdu:
+    with fits.open(_fits_file, memmap=True) as hdu:
         if verbose:
             print(hdu.info())
             print(repr(hdu[0].header))
@@ -299,7 +299,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(10)
+    pool = ProcessPoolExecutor(4)
 
     for fits_file in fits_files[::-1]:
         pool.submit(process_file, _fits_file=fits_file, _collection=collection, _batch_size=batch_size, verbose=True)
