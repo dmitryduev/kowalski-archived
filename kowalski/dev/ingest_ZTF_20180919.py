@@ -253,8 +253,9 @@ if __name__ == '__main__':
             except Exception as e:
                 traceback.print_exc()
                 print(e)
-                print('Failed, waiting 5 seconds to retry')
-                time.sleep(5)
+                # print(doc)
+                # print('Failed, waiting 2 seconds to retry')
+                # time.sleep(0.2)
                 continue
 
         # stuff left from the last file?
@@ -270,8 +271,8 @@ if __name__ == '__main__':
             except Exception as e:
                 traceback.print_exc()
                 print(e)
-                print('Failed, waiting 5 seconds to retry')
-                time.sleep(5)
+                print('Failed, waiting 2 seconds to retry')
+                time.sleep(2)
 
         # # create 2d index:
         # print('Creating 2d index')
