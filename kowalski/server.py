@@ -634,13 +634,29 @@ def parse_query(task, save: bool=False):
             task_reduced['query'][catalog] = dict()
             # parse catalog query:
             # construct filter
-            catalog_query = literal_eval(task['catalogs'][catalog]['filter'].strip())
+            _filter = task['catalogs'][catalog]['filter']
+            if isinstance(_filter, str):
+                # passed string? evaluate:
+                catalog_query = literal_eval(_filter.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_query = _filter
+            else:
+                raise ValueError('Unsupported filter specification')
 
             # construct projection
             # catalog_projection = dict()
             # FIXME: always return standardized coordinates?
             # catalog_projection = {'coordinates.epoch': 1, 'coordinates.radec_str': 1, 'coordinates.radec': 1}
-            catalog_projection = literal_eval(task['catalogs'][catalog]['projection'].strip())
+            _projection = task['catalogs'][catalog]['projection']
+            if isinstance(_projection, str):
+                # passed string? evaluate:
+                catalog_projection = literal_eval(_projection.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_projection = _projection
+            else:
+                raise ValueError('Unsupported projection specification')
 
             # parse coordinate list
             # print(task['object_coordinates']['radec'])

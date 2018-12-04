@@ -123,7 +123,7 @@ for example, made a typo in the query like this (forgot the bracket at the end):
 qu = {"query_type": "general_search", "query": "db['ZTF_alerts'].find_one({}, {'_id': 1}"}
 r = k.query(query=q)
 # print the error message:
-print(r['result']['message'])
+print(r['result_data']['message'])
 ```
 
 You will get an error message that will read something like:
@@ -144,5 +144,7 @@ SyntaxError: unexpected EOF while parsing
 The main things to keep in mind when migrating from an older version of `penquins`:
 
 - Queries are not saved to db/disk by default anymore. 
-- Filter/projection syntax in cone searches
+- If you query is not saved to db/disk, the Kowalski response will contain 'result_data' with the query result.
+- Filter/projection syntax in cone searches changed to regular `mongo` syntax. 
+Both filter and projection values can be either dictionaries or strings
 - query_sync deprecated, use query
