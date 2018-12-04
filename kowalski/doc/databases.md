@@ -32,7 +32,7 @@ Gaia Data Release 2 catalog (gaia_source table)
 
 <hr/>
 
-### <span class="badge badge-primary">Gaia_DR2_WD</span>
+### <span class="badge badge-primary">Gaia\_DR2\_WD</span>
 ##### <span class="badge badge-success">Available</span>
 Gaia DR2-based catalog of known white dwarfs and CVs 
 
