@@ -46,7 +46,7 @@ q = {"query_type": "cone_search",
          "cone_search_unit": "arcsec"
      },
      "catalogs": {
-         "PanSTARRS": {"filter": {"nDetections": {"$gt": 1, "$lt": 100}}, "projection": {}}
+         "PanSTARRS1": {"filter": {"nDetections": {"$gt": 1, "$lt": 100}}, "projection": {"_id": 1}}
      },
      "kwargs": {
          "alert-id": "ZTF18omgalrt"}
