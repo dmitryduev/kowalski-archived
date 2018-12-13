@@ -48,7 +48,7 @@ RUN python generate_secrets.py
 #RUN python -m pytest -s server.py
 
 # run container
-#CMD /usr/local/bin/supervisord -n -c supervisord.conf
+CMD /usr/local/bin/supervisord -n -c supervisord.conf
 #CMD cron && crontab /etc/cron.d/fetch-cron && /bin/bash
 #CMD /bin/bash
-CMD /usr/local/bin/gunicorn -w 4 --bind 0.0.0.0:4000 --worker-class aiohttp.GunicornWebWorker server:app_factory
+#CMD /usr/local/bin/gunicorn -w 4 --bind 0.0.0.0:4000 --worker-class aiohttp.GunicornWebWorker server:app_factory
