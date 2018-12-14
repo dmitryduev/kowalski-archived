@@ -253,7 +253,8 @@ if __name__ == '__main__':
     # create 2d index:
     print('Creating 2d index')
     if not dry_run:
-        db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+        db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                     ('_id', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 4096

@@ -246,6 +246,7 @@ if __name__ == '__main__':
 
         # create 2d index:
         print('Creating 2d index')
-        db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+        db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                      ('_id', pymongo.ASCENDING)], background=True)
 
         print('All done')

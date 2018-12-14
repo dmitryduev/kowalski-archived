@@ -295,7 +295,8 @@ class AlertConsumer(object):
         self.connect_to_db()
 
         # indexes
-        self.db['db'][self.collection_alerts].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+        self.db['db'][self.collection_alerts].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                                            ('_id', pymongo.ASCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.ASCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('candid', pymongo.ASCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)

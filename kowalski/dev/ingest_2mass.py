@@ -310,7 +310,8 @@ if __name__ == '__main__':
     # create 2d index:
     print('Creating 2d index')
     # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)])
-    db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                 ('_id', pymongo.ASCENDING)], background=True)
 
     csvs = glob.glob(os.path.join(_location, 'psc_*'))
     print(f'# files to process: {len(csvs)}')
@@ -333,7 +334,7 @@ if __name__ == '__main__':
     # create 2d index:
     print('Creating 2d index')
     # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('name', 1)])
-    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'), ('_id', 1)], background=True)
 
     csvs = glob.glob(os.path.join(_location, 'xsc_*'))
 

@@ -138,6 +138,11 @@ def get_tns_date2date(date1, date2, grab_all=False):
     client, db = connect_to_db(config)
     print('Successfully connected')
 
+    collection = 'TNS'
+
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                 ('_id', pymongo.ASCENDING)], background=True)
+
     # convert dates to YYYY-MM-DD:
     date1_f = date1.strftime('%Y-%m-%d')
     date2_f = date2.strftime('%Y-%m-%d')
@@ -160,7 +165,7 @@ def get_tns_date2date(date1, date2, grab_all=False):
             doc = mongify(row)
             documents.append(doc)
 
-        insert_multiple_db_entries(db, _collection='TNS', _db_entries=documents, _verbose=False)
+        insert_multiple_db_entries(db, _collection=collection, _db_entries=documents, _verbose=False)
 
     # close connection to db
     client.close()

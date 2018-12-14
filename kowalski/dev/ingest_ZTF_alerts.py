@@ -281,7 +281,8 @@ if __name__ == '__main__':
     collection = 'ZTF_alerts'
 
     # indexes
-    db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                 ('_id', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('objectId', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candid', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)

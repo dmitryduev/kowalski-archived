@@ -149,14 +149,19 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    _collection = 'CLU_20180513'
+    _collection = 'CLU_20181213V2'
+
+    # create 2d index:
+    print('Creating 2d index')
+    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                  ('_id', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 2048
     batch_num = 1
     documents = []
 
-    clu_fits = '/_tmp/clu/CLU_20180513.fits'
+    clu_fits = '/_tmp/clu/CLU_20181213V2.fits'
 
     with fits.open(clu_fits) as hdu:
         print(hdu.info())
@@ -192,7 +197,7 @@ if __name__ == '__main__':
                 # print(cf)
 
                 for ii, kk in enumerate(field_names):
-                    if doc[kk] == 'N/A':
+                    if doc[kk] == 'N/A' or doc[kk] == 'n/a':
                         doc[kk] = None
                     else:
                         if field_data_types[ii] in (float, int):
@@ -200,13 +205,13 @@ if __name__ == '__main__':
                         else:
                             doc[kk] = str(doc[kk]).strip()
 
-                doc['_id'] = doc['CLUID']
+                doc['_id'] = doc['cluid']
 
                 # GeoJSON for 2D indexing
                 doc['coordinates'] = {}
                 # doc['coordinates']['epoch'] = doc['jd']
-                _ra = doc['RA']
-                _dec = doc['Dec']
+                _ra = doc['ra']
+                _dec = doc['dec']
                 _radec = [_ra, _dec]
                 # string format: H:M:S, D:M:S
                 # tic = time.time()
@@ -250,10 +255,5 @@ if __name__ == '__main__':
         if len(documents) > 0:
             print(f'inserting batch #{batch_num}')
             insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-
-        # create 2d index:
-        print('Creating 2d index')
-        db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                      ('_id', pymongo.ASCENDING)], background=True)
 
         print('All done')
