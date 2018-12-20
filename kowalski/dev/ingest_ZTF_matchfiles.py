@@ -260,7 +260,7 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
 
                     # ingest in batches
                     if len(docs_sources) % _batch_size == 0:
-                        print(f'inserting batch #{batch_num}')
+                        print(f'inserting batch #{batch_num} for {_file}')
                         if not _dry_run:
                             insert_multiple_db_entries(_db, _collection=_collections['sources'],
                                                        _db_entries=docs_sources, _verbose=True)
@@ -271,7 +271,7 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
             # ingest remaining
             # stuff left from the last file?
             if len(docs_sources) > 0:
-                print(f'inserting last batch #{batch_num}')
+                print(f'inserting last batch #{batch_num} for {_file}')
                 if not _dry_run:
                     insert_multiple_db_entries(_db, _collection=_collections['sources'],
                                                _db_entries=docs_sources)
