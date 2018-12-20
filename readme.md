@@ -59,6 +59,8 @@ Run `docker-compose` to start the service:
 docker-compose up --build -d
 ```
 
+You may have to use `sudo` to run the build command if `traefik` complains about `acme.json` access privileges.
+
 To tear everything down (i.e. stop and remove the containers), run:
 ```bash
 docker-compose down
