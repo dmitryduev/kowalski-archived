@@ -304,8 +304,9 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     _radec_geojson = [_ra - 180.0, _dec]
                     doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                            'coordinates': _radec_geojson}
-                    # radians:
-                    doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                    # radians and degrees:
+                    doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                    doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                     # print(doc['coordinates'])
 

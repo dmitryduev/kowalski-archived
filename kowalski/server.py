@@ -66,8 +66,8 @@ async def init_db():
     _mongo = _client[db_name]
 
     if f'{db_name}.{username}' not in user_ids:
-        _mongo.command('createUser', config['database']['user'],
-                       pwd=config['database']['pwd'], roles=['readWrite'])
+        await _mongo.command('createUser', config['database']['user'],
+                             pwd=config['database']['pwd'], roles=['readWrite'])
         print('Successfully initialized db')
 
     _mongo.client.close()
