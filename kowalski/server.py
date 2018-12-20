@@ -1242,9 +1242,13 @@ async def query_cone_search_handler(request):
 
     # get available catalog names
     catalogs = await request.app['mongo'].list_collection_names()
-    catalogs = [c for c in sorted(catalogs)[::-1] if c not in (config['database']['collection_users'],
-                                                               config['database']['collection_queries'],
-                                                               config['database']['collection_stats'])]
+    # exclude system collections and collections without a 2dsphere index
+    catalogs_system = (config['database']['collection_users'],
+                       config['database']['collection_queries'],
+                       config['database']['collection_stats'])
+    catalogs_no_2d_index = ('ZTF_matchfiles_exposures_20181219',
+                            'Gaia_DR2_light_curves')
+    catalogs = [c for c in sorted(catalogs)[::-1] if c not in catalogs_system + catalogs_no_2d_index]
 
     context = {'logo': config['server']['logo'],
                'user': session['user_id'],
