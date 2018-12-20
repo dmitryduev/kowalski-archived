@@ -1,6 +1,7 @@
 import tables
 import os
 import glob
+# from pprint import pp
 import time
 # from astropy.coordinates import Angle
 import numpy as np
@@ -182,9 +183,10 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                 docs_exposures.append(doc)
 
             # ingest exposures in one go:
-            print(f'ingesting exposures for {_file}')
-            insert_multiple_db_entries(_db, _collection=_collections['exposures'], _db_entries=docs_exposures)
-            print(f'done ingesting exposures for {_file}')
+            if not _dry_run:
+                print(f'ingesting exposures for {_file}')
+                insert_multiple_db_entries(_db, _collection=_collections['exposures'], _db_entries=docs_exposures)
+                print(f'done ingesting exposures for {_file}')
 
             docs_sources = []
             batch_num = 1
@@ -203,8 +205,14 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
 
                 for source in sources:
                     doc = dict(zip(sources_colnames, source))
-                    # convert numpy arrays into lists to ingest into mongodb?
+                    # convert types for pymongo:
                     for k, v in doc.items():
+                        # types.add(type(v))
+                        if np.issubdtype(type(v), np.integer):
+                            doc[k] = int(doc[k])
+                        if np.issubdtype(type(v), np.inexact):
+                            doc[k] = float(doc[k])
+                        # convert numpy arrays into lists
                         if type(v) == np.ndarray:
                             doc[k] = doc[k].tolist()
 
@@ -233,7 +241,19 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                     sourcedata = np.array(group[f'{source_type}data'].read_where(f'matchid == {doc["matchid"]}'))
                     # print(sourcedata)
                     doc['data'] = [dict(zip(sourcedata_colnames, sd)) for sd in sourcedata]
-                    print(doc['data'])
+                    # print(doc['data'])
+
+                    # convert types for pymongo:
+                    for dd in doc['data']:
+                        for k, v in dd.items():
+                            # types.add(type(v))
+                            if np.issubdtype(type(v), np.integer):
+                                dd[k] = int(dd[k])
+                            if np.issubdtype(type(v), np.inexact):
+                                dd[k] = float(dd[k])
+                            # convert numpy arrays into lists
+                            if type(v) == np.ndarray:
+                                dd[k] = dd[k].tolist()
 
                     # pprint(doc)
                     docs_sources.append(doc)
@@ -243,7 +263,7 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                         print(f'inserting batch #{batch_num}')
                         if not _dry_run:
                             insert_multiple_db_entries(_db, _collection=_collections['sources'],
-                                                       _db_entries=docs_sources)
+                                                       _db_entries=docs_sources, _verbose=True)
                         # flush:
                         docs_sources = []
                         batch_num += 1
@@ -273,7 +293,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='')
 
-    parser.add_argument('--dryrun', action='store_true', help='enforce execution')
+    parser.add_argument('--dryrun', action='store_true', help='dry run?')
 
     args = parser.parse_args()
 
@@ -290,11 +310,18 @@ if __name__ == '__main__':
     # create 2d index:
     print('Creating 2d index')
     if not dry_run:
+        db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                     ('_id', pymongo.ASCENDING)], background=True)
+                                                 ('matchid', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('matchid', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('x', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('y', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('z', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 2048
+    # batch_size = 1
 
     _location = '/_tmp/ztf_matchfiles_20181219/'
 
