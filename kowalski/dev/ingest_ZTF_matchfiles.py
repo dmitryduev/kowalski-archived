@@ -306,7 +306,10 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
 
                         # fixme: do not store all fields to save space
                         if len(doc_data) > 0:
-                            sourcedata_fields_to_keep = ('expid', 'hjd', 'mag', 'magerr', 'mjd', 'programid')
+                            sourcedata_fields_to_keep = ('expid', 'hjd',
+                                                         'mag', 'magerr',
+                                                         'psfmag', 'psfmagerr',
+                                                         'mjd', 'programid')
                             doc_keys = list(doc_data[0].keys())
                             for ddi, ddp in enumerate(doc['data']):
                                 for kk in doc_keys:
