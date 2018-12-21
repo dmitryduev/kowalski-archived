@@ -190,8 +190,8 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
             quad = int(quad[1:])
 
             rc = ccd_quad_2_rc(ccd=ccd, quad=quad)
-            baseid = 1e13 + field * 1e9 + rc * 1e7 + filt * 1e6
-            print(f'{ff}: {field} {filt} {ccd} {quad}')
+            baseid = int(1e13 + field * 1e9 + rc * 1e7 + filt * 1e6)
+            # print(f'{ff}: {field} {filt} {ccd} {quad}')
             print(f'{ff}: baseid {baseid}')
 
             # tic = time.time()
@@ -246,7 +246,7 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                             doc[k] = doc[k].tolist()
 
                     # generate unique _id:
-                    doc['_id'] = int(baseid) + doc['matchid']
+                    doc['_id'] = baseid + doc['matchid']
 
                     doc['iqr'] = doc['bestpercentiles'][8] - doc['bestpercentiles'][3]
 
@@ -395,9 +395,10 @@ if __name__ == '__main__':
 
     # production
     _location = '/matchfiles/'
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
     files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
-    files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
-             '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
+    # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
+    #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
     print(files)
     file_sizes = [os.path.getsize(ff) for ff in files]
     total_file_size = np.sum(file_sizes) / 1e6
