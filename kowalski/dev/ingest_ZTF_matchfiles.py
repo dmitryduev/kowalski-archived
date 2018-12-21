@@ -395,14 +395,14 @@ if __name__ == '__main__':
 
     # production
     _location = '/matchfiles/'
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
     #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
-    print(files)
-    file_sizes = [os.path.getsize(ff) for ff in files]
-    total_file_size = np.sum(file_sizes) / 1e6
-    print(f'Total file size: {total_file_size} MB')
+    # print(files)
+    # file_sizes = [os.path.getsize(ff) for ff in files]
+    # total_file_size = np.sum(file_sizes) / 1e6
+    # print(f'Total file size: {total_file_size} MB')
 
     print(f'# files to process: {len(files)}')
 
