@@ -151,7 +151,7 @@ def deg2dms(x):
 
 
 @jit
-def ccd_quad_2_rc(ccd: int, quad: int):
+def ccd_quad_2_rc(ccd: int, quad: int) -> int:
     # assert ccd in range(1, 17)
     # assert quad in range(1, 5)
     b = (ccd - 1) * 4
@@ -178,11 +178,18 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
             # print(f.root.matches.sources._v_attrs)
             # print(f.root.matches.sourcedata._v_attrs)
 
+            ff_basename = os.path.basename(ff)
+
             # base id:
             filters = {'zg': 1, 'zr': 2, 'zi': 3}
-            _, field, filt, ccd, quad, _ = ff.split('_')
-            rc = ccd_quad_2_rc(ccd=int(ccd), quad=int(quad))
-            baseid = 1e13 + int(field) * 1e9 + int(rc) * 1e7 + filters[filt] * 1e6
+            _, field, filt, ccd, quad, _ = ff_basename.split('_')
+            field = int(field)
+            filt = filters[filt]
+            ccd = int(ccd[1:])
+            quad = int(quad[1:])
+
+            rc = ccd_quad_2_rc(ccd=ccd, quad=quad)
+            baseid = 1e13 + field * 1e9 + rc * 1e7 + filt * 1e6
 
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
@@ -193,7 +200,11 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
             docs_exposures = []
             for index, row in exposures.iterrows():
                 doc = row.to_dict()
-                doc['matchfile'] = os.path.basename(ff)
+                doc['matchfile'] = ff_basename
+                doc['field'] = field
+                doc['ccd'] = ccd
+                doc['quad'] = quad
+                doc['rc'] = rc
                 # pprint(doc)
                 docs_exposures.append(doc)
 
@@ -235,6 +246,12 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                     doc['_id'] = int(baseid) + doc['matchid']
 
                     doc['iqr'] = doc['bestpercentiles'][8] - doc['bestpercentiles'][3]
+
+                    doc['matchfile'] = ff_basename
+                    doc['field'] = field
+                    doc['ccd'] = ccd
+                    doc['quad'] = quad
+                    doc['rc'] = rc
 
                     doc['source_type'] = source_type
 
