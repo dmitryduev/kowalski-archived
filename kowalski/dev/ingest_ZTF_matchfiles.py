@@ -381,9 +381,14 @@ if __name__ == '__main__':
     batch_size = 2048
     # batch_size = 1
 
-    _location = '/_tmp/ztf_matchfiles_20181219/'
+    # fixme:
+    # test
+    # _location = '/_tmp/ztf_matchfiles_20181219/'
+    # files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
 
-    files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
+    # production
+    _location = '/matchfiles/'
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
 
     print(f'# files to process: {len(files)}')
 

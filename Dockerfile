@@ -13,7 +13,7 @@ RUN tar -xzf /kafka/kafka_2.11-1.1.1.tgz
 #fixme: ^^^
 
 # place to keep our app and the data:
-RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data && mkdir -p /_tmp
+RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data && mkdir -p /_tmp && mkdir -p /matchfiles
 
 ## Add crontab file in the cron directory
 #ADD code/crontab /etc/cron.d/fetch-cron
