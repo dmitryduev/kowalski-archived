@@ -354,11 +354,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='')
 
+    parser.add_argument('--keepall', action='store_true', help='keep all fields from the matchfiles?')
     parser.add_argument('--dryrun', action='store_true', help='dry run?')
 
     args = parser.parse_args()
 
     dry_run = args.dryrun
+    keep_all = args.keepall
 
     # connect to MongoDB:
     print('Connecting to DB')
@@ -391,7 +393,11 @@ if __name__ == '__main__':
 
     # production
     _location = '/matchfiles/'
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[100]
+    print(files)
+    file_sizes = [os.path.getsize(ff) for ff in files]
+    total_file_size = np.sum(file_sizes) / 1e6
+    print(f'Total file size: {total_file_size}')
 
     print(f'# files to process: {len(files)}')
 
@@ -403,7 +409,7 @@ if __name__ == '__main__':
     # for ff in files[::-1]:
     for ff in sorted(files):
         pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
-                    keep_all=False, verbose=True, _dry_run=dry_run)
+                    keep_all=keep_all, verbose=True, _dry_run=dry_run)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
