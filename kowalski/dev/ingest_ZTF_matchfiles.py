@@ -393,11 +393,11 @@ if __name__ == '__main__':
 
     # production
     _location = '/matchfiles/'
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[100]
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
     print(files)
     file_sizes = [os.path.getsize(ff) for ff in files]
     total_file_size = np.sum(file_sizes) / 1e6
-    print(f'Total file size: {total_file_size}')
+    print(f'Total file size: {total_file_size} MB')
 
     print(f'# files to process: {len(files)}')
 
