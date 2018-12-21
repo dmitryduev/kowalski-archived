@@ -150,6 +150,15 @@ def deg2dms(x):
     return dms
 
 
+@jit
+def ccd_quad_2_rc(ccd: int, quad: int):
+    # assert ccd in range(1, 17)
+    # assert quad in range(1, 5)
+    b = (ccd - 1) * 4
+    rc = b + quad - 1
+    return rc
+
+
 def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=False):
 
     # connect to MongoDB:
@@ -168,6 +177,12 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
             # print(f.root.matches.exposures._v_attrs)
             # print(f.root.matches.sources._v_attrs)
             # print(f.root.matches.sourcedata._v_attrs)
+
+            # base id:
+            filters = {'zg': 1, 'zr': 2, 'zi': 3}
+            _, field, filt, ccd, quad, _ = ff.split('_')
+            rc = ccd_quad_2_rc(ccd=int(ccd), quad=int(quad))
+            baseid = 1e13 + int(field) * 1e9 + int(rc) * 1e7 + filters[filt] * 1e6
 
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
@@ -190,7 +205,9 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
 
             docs_sources = []
             batch_num = 1
-            for source_type in ('source', 'transient'):
+            # fixme: no transients for now!
+            # for source_type in ('source', 'transient'):
+            for source_type in ('source',):
 
                 sources_colnames = group[f'{source_type}s'].colnames
                 sources = np.array(group[f'{source_type}s'].read())
@@ -200,8 +217,6 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                 # sourcedata_colnames = sourcedata.columns.values
                 sourcedata_colnames = group[f'{source_type}data'].colnames
                 # sourcedata = np.array(group[f'{source_type}data'].read())
-
-                # let mongodb generate _id's for us in case we need to go switch to bucketing LC data in the future
 
                 for source in sources:
                     doc = dict(zip(sources_colnames, source))
@@ -215,6 +230,11 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                         # convert numpy arrays into lists
                         if type(v) == np.ndarray:
                             doc[k] = doc[k].tolist()
+
+                    # generate unique _id:
+                    doc['_id'] = int(baseid) + doc['matchid']
+
+                    doc['iqr'] = doc['bestpercentiles'][8] - doc['bestpercentiles'][3]
 
                     doc['source_type'] = source_type
 
@@ -312,8 +332,8 @@ if __name__ == '__main__':
     if not dry_run:
         db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                                 ('matchid', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('matchid', pymongo.ASCENDING)], background=True)
+                                                 ('_id', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('matchid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('x', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('y', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('z', pymongo.ASCENDING)], background=True)
