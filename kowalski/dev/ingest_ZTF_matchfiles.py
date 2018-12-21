@@ -274,14 +274,6 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                     doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
                     doc['coordinates']['radec_deg'] = [_ra, _dec]
 
-                    # fixme: do not store all fields to save space
-                    sources_fields_to_keep = ('_id', 'coordinates', 'matchfile', 'iqr') + \
-                        ('refmag', 'refmagerr')
-                    doc_keys = list(doc.keys())
-                    for kk in doc_keys:
-                        if kk not in sources_fields_to_keep:
-                            doc.pop(kk)
-
                     # grab data
                     sourcedata = np.array(group[f'{source_type}data'].read_where(f'matchid == {doc["matchid"]}'))
                     # print(sourcedata)
@@ -301,6 +293,14 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                             # convert numpy arrays into lists
                             if type(v) == np.ndarray:
                                 dd[k] = dd[k].tolist()
+
+                    # fixme: do not store all fields to save space
+                    sources_fields_to_keep = ('_id', 'coordinates', 'matchfile', 'iqr', 'data') + \
+                                             ('refmag', 'refmagerr')
+                    doc_keys = list(doc.keys())
+                    for kk in doc_keys:
+                        if kk not in sources_fields_to_keep:
+                            doc.pop(kk)
 
                     # fixme: do not store all fields to save space
                     if len(doc_data) > 0:
@@ -370,9 +370,9 @@ if __name__ == '__main__':
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                  ('_id', pymongo.ASCENDING)], background=True)
         # db[collections['sources']].create_index([('matchid', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('x', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('y', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('z', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('x', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('y', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('z', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
