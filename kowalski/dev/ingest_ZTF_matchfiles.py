@@ -159,7 +159,8 @@ def ccd_quad_2_rc(ccd: int, quad: int) -> int:
     return rc
 
 
-def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=False):
+def process_file(_file, _collections, _batch_size=2048, keep_all=False,
+                 verbose=False, _dry_run=False):
 
     # connect to MongoDB:
     if verbose:
@@ -294,22 +295,23 @@ def process_file(_file, _collections, _batch_size=2048, verbose=False, _dry_run=
                             if type(v) == np.ndarray:
                                 dd[k] = dd[k].tolist()
 
-                    # fixme: do not store all fields to save space
-                    sources_fields_to_keep = ('_id', 'coordinates', 'matchfile', 'iqr', 'data') + \
-                                             ('refmag', 'refmagerr')
-                    doc_keys = list(doc.keys())
-                    for kk in doc_keys:
-                        if kk not in sources_fields_to_keep:
-                            doc.pop(kk)
+                    if not keep_all:
+                        # fixme: do not store all fields to save space
+                        sources_fields_to_keep = ('_id', 'coordinates', 'matchfile', 'iqr', 'data') + \
+                                                 ('refmag', 'refmagerr')
+                        doc_keys = list(doc.keys())
+                        for kk in doc_keys:
+                            if kk not in sources_fields_to_keep:
+                                doc.pop(kk)
 
-                    # fixme: do not store all fields to save space
-                    if len(doc_data) > 0:
-                        sourcedata_fields_to_keep = ('expid', 'hjd', 'mag', 'magerr', 'mjd', 'programid')
-                        doc_keys = list(doc_data[0].keys())
-                        for ddi, ddp in enumerate(doc['data']):
-                            for kk in doc_keys:
-                                if kk not in sourcedata_fields_to_keep:
-                                    doc['data'][ddi].pop(kk)
+                        # fixme: do not store all fields to save space
+                        if len(doc_data) > 0:
+                            sourcedata_fields_to_keep = ('expid', 'hjd', 'mag', 'magerr', 'mjd', 'programid')
+                            doc_keys = list(doc_data[0].keys())
+                            for ddi, ddp in enumerate(doc['data']):
+                                for kk in doc_keys:
+                                    if kk not in sourcedata_fields_to_keep:
+                                        doc['data'][ddi].pop(kk)
 
                     # pprint(doc)
                     docs_sources.append(doc)
@@ -392,9 +394,7 @@ if __name__ == '__main__':
     # for ff in files[::-1]:
     for ff in sorted(files):
         pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
-                    verbose=True, _dry_run=dry_run)
-        # process_file(_file=ff, _collections=collections, _batch_size=batch_size,
-        #              verbose=True, _dry_run=dry_run)
+                    keep_all=False, verbose=True, _dry_run=dry_run)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
