@@ -172,14 +172,14 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
     print(f'processing {_file}')
 
     try:
-        with tables.open_file(ff) as f:
+        with tables.open_file(_file) as f:
             # print(f.root['/matches'].attrs)
             group = f.root.matches
             # print(f.root.matches.exposures._v_attrs)
             # print(f.root.matches.sources._v_attrs)
             # print(f.root.matches.sourcedata._v_attrs)
 
-            ff_basename = os.path.basename(ff)
+            ff_basename = os.path.basename(_file)
 
             # base id:
             filters = {'zg': 1, 'zr': 2, 'zi': 3}
@@ -191,6 +191,8 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
 
             rc = ccd_quad_2_rc(ccd=ccd, quad=quad)
             baseid = 1e13 + field * 1e9 + rc * 1e7 + filt * 1e6
+            print(f'{ff}: {field} {filt} {ccd} {quad}')
+            print(f'{ff}: baseid {baseid}')
 
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
@@ -394,6 +396,8 @@ if __name__ == '__main__':
     # production
     _location = '/matchfiles/'
     files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
+    files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
+             '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
     print(files)
     file_sizes = [os.path.getsize(ff) for ff in files]
     total_file_size = np.sum(file_sizes) / 1e6
