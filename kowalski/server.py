@@ -1167,15 +1167,25 @@ async def web_query_grab(request):
     try:
         task_id = _data['task_id']
         part = _data['part']
+        save = _data['save']
 
-        query = await request.app['mongo'].queries.find_one({'user': user, 'task_id': {'$eq': task_id}})
+        # query = await request.app['mongo'].queries.find_one({'user': user, 'task_id': {'$eq': task_id}})
         # print(query)
 
         if part == 'task':
             task_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.task.json')
-            # with open(task_file, 'r') as f_task_file:
-            async with aiofiles.open(task_file, 'r') as f_task_file:
-                return web.json_response(await f_task_file.read(), status=200)
+
+            # check result file size in bytes:
+            task_file_size = os.path.getsize(task_file)
+
+            if save or (task_file_size / 1e6 < 10):
+                # with open(task_file, 'r') as f_task_file:
+                async with aiofiles.open(task_file, 'r') as f_task_file:
+                    return web.json_response(await f_task_file.read(), status=200)
+            else:
+                return web.json_response({'message': f'query {task_id} size of ' +
+                                                     f'{task_file_size / 1e6} MB too large for browser'},
+                                         status=200)
 
         elif part == 'result':
             task_result_file = os.path.join(config['path']['path_queries'], user, f'{task_id}.result.json')
@@ -1183,7 +1193,7 @@ async def web_query_grab(request):
             # check result file size in bytes:
             task_result_file_size = os.path.getsize(task_result_file)
 
-            if task_result_file_size / 1e6 < 10:
+            if save or (task_result_file_size / 1e6 < 10):
                 async with aiofiles.open(task_result_file, 'r') as f_task_result_file:
                     return web.json_response(await f_task_result_file.read(), status=200)
             else:
