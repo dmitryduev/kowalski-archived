@@ -184,9 +184,9 @@ if __name__ == '__main__':
 
     # print(df.to_dict(orient='records'))
 
-    # for ii, dff in enumerate(pd.read_csv(f_in, chunksize=batch_size)):
-    for ii, dff in enumerate(pd.read_csv(f_in, chunksize=2)):
-        print(f'Processing batch # {ii+1} of {num_chunks}')
+    # for ii, dff in enumerate(pd.read_csv(f_in, chunksize=2)):
+    for ii, dff in enumerate(pd.read_csv(f_in, chunksize=batch_size)):
+    print(f'Processing batch # {ii+1} of {num_chunks}')
 
         dff.rename(index=str, columns={'id': '_id'}, inplace=True)
         batch = dff.to_dict(orient='records')
