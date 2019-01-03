@@ -169,8 +169,8 @@ if __name__ == '__main__':
     batch_num = 1
     documents = []
 
-    # f_in = '/_tmp/ZTF_20181220.csv'
-    f_in = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/ZTF_20181220.csv'
+    f_in = '/_tmp/ZTF_20181220.csv'
+    # f_in = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/ZTF_20181220.csv'
 
     # # load csv into memory
     # print('Loading input file into memory:')
