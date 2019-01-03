@@ -1,4 +1,3 @@
-from astropy.io import fits
 import numpy as np
 import pandas as pd
 import pymongo
@@ -9,17 +8,16 @@ import datetime
 import pytz
 import time
 from numba import jit
-import fastavro as avro
 
 
 ''' load config and secrets '''
 
-# with open('/app/config.json') as cjson:
-with open('/Users/dmitryduev/_caltech/python/kowalski/kowalski/config.json') as cjson:
+# with open('/Users/dmitryduev/_caltech/python/kowalski/kowalski/config.json') as cjson:
+with open('/app/config.json') as cjson:
     config = json.load(cjson)
 
-# with open('/app/secrets.json') as sjson:
-with open('/Users/dmitryduev/_caltech/python/kowalski/secrets.json') as sjson:
+# with open('/Users/dmitryduev/_caltech/python/kowalski/secrets.json') as sjson:
+with open('/app/secrets.json') as sjson:
     secrets = json.load(sjson)
 
 for k in secrets:
@@ -186,7 +184,8 @@ if __name__ == '__main__':
 
     # for ii, dff in enumerate(pd.read_csv(f_in, chunksize=2)):
     for ii, dff in enumerate(pd.read_csv(f_in, chunksize=batch_size)):
-    print(f'Processing batch # {ii+1} of {num_chunks}')
+
+        print(f'Processing batch # {ii+1} of {num_chunks}')
 
         dff.rename(index=str, columns={'id': '_id'}, inplace=True)
         batch = dff.to_dict(orient='records')
