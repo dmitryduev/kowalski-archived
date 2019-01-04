@@ -258,7 +258,7 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    collection = 'Gaia_DR2_light_curves'
+    collection = 'Gaia_DR2_2MASS_best_neighbour'
 
     # create 2d index:
     print('Creating 2d index')
