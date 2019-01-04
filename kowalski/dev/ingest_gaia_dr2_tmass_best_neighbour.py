@@ -231,7 +231,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
         # print(batch)
 
         # ingest
-        insert_multiple_db_entries(db, _collection=_collection, _db_entries=batch)
+        insert_multiple_db_entries(_db, _collection=_collection, _db_entries=batch)
 
     # disconnect from db:
     try:
