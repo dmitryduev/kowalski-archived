@@ -104,7 +104,9 @@ def deg2hms(x):
         form, hours:minutes:seconds.
 
     """
-    assert 0.0 <= x < 360.0, 'Bad RA value in degrees'
+    assert 0.0 <= x <= 360.0, 'Bad RA value in degrees'
+    if x == 360.0:
+        x = 0.0
     # ac = Angle(x, unit='degree')
     # hms = str(ac.to_string(unit='hour', sep=':', pad=True))
     # print(str(hms))
@@ -186,24 +188,38 @@ if __name__ == '__main__':
 
         print(f'Processing batch # {ii+1} of {num_chunks}')
 
+        # if ii == 63267:
+
         dff.rename(index=str, columns={'id': '_id'}, inplace=True)
         batch = dff.to_dict(orient='records')
 
-        for ie, doc in enumerate(batch):
-            # fix types:
-            for k in ('_id', 'nobs', 'ngoodobs', 'nbestobs', ):
-                doc[k] = int(doc[k])
-            for k in ('ra', 'dec', 'refmag', 'bestmedianmag', 'bestmedianabsdev', 'iqr'):
-                doc[k] = float(doc[k])
+        bad_doc_ind = []
 
-            # GeoJSON for 2D indexing
-            doc['coordinates'] = dict()
-            # string format: H:M:S, D:M:S
-            doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
-            # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-            _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
-            doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                   'coordinates': _radec_geojson}
+        for ie, doc in enumerate(batch):
+            try:
+                # fix types:
+                for k in ('_id', 'nobs', 'ngoodobs', 'nbestobs', ):
+                    doc[k] = int(doc[k])
+                for k in ('ra', 'dec', 'refmag', 'bestmedianmag', 'bestmedianabsdev', 'iqr'):
+                    doc[k] = float(doc[k])
+
+                # GeoJSON for 2D indexing
+                # print(doc['ra'], doc['dec'])
+                doc['coordinates'] = dict()
+                # string format: H:M:S, D:M:S
+                doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
+                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
+                doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                       'coordinates': _radec_geojson}
+            except Exception as e:
+                print(str(e))
+                bad_doc_ind.append(ie)
+
+        if len(bad_doc_ind) > 0:
+            print('removing bad docs')
+            for index in sorted(bad_doc_ind, reverse=True):
+                del batch[index]
 
         # print(batch)
 
