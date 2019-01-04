@@ -186,7 +186,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         dff['_id'] = dff['source_id']
 
-        for k in ('original_ext_source_id', 'designation', 'ext_key', 'ph_qual'):
+        for k in ('original_ext_source_id', 'designation', 'ph_qual'):
             dff[k] = dff[k].apply(lambda x: x[2:-1])
 
         batch = dff.to_dict(orient='records')
@@ -202,7 +202,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                             continue
                         elif doc[col_name] in ('false', 'true'):
                             doc[col_name] = eval(doc[col_name].capitalize())
-                        elif len(doc[col_name]) == 0:
+                        elif doc[col_name] == '':
                             doc[col_name] = None
                         else:
                             doc[col_name] = col_type(doc[col_name])
@@ -261,8 +261,9 @@ if __name__ == '__main__':
     collection = 'Gaia_DR2_2MASS_best_neighbour'
 
     # create 2d index:
-    print('Creating 2d index')
+    print('Creating indices')
     db[collection].create_index([('source_id', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('designation', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
                                  ('_id', pymongo.ASCENDING)], background=True)
 
@@ -291,10 +292,5 @@ if __name__ == '__main__':
 
     # create indices:
     print('Creating indices')
-    if not dry_run:
-        db[collection].create_index([('source_id', pymongo.ASCENDING)], background=True)
-        db[collection].create_index([('flux', pymongo.ASCENDING)], background=True)
-        db[collection].create_index([('time', pymongo.ASCENDING)], background=True)
-        db[collection].create_index([('mag', pymongo.ASCENDING)], background=True)
 
     print('All done')
