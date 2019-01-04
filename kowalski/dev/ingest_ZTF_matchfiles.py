@@ -204,6 +204,7 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
             for index, row in exposures.iterrows():
                 doc = row.to_dict()
                 doc['matchfile'] = ff_basename
+                doc['filter'] = filt
                 doc['field'] = field
                 doc['ccd'] = ccd
                 doc['quad'] = quad

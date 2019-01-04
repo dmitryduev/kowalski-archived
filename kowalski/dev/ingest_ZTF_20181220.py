@@ -165,7 +165,6 @@ if __name__ == '__main__':
     # number of records to insert
     batch_size = 2048
     batch_num = 1
-    documents = []
 
     f_in = '/_tmp/ZTF_20181220.csv'
     # f_in = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/ZTF_20181220.csv'
@@ -177,7 +176,7 @@ if __name__ == '__main__':
 
     # total = df.shape[0]
     total = 2348920269
-    num_chunks = total // batch_size
+    num_chunks = total // batch_size + 1
     print(num_chunks)
 
     # print(df.to_dict(orient='records'))
@@ -209,4 +208,4 @@ if __name__ == '__main__':
         # print(batch)
 
         # ingest
-        insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+        insert_multiple_db_entries(db, _collection=_collection, _db_entries=batch)
