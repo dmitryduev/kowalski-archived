@@ -256,7 +256,7 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                             # do not store all fields to save space
                             sources_fields_to_keep = ('bestastrometricrms', 'bestchisq', 'bestcon', 'bestlineartrend',
                                                       'bestmagrms', 'bestmaxslope', 'bestmeanmag', 'bestmedianabsdev',
-                                                      'bestmedianmag', 'bestminmag',
+                                                      'bestmedianmag', 'bestminmag', 'bestmaxmag',
                                                       'bestnabovemeanbystd', 'bestnbelowmeanbystd',
                                                       'bestnconsecabovemeanbystd', 'bestnconsecbelowmeanbystd',
                                                       'bestnconsecfrommeanbystd',
