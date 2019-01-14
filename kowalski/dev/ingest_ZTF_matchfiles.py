@@ -411,8 +411,8 @@ if __name__ == '__main__':
     collections = {'exposures': 'ZTF_exposures_20181220',
                    'sources': 'ZTF_sources_20181220'}
 
-    # create 2d index:
-    print('Creating 2d index')
+    # create indices:
+    print('Creating indices')
     if not dry_run:
         db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
