@@ -24,8 +24,8 @@ with open('/app/config.json') as cjson:
 with open('/app/secrets.json') as sjson:
     secrets = json.load(sjson)
 
-for k in secrets:
-    config[k].update(secrets.get(k, {}))
+for k_ in secrets:
+    config[k_].update(secrets.get(k_, {}))
 
 
 def utc_now():
@@ -159,6 +159,9 @@ def ccd_quad_2_rc(ccd: int, quad: int) -> int:
     return rc
 
 
+filters = {'zg': 1, 'zr': 2, 'zi': 3}
+
+
 def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                  verbose=False, _dry_run=False):
 
@@ -182,7 +185,6 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
             ff_basename = os.path.basename(_file)
 
             # base id:
-            filters = {'zg': 1, 'zr': 2, 'zi': 3}
             _, field, filt, ccd, quad, _ = ff_basename.split('_')
             field = int(field)
             filt = filters[filt]
@@ -202,15 +204,18 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
             # prepare docs to ingest into db:
             docs_exposures = []
             for index, row in exposures.iterrows():
-                doc = row.to_dict()
-                doc['matchfile'] = ff_basename
-                doc['filter'] = filt
-                doc['field'] = field
-                doc['ccd'] = ccd
-                doc['quad'] = quad
-                doc['rc'] = rc
-                # pprint(doc)
-                docs_exposures.append(doc)
+                try:
+                    doc = row.to_dict()
+                    doc['matchfile'] = ff_basename
+                    doc['filter'] = filt
+                    doc['field'] = field
+                    doc['ccd'] = ccd
+                    doc['quad'] = quad
+                    doc['rc'] = rc
+                    # pprint(doc)
+                    docs_exposures.append(doc)
+                except Exception as e_:
+                    print(str(e_))
 
             # ingest exposures in one go:
             if not _dry_run:
@@ -220,7 +225,7 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
 
             docs_sources = []
             batch_num = 1
-            # fixme: no transients for now!
+            # fixme? skip transients
             # for source_type in ('source', 'transient'):
             for source_type in ('source',):
 
@@ -234,103 +239,132 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                 # sourcedata = np.array(group[f'{source_type}data'].read())
 
                 for source in sources:
-                    doc = dict(zip(sources_colnames, source))
-                    # convert types for pymongo:
-                    for k, v in doc.items():
-                        # types.add(type(v))
-                        if np.issubdtype(type(v), np.integer):
-                            doc[k] = int(doc[k])
-                        if np.issubdtype(type(v), np.inexact):
-                            doc[k] = float(doc[k])
-                        # convert numpy arrays into lists
-                        if type(v) == np.ndarray:
-                            doc[k] = doc[k].tolist()
+                    try:
+                        doc = dict(zip(sources_colnames, source))
 
-                    # generate unique _id:
-                    doc['_id'] = baseid + doc['matchid']
+                        # grab data first
+                        sourcedata = np.array(group[f'{source_type}data'].read_where(f'matchid == {doc["matchid"]}'))
+                        # print(sourcedata)
+                        doc_data = [dict(zip(sourcedata_colnames, sd)) for sd in sourcedata]
 
-                    doc['iqr'] = doc['bestpercentiles'][8] - doc['bestpercentiles'][3]
+                        # skip sources that are only detected in the reference image:
+                        if len(doc_data) == 0:
+                            continue
 
-                    doc['matchfile'] = ff_basename
-                    doc['field'] = field
-                    doc['ccd'] = ccd
-                    doc['quad'] = quad
-                    doc['rc'] = rc
+                        # dump unwanted fields:
+                        if not keep_all:
+                            # do not store all fields to save space
+                            sources_fields_to_keep = ('bestastrometricrms', 'bestchisq', 'bestcon', 'bestlineartrend',
+                                                      'bestmagrms', 'bestmaxslope', 'bestmeanmag', 'bestmedianabsdev',
+                                                      'bestmedianmag', 'bestminmag',
+                                                      'bestnabovemeanbystd', 'bestnbelowmeanbystd',
+                                                      'bestnconsecabovemeanbystd', 'bestnconsecbelowmeanbystd',
+                                                      'bestnconsecfrommeanbystd',
+                                                      'bestnmedianbufferrange',
+                                                      'bestnpairposslope', 'bestpercentiles', 'bestskewness',
+                                                      'bestsmallkurtosis', 'beststetsonj', 'beststetsonk',
+                                                      'bestvonneumannratio', 'bestweightedmagrms',
+                                                      'bestweightedmeanmag',
+                                                      'dec', 'matchid', 'nbestobs', 'ngoodobs', 'ngoodobs',
+                                                      'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
 
-                    # doc['source_type'] = source_type
+                            doc_keys = list(doc.keys())
+                            for kk in doc_keys:
+                                if kk not in sources_fields_to_keep:
+                                    doc.pop(kk)
 
-                    # GeoJSON for 2D indexing
-                    doc['coordinates'] = {}
-                    _ra = doc['ra']
-                    _dec = doc['dec']
-                    _radec = [_ra, _dec]
-                    # string format: H:M:S, D:M:S
-                    # tic = time.time()
-                    _radec_str = [deg2hms(_ra), deg2dms(_dec)]
-                    # print(time.time() - tic)
-                    # print(_radec_str)
-                    doc['coordinates']['radec_str'] = _radec_str
-                    # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-                    _radec_geojson = [_ra - 180.0, _dec]
-                    doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                           'coordinates': _radec_geojson}
-                    # radians and degrees:
-                    doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                    doc['coordinates']['radec_deg'] = [_ra, _dec]
-
-                    # grab data
-                    sourcedata = np.array(group[f'{source_type}data'].read_where(f'matchid == {doc["matchid"]}'))
-                    # print(sourcedata)
-                    doc_data = [dict(zip(sourcedata_colnames, sd)) for sd in sourcedata]
-
-                    doc['data'] = doc_data
-                    # print(doc['data'])
-
-                    # convert types for pymongo:
-                    for dd in doc['data']:
-                        for k, v in dd.items():
+                        # convert types for pymongo:
+                        for k, v in doc.items():
                             # types.add(type(v))
                             if np.issubdtype(type(v), np.integer):
-                                dd[k] = int(dd[k])
+                                doc[k] = int(doc[k])
                             if np.issubdtype(type(v), np.inexact):
-                                dd[k] = float(dd[k])
+                                doc[k] = float(doc[k])
                             # convert numpy arrays into lists
                             if type(v) == np.ndarray:
-                                dd[k] = dd[k].tolist()
+                                doc[k] = doc[k].tolist()
 
-                    if not keep_all:
-                        # fixme: do not store all fields to save space
-                        sources_fields_to_keep = ('_id', 'coordinates', 'matchfile', 'iqr', 'data') + \
-                                                 ('refmag', 'refmagerr')
-                        doc_keys = list(doc.keys())
-                        for kk in doc_keys:
-                            if kk not in sources_fields_to_keep:
-                                doc.pop(kk)
+                        # generate unique _id:
+                        doc['_id'] = baseid + doc['matchid']
 
-                        # fixme: do not store all fields to save space
-                        if len(doc_data) > 0:
-                            sourcedata_fields_to_keep = ('expid', 'hjd',
-                                                         'mag', 'magerr',
-                                                         'psfmag', 'psfmagerr',
-                                                         'mjd', 'programid')
-                            doc_keys = list(doc_data[0].keys())
-                            for ddi, ddp in enumerate(doc['data']):
-                                for kk in doc_keys:
-                                    if kk not in sourcedata_fields_to_keep:
-                                        doc['data'][ddi].pop(kk)
+                        doc['iqr'] = doc['bestpercentiles'][8] - doc['bestpercentiles'][3]
 
-                    # pprint(doc)
-                    docs_sources.append(doc)
+                        # doc['matchfile'] = ff_basename
+                        doc['filter'] = filt
+                        doc['field'] = field
+                        doc['ccd'] = ccd
+                        doc['quad'] = quad
+                        doc['rc'] = rc
+
+                        # doc['source_type'] = source_type
+
+                        # GeoJSON for 2D indexing
+                        doc['coordinates'] = {}
+                        _ra = doc['ra']
+                        _dec = doc['dec']
+                        _radec = [_ra, _dec]
+                        # string format: H:M:S, D:M:S
+                        # tic = time.time()
+                        _radec_str = [deg2hms(_ra), deg2dms(_dec)]
+                        # print(time.time() - tic)
+                        # print(_radec_str)
+                        doc['coordinates']['radec_str'] = _radec_str
+                        # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                        _radec_geojson = [_ra - 180.0, _dec]
+                        doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                               'coordinates': _radec_geojson}
+                        # radians and degrees:
+                        # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                        # doc['coordinates']['radec_deg'] = [_ra, _dec]
+
+                        # data
+
+                        doc['data'] = doc_data
+                        # print(doc['data'])
+
+                        if not keep_all:
+                            # do not store all fields to save space
+                            if len(doc_data) > 0:
+                                sourcedata_fields_to_keep = ('catflags', 'chi', 'dec', 'expid', 'hjd',
+                                                             'mag', 'magerr', 'programid',
+                                                             'psfmag', 'psfmagerr', 'ra', 'relphotflags',
+                                                             'sharp', 'snr')
+                                doc_keys = list(doc_data[0].keys())
+                                for ddi, ddp in enumerate(doc['data']):
+                                    for kk in doc_keys:
+                                        if kk not in sourcedata_fields_to_keep:
+                                            doc['data'][ddi].pop(kk)
+
+                        # convert types for pymongo:
+                        for dd in doc['data']:
+                            for k, v in dd.items():
+                                # types.add(type(v))
+                                if np.issubdtype(type(v), np.integer):
+                                    dd[k] = int(dd[k])
+                                if np.issubdtype(type(v), np.inexact):
+                                    dd[k] = float(dd[k])
+                                # convert numpy arrays into lists
+                                if type(v) == np.ndarray:
+                                    dd[k] = dd[k].tolist()
+
+                        # pprint(doc)
+                        docs_sources.append(doc)
+
+                    except Exception as e_:
+                        print(str(e_))
 
                     # ingest in batches
-                    if len(docs_sources) % _batch_size == 0:
-                        print(f'inserting batch #{batch_num} for {_file}')
-                        if not _dry_run:
-                            insert_multiple_db_entries(_db, _collection=_collections['sources'],
-                                                       _db_entries=docs_sources, _verbose=True)
-                        # flush:
-                        docs_sources = []
-                        batch_num += 1
+                    try:
+                        if len(docs_sources) % _batch_size == 0:
+                            print(f'inserting batch #{batch_num} for {_file}')
+                            if not _dry_run:
+                                insert_multiple_db_entries(_db, _collection=_collections['sources'],
+                                                           _db_entries=docs_sources, _verbose=True)
+                            # flush:
+                            docs_sources = []
+                            batch_num += 1
+                    except Exception as e_:
+                        print(str(e_))
 
             # ingest remaining
             # stuff left from the last file?
@@ -347,9 +381,10 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
     # disconnect from db:
     try:
         _client.close()
-    finally:
         if verbose:
             print('Successfully disconnected from db')
+    finally:
+        pass
 
 
 if __name__ == '__main__':
@@ -370,8 +405,11 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    collections = {'exposures': 'ZTF_matchfiles_exposures_20181219',
-                   'sources': 'ZTF_matchfiles_sources_20181219'}
+    # collections = {'exposures': 'ZTF_matchfiles_exposures_20181219',
+    #                'sources': 'ZTF_matchfiles_sources_20181219'}
+
+    collections = {'exposures': 'ZTF_exposures_20181220',
+                   'sources': 'ZTF_sources_20181220'}
 
     # create 2d index:
     print('Creating 2d index')
@@ -379,11 +417,15 @@ if __name__ == '__main__':
         db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                  ('_id', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('matchid', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('x', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('y', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('z', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('bestchisq', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('bestmedianmag', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('nbestobs', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('nobs', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('refchi', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('refmag', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('refmagerr', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('data.expid', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 2048
@@ -410,7 +452,7 @@ if __name__ == '__main__':
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
     # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(10)
+    pool = ProcessPoolExecutor(12)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
