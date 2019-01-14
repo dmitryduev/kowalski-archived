@@ -367,12 +367,21 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                         print(str(e_))
 
             # ingest remaining
-            # stuff left from the last file?
-            if len(docs_sources) > 0:
-                print(f'inserting last batch #{batch_num} for {_file}')
-                if not _dry_run:
-                    insert_multiple_db_entries(_db, _collection=_collections['sources'],
-                                               _db_entries=docs_sources)
+            while len(docs_sources) > 0:
+                try:
+                    # In case mongo crashed and disconnected, docs will accumulate in documents
+                    # keep on trying to insert them until successful
+                    print(f'inserting batch #{batch_num} for {_file}')
+                    if not _dry_run:
+                        insert_multiple_db_entries(_db, _collection=_collections['sources'], _db_entries=docs_sources)
+                        # flush:
+                        docs_sources = []
+
+                except Exception as e:
+                    traceback.print_exc()
+                    print(e)
+                    print('Failed, waiting 5 seconds to retry')
+                    time.sleep(5)
 
     except Exception as e:
         traceback.print_exc()
