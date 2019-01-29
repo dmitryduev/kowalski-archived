@@ -457,7 +457,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     ['y', float],
                     ['z', float],
                     ['spt_ind', int],
-                    ['htm20', int]]
+                    ['htm20', int],
+                    ['eol', bool]]
     column_names = np.array(column_names)
 
     for ii, dff in enumerate(pd.read_csv(_file, chunksize=_batch_size, sep='|',
@@ -467,9 +468,9 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         dff['_id'] = dff['cntr']
 
-        drop_columns = ['x', 'y', 'z', 'spt_ind', 'htm20']
-        print(dff)
-        dff.drop(drop_columns, inplace=True)
+        drop_columns = ('x', 'y', 'z', 'spt_ind', 'htm20', 'eol')
+        # print(dff)
+        dff.drop(labels=drop_columns, axis=1, inplace=True)
 
         batch = dff.to_dict(orient='records')
 
