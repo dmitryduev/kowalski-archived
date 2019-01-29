@@ -1439,7 +1439,7 @@ class TestAPIs(object):
 
     # test user management API for admin
     async def test_users(self, aiohttp_client):
-        client = await aiohttp_client(await app_factory(_config=config))
+        client = await aiohttp_client(await app_factory())
 
         login = await client.post('/login', json={"username": config['server']['admin_username'],
                                                   "password": config['server']['admin_password']})
@@ -1471,7 +1471,7 @@ class TestAPIs(object):
 
     # test programmatic query API
     async def test_query(self, aiohttp_client):
-        client = await aiohttp_client(await app_factory(_config=config))
+        client = await aiohttp_client(await app_factory())
 
         # check JWT authorization
         auth = await client.post(f'/auth',

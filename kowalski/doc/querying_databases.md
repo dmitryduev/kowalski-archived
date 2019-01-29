@@ -287,6 +287,14 @@ db['Gaia_DR2'].find({'parallax': {'$gt': 0}, '$expr': {'$gt': [{'$add': [{'$subt
                     {'_id': 1, 'phot_g_mean_mag': 1, 'bp_rp': 1, 'coordinates': 1})
 ```
 
+---
+
+*Iterate over all ZTF Light Curves*
+
+```python
+db['ZTF_sources_20181220'].find({}, {'_id': 1, 'data.programid': 2, 'data.hjd': 1, 'data.mag': 1, 'data.magerr': 1}).skip(0).limit(10)
+db['ZTF_sources_20181220'].find({'data.programid': {'$ne': 1}}, {'_id': 1, 'data.programid': 1, 'data.hjd': 1, 'data.mag': 1, 'data.magerr': 1}).skip(5).limit(10)
+```
 
 ##### Spatial (positional) queries
 
