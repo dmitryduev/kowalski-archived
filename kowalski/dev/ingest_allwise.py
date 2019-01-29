@@ -468,9 +468,9 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         dff['_id'] = dff['cntr']
 
-        drop_columns = ('x', 'y', 'z', 'spt_ind', 'htm20', 'eol')
-        # print(dff)
-        dff.drop(labels=drop_columns, axis=1, inplace=True)
+        drop_columns = ['x', 'y', 'z', 'spt_ind', 'htm20', 'eol']
+        print(dff)
+        dff.drop(columns=drop_columns, inplace=True)
 
         batch = dff.to_dict(orient='records')
 
@@ -479,7 +479,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
         for ie, doc in enumerate(batch):
             try:
                 # fix types:
-                for col_name, col_type in column_names:
+                for col_name, col_type in column_names[:-6]:
                     try:
                         if doc[col_name] == '' or doc[col_name] == np.nan:
                             # doc[col_name] = None
