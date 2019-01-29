@@ -460,7 +460,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     ['htm20', int]]
     column_names = np.array(column_names)
 
-    for ii, dff in enumerate(pd.read_csv(_file, chunksize=_batch_size,
+    for ii, dff in enumerate(pd.read_csv(_file, chunksize=_batch_size, sep='|',
                                          header=None, names=column_names[:, 0])):
 
         print(f'Processing batch # {ii+1} from {_file}')
@@ -468,6 +468,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
         dff['_id'] = dff['cntr']
 
         drop_columns = ['x', 'y', 'z', 'spt_ind', 'htm20']
+        print(dff)
         dff.drop(drop_columns)
 
         batch = dff.to_dict(orient='records')
@@ -479,12 +480,9 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                 # fix types:
                 for col_name, col_type in column_names:
                     try:
-                        # if doc[col_name] == 'NOT_AVAILABLE':
-                        #     continue
-                        # elif doc[col_name] in ('false', 'true'):
-                        #     doc[col_name] = eval(doc[col_name].capitalize())
-                        if doc[col_name] == '':
-                            doc[col_name] = None
+                        if doc[col_name] == '' or doc[col_name] == np.nan:
+                            # doc[col_name] = None
+                            doc.pop(col_name, None)
                         else:
                             doc[col_name] = col_type(doc[col_name])
                     except Exception as e:
@@ -564,10 +562,10 @@ if __name__ == '__main__':
 
     # for ff in files[::-1]:
     for ff in sorted(files):
-        pool.submit(process_file, _file=ff, _collection=collection, _batch_size=batch_size,
-                    verbose=True, _dry_run=dry_run)
-        # process_file(_file=ff, _collection=collection, _batch_size=batch_size,
-        #              verbose=True, _dry_run=dry_run)
+        # pool.submit(process_file, _file=ff, _collection=collection, _batch_size=batch_size,
+        #             verbose=True, _dry_run=dry_run)
+        process_file(_file=ff, _collection=collection, _batch_size=batch_size,
+                     verbose=True, _dry_run=dry_run)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
