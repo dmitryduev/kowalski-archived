@@ -469,7 +469,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         drop_columns = ['x', 'y', 'z', 'spt_ind', 'htm20']
         print(dff)
-        dff.drop(drop_columns)
+        dff.drop(drop_columns, inplace=True)
 
         batch = dff.to_dict(orient='records')
 
