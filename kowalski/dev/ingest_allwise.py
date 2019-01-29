@@ -1,3 +1,4 @@
+import math
 import os
 import glob
 import numpy as np
@@ -483,6 +484,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     try:
                         if doc[col_name] == '' or doc[col_name] == np.nan:
                             # doc[col_name] = None
+                            doc.pop(col_name, None)
+                        elif isinstance(doc[col_name], float) and math.isnan(doc[col_name]):
                             doc.pop(col_name, None)
                         else:
                             doc[col_name] = col_type(doc[col_name])
