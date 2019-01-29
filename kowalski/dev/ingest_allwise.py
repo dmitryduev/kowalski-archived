@@ -566,10 +566,10 @@ if __name__ == '__main__':
 
     # for ff in files[::-1]:
     for ff in sorted(files):
-        # pool.submit(process_file, _file=ff, _collection=collection, _batch_size=batch_size,
-        #             verbose=True, _dry_run=dry_run)
-        process_file(_file=ff, _collection=collection, _batch_size=batch_size,
-                     verbose=True, _dry_run=dry_run)
+        pool.submit(process_file, _file=ff, _collection=collection, _batch_size=batch_size,
+                    verbose=True, _dry_run=dry_run)
+        # process_file(_file=ff, _collection=collection, _batch_size=batch_size,
+        #              verbose=True, _dry_run=dry_run)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
