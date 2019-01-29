@@ -574,7 +574,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(5)
+    pool = ProcessPoolExecutor(10)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
