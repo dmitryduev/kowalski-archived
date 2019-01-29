@@ -460,7 +460,20 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     ['spt_ind', int],
                     ['htm20', int],
                     ['eol', bool]]
+    column_names_keep = set(['designation', 'ra', 'dec', 'sigra', 'sigdec', 'sigradec', 'glon', 'glat', 'elon', 'elat',
+                             'wx', 'wy', 'w1mpro', 'w1sigmpro', 'w1snr', 'w1rchi2', 'w2mpro', 'w2sigmpro', 'w2snr',
+                             'w2rchi2', 'w3mpro', 'w3sigmpro', 'w3snr', 'w3rchi2', 'w4mpro', 'w4sigmpro', 'w4snr',
+                             'w4rchi2', 'rchi2', 'nb', 'na', 'w1sat', 'w2sat', 'w3sat', 'w4sat', 'satnum', 'ra_pm',
+                             'dec_pm', 'sigra_pm', 'sigdec_pm', 'sigradec_pm', 'pmra', 'sigpmra', 'pmdec', 'sigpmdec',
+                             'w1rchi2_pm', 'w2rchi2_pm', 'w3rchi2_pm', 'w4rchi2_pm', 'rchi2_pm', 'pmcode', 'cc_flags',
+                             'ext_flg', 'var_flg', 'ph_qual', 'det_bit', 'moon_lev', 'w1nm', 'w1m', 'w2nm', 'w2m',
+                             'w3nm', 'w3m', 'w4nm', 'w4m', 'w1cov', 'w2cov', 'w3cov', 'w4cov', 'tmass_key', 'r_2mass',
+                             'pa_2mass', 'n_2mass', 'j_m_2mass', 'j_msig_2mass', 'h_m_2mass', 'h_msig_2mass',
+                             'k_m_2mass', 'k_msig_2mass'])
+
     column_names = np.array(column_names)
+    columns = {c[0]: c[1] for c in column_names if c[0] in column_names_keep}
+    columns_ditch = set(column_names[:, 0]) - column_names_keep
 
     for ii, dff in enumerate(pd.read_csv(_file, chunksize=_batch_size, sep='|',
                                          header=None, names=column_names[:, 0])):
@@ -469,9 +482,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         dff['_id'] = dff['cntr']
 
-        drop_columns = ['x', 'y', 'z', 'spt_ind', 'htm20', 'eol']
         # print(dff)
-        dff.drop(columns=drop_columns, inplace=True)
+        dff.drop(columns=columns_ditch, inplace=True)
 
         batch = dff.to_dict(orient='records')
 
@@ -480,7 +492,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
         for ie, doc in enumerate(batch):
             try:
                 # fix types:
-                for col_name, col_type in column_names[:-6]:
+                for col_name, col_type in columns.items():
                     try:
                         if doc[col_name] == '' or doc[col_name] == np.nan:
                             # doc[col_name] = None
