@@ -195,16 +195,50 @@ Examples:
             height: getHeight(),
             columns: [
                 [
-                    {% for field_id in ('_id', 'ra', 'dec',
-                                        'p', 'zvm_program_id',
-                                        'source_types', 'source_flags', 'spec', 'lc', 'created') %}
+                    {
+                        field: 'obs_date',
+                        title: 'T_obs, UTC',
+                        rowspan: 2,
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'objectId',
+                        title: 'objectId',
+                        rowspan: 2,
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'candid',
+                        title: 'candid',
+                        rowspan: 2,
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'candidate',
+                        title: 'candidate',
+                        colspan: 7,
+                        align: 'center',
+                        valign: 'middle'
+                    }
+                ],
+                [
+                    {% for field_id in ('programid', 'fid', 'rb',
+                                        'magpsf', 'sigmapsf',
+                                        'ra', 'dec') %}
                     {
                         field: '{{field_id}}',
                         title: '{{field_id}}',
                         align: 'center',
                         valign: 'middle',
                         sortable: true,
-                        {% if field_id in ('lc', 'spec') %}
+                        {% if field_id in ('sigmapsf') %}
                         visible: false,
                         {% else %}
                         visible: true
@@ -214,19 +248,25 @@ Examples:
                 ]
             ],
             data: [
-                {% for entry in data %}
+                {% for alert in alerts %}
+                   {% set candid = alert['candid'] %}
+                   {% set objectId = alert['objectId'] %}
                     {
-                        {% for field_id in ('_id', 'ra', 'dec',
-                                        'p', 'zvm_program_id',
-                                        'source_types', 'source_flags', 'created') %}
-                        {{ field_id }}: "{{entry[field_id]}}",
-                        {% endfor %}
+                        objectId: "{{objectId}}",
+                        candid: "{{candid}}",
 
-                        {% for field_id in ('lc', 'spec') %}
-                        {{ field_id }}: "{{entry[field_id] | safe}}",
-                        {% endfor %}
+                        obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss'),
+                        {#obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss') + "__{{ alert['candidate']['jd'] }}",#}
+
+                        ra: "{{ alert['coordinates']['radec_str'][0] }}",
+                        dec: "{{ alert['coordinates']['radec_str'][1] }}",
+
+                        programid: "{{alert['candidate']['programid']}}",
+                        fid: "{{alert['candidate']['fid']}}",
+                        rb: "{{alert['candidate']['rb']}}".slice(0, 4),
+                        magpsf: "{{alert['candidate']['magpsf']}}".slice(0, 5),
+                        sigmapsf: "{{alert['candidate']['sigmapsf']}}".slice(0, 4)
                     },
-
                 {% endfor %}
             ]
         });
