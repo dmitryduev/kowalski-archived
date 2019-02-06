@@ -1211,6 +1211,30 @@ async def web_query_grab(request):
         return web.json_response({'message': f'Failure: {_err}'}, status=500)
 
 
+''' ZTF Alert Lab API '''
+
+
+@routes.get('/lab/ztf-alerts')
+@login_required
+async def docs_handler(request):
+    """
+        Serve docs page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    # todo?
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-lab-ztf-alerts.html',
+                                              request,
+                                              context)
+    return response
+
+
 ''' web endpoints '''
 
 
@@ -1337,27 +1361,6 @@ async def doc_handler(request):
                'title': title,
                'content': content}
     response = aiohttp_jinja2.render_template('template-doc.html',
-                                              request,
-                                              context)
-    return response
-
-
-@routes.get('/lab/ztf-alerts')
-@login_required
-async def docs_handler(request):
-    """
-        Serve docs page for the browser
-    :param request:
-    :return:
-    """
-    # get session:
-    session = await get_session(request)
-
-    # todo?
-
-    context = {'logo': config['server']['logo'],
-               'user': session['user_id']}
-    response = aiohttp_jinja2.render_template('template-lab-ztf-alerts.html',
                                               request,
                                               context)
     return response

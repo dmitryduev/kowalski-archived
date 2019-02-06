@@ -11,19 +11,119 @@
 {% endblock %}
 
 {% block body_top %}
-{#    <div class="container mt-2">#}
-{#        YO#}
-{#    </div>#}
+    <div class="container-fluid mt-2">
+
+        <div id="accordion" role="tablist" class="mt-2">
+            <div class="card">
+                <div class="card-header" role="tab" id="headingQueryTab">
+                    <h5 class="mb-0">
+                        <a data-toggle="collapse" href="#queryTab" aria-expanded="true"
+                           aria-controls="queryTab">
+                            Lab: Search ZTF Alerts
+                        </a>
+                    </h5>
+                </div>
+                <div id="queryTab" class="collapse" role="tabpanel" aria-labelledby="headingQueryTab">
+                    <div class="card-body">
+                        <form id="query_form" class="form" method="post">
+
+                            <div class="form-group row">
+                                <label for="ra" class="col-md-2 col-form-label">RA/Dec, ICRS</label>
+                                <div class="col-md-10">
+                                    <textarea class="form-control form-control-sm object_coordinates" id="radec" name="radec"
+                                              placeholder="Python-readable list of comma-separated object coordinates or dictionary:
+[(HH:MM:SS, DD:MM:SS) or (HHhMMmSSs, DDdMMmSSs) or (deg, deg)]
+Examples:
+[(0.0, 0.0)]
+[(0.0, 0.0), (1.0, 1.0)]
+[('08:55:29.205', '-34:02:36.8944')]
+{'object1': ('08h55m29.205s', '-34d02m36.8944s'), 'object2': ('06h55m29.205s', '32d02m36.1944s')}
+"
+                                              rows="8"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="cone_search_radius" class="col-md-2 control-label">
+                                    Cone search radius
+                                </label>
+
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control form-control-sm object_coordinates" id="cone_search_radius"
+                                           name="cone_search_radius" placeholder="">
+                                </div>
+                                <div class="col-md-5">
+                                    <select class="form-control form-control-sm object_coordinates" id="cone_search_unit"
+                                            name="cone_search_unit">
+                                        <option>arcsec</option>
+                                        <option>arcmin</option>
+                                        <option>deg</option>
+                                        <option>rad</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="filter" class="col-md-2 col-form-label">Filter</label>
+                                <div class="col-md-10">
+                                    <textarea class="form-control form-control-sm"
+                                              id="filter" name="filter"
+                                              placeholder="Filter in MongoDB syntax, see help"
+                                              rows="3"></textarea>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-dark btn-sm" id="submit_query">Submit</button>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block body %}
 
-    <div class="container mt-2">
+    <div class="container-fluid">
 
-        <h3>Lab: ZTF alerts</h3><br>
+{#    {% if data | length > 0 %}#}
+        <div id="toolbar" class="btn-group">
+            <button type="button" class="btn btn-outline-dark"
+                    style="cursor: pointer;" onclick="toggle_expansion()"
+                    data-toggle="tooltip" data-placement="top" title="Show/hide more">
+                <i id="expansion_toggle" class="fas fa-plus" aria-hidden="true"></i>
+            </button>
 
-        Under construction
+{#            <button type="button" class="btn btn-outline-dark"#}
+{#                    style="cursor: pointer;" onclick="toggle_invert_cutouts()"#}
+{#                    data-toggle="tooltip" data-placement="top" title="Invert cutout colors">#}
+{#                <i id="expansion_toggle" class="fas fa-adjust" aria-hidden="true"></i>#}
+{#            </button>#}
 
+        </div>
+        <table id="table"
+               class="table table-hover table-condensed"
+               data-toggle="table"
+               data-toolbar="#toolbar"
+               data-pagination="true"
+               data-side-pagination="client"
+               data-minimum-count-columns="2"
+               data-page-size="20"
+               data-page-list="[20, 50, 100, All]"
+               data-search="true"
+               data-detail-view="true"
+               data-detail-formatter="detailFormatter"
+               data-show-columns="true"
+               data-show-multi-sort="true"
+               data-show-export="true"
+               data-export-types="['json', 'csv']"
+               data-export-options='{ "fileName": "ztf-alerts",
+                                      "worksheetName": "ztf-alerts-sources1"
+                                     }'>
+        </table>
+{#    {% endif %}#}
     </div>
 
     <!-- Modal -->
@@ -53,10 +153,244 @@
 
 {% block js %}
 
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Bootstrap table -->
+    <script src="{{-script_root-}}/static/js/bootstrap-table.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-en-US.js"></script>
+    <script src="{{-script_root-}}/static/js/tableExport.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-export.js"></script>
+    <script src="{{-script_root-}}/static/js/FileSaver.min.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-multiple-sort.js"></script>
+
     <!-- Big int support for js -->
     <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
 
+    <!-- Julian dates -->
+    <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+
     <script>
+        // Fancy table stuff
+        function getHeight() {
+            var window_height = $(window).height();
+            {#console.log(window_height);#}
+            {#console.log(document.getElementById('table').getBoundingClientRect().top);#}
+            if (window_height > 1200) {
+                var top = document.getElementById('table').getBoundingClientRect().top;
+                return Math.max(560, window_height - top - 20);
+            }
+            else {
+                var top = document.getElementById('table').getBoundingClientRect().top;
+                return Math.max(560, window_height - top - 20);
+            }
+        }
+
+        var jd = new JulianDate();
+
+        // build table using js
+        $('#table').bootstrapTable({
+            height: getHeight(),
+            columns: [
+                [
+                    {% for field_id in ('_id', 'ra', 'dec',
+                                        'p', 'zvm_program_id',
+                                        'source_types', 'source_flags', 'spec', 'lc', 'created') %}
+                    {
+                        field: '{{field_id}}',
+                        title: '{{field_id}}',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        {% if field_id in ('lc', 'spec') %}
+                        visible: false,
+                        {% else %}
+                        visible: true
+                        {% endif %}
+                    },
+                    {% endfor %}
+                ]
+            ],
+            data: [
+                {% for entry in data %}
+                    {
+                        {% for field_id in ('_id', 'ra', 'dec',
+                                        'p', 'zvm_program_id',
+                                        'source_types', 'source_flags', 'created') %}
+                        {{ field_id }}: "{{entry[field_id]}}",
+                        {% endfor %}
+
+                        {% for field_id in ('lc', 'spec') %}
+                        {{ field_id }}: "{{entry[field_id] | safe}}",
+                        {% endfor %}
+                    },
+
+                {% endfor %}
+            ]
+        });
+
+        // display details
+        function detailFormatter(index, row, element) {
+            var html = [];
+
+            {#let jdd = new JulianDate();#}
+            {#let date_utc = moment(jdd.julian(parseFloat(row['jd'])).getDate()).utc().format('YYYYMMDD');#}
+
+            {# todo: grab with ajax and plot? #}
+            {#// Preview light curves#}
+            {#html.push("<div class=\"row p-0 m-0\">");#}
+            {#html.push("<div class=\"col-md-12 p-0 m-0\">");#}
+            {#html.push("<div id='lc_" + index + "' style='width: 100\%; height: 400px;'></div>");#}
+            {#html.push("<script>var data = [{" +#}
+            {#             "x: " + row['mjd'] +", " +#}
+            {#             "y: " + row['mag'] +", " +#}
+                         {#"error_y: {type: 'data', array: " + row['magerr'] + ", visible: true}, " +#}
+                         {# lines+markers#}
+            {#             "line: {width: 0.5, color: '#00415a'}, " +#}
+            {#             "mode: 'lines+markers'} ]; " +#}
+            {#             "var layout = {yaxis: {autorange: 'reversed'}}; " +#}
+            {#             "Plotly.newPlot('lc_" + index + "', data, layout);<\/script>");#}
+            {#html.push("</div>");#}
+            {##}
+            {#// close row#}
+            {#html.push("</div>");#}
+
+            // Buttons:
+            html.push("<div class=\"row p-0 m-0\">");
+            html.push("<div class=\"col-12 p-0 m-0\">");
+            // details:
+            {#html.push("<br>");#}
+            html.push("<a target='_blank' role='button' " + "href='/sources/" + row['_id'] +
+                "' class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Details <i class='fas fa-external-link-alt'></i></a>");
+            html.push("</div>");
+
+            // close buttons row
+            html.push("</div>");
+
+            return html.join('');
+        }
+
+
+        // reset height of table with search results
+        function resetTableHeight() {
+            var $table = $('#table');
+            $table.bootstrapTable('resetView', {
+                height: getHeight()
+            });
+        }
+        $(document).ready(function() {
+            // on load
+            if( $('#table').length ) {
+                resetTableHeight();
+            }
+        });
+        $(window).resize(function () {
+            // on window resize
+            if( $('#table').length ) {
+                resetTableHeight();
+            }
+        });
+
+        // on accordion collapse/show
+        $('#queryTab').on('hidden.bs.collapse', function () {
+          resetTableHeight();
+        });
+        $('#queryTab').on('shown.bs.collapse', function () {
+          resetTableHeight();
+        });
+
+        {# table sorting #}
+        function getOrder() {
+            var $table = $('#table');
+            return $table.bootstrapTable('getOptions').sortOrder === 'asc' ? -1 : 1;
+        }
+
+        function numberSorter(a, b) {
+            a = $.trim(a.replace(/<\/?[^>]+(>|$)/g, ""));
+            b = $.trim(b.replace(/<\/?[^>]+(>|$)/g, ""));
+            if (!a || a === 'None') return -1 * getOrder();
+            if (!b || b === 'None') return 1 * getOrder();
+            if (parseFloat(a) < parseFloat(b)) return -1;
+            if (parseFloat(a) > parseFloat(b)) return 1;
+            return 0;
+        }
+
+        function stringSorter(a, b) {
+            a = $.trim(a.replace(/<\/?[^>]+(>|$)/g, ""));
+            b = $.trim(b.replace(/<\/?[^>]+(>|$)/g, ""));
+            if (!a || a === 'None') return -1 * getOrder();
+            if (!b || b === 'None') return 1 * getOrder();
+            if (a < b) return -1;
+            if (a > b) return 1;
+            return 0;
+        }
+
+        {# expand all rows in table #}
+        function toggle_expansion(){
+            if ($("#expansion_toggle").hasClass('fa-plus')) {
+                $('#table').bootstrapTable('expandAllRows', false);
+            }
+            else {
+                $('#table').bootstrapTable('collapseAllRows', false);
+            }
+            $("#expansion_toggle").toggleClass('fa-plus fa-minus');
+        }
+
+        {# toggle cutout color invert #}
+        function toggle_invert_cutouts(){
+            $('.cutout').toggleClass('invert');
+        }
+
+
+        {# init tooltips #}
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        });
+
+
+        {# actions #}
+        {# download json as files #}
+        function download(json, name, type) {
+            var a = document.createElement("a");
+            var file = new Blob([json], {type: type});
+            var url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function(){
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+{#        {% endif %}#}
+
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fas fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fas fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            $('#query_form').submit();
+                        }
+                    }
+                });
+            });
+        });
 
         {# show flashing messages #}
         function showFlashingMessage(title, message, type) {
@@ -88,5 +422,20 @@
             });
         {% endif %}
     </script>
+
+    {# populate form from previous request #}
+    {% if form | length > 0 %}
+    <script>
+        $(document).ready(function() {
+            {%-for key in form-%}
+                {%-if form[key] == 'on'-%}
+                    $('#{{-key-}}').prop('checked', true);
+                {%-else-%}
+                    $('#{{-key-}}').val("{{-form[key]|safe|replace('\"', '\'')-}}");
+                {%-endif-%}
+            {%-endfor-%}
+        })
+    </script>
+    {% endif %}
 
 {% endblock %}
