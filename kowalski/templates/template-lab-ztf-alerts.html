@@ -2,8 +2,7 @@
 
 {# custom css #}
 {% block css %}
-{#    <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">#}
-{#    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />#}
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">
 {% endblock %}
 
 {% block nav_lab %}
@@ -86,9 +85,9 @@ Examples:
 
 {% block body %}
 
+
     <div class="container-fluid">
 
-{#    {% if data | length > 0 %}#}
         <div id="toolbar" class="btn-group">
             <button type="button" class="btn btn-outline-dark"
                     style="cursor: pointer;" onclick="toggle_expansion()"
@@ -103,6 +102,7 @@ Examples:
 {#            </button>#}
 
         </div>
+
         <table id="table"
                class="table table-hover table-condensed"
                data-toggle="table"
@@ -111,19 +111,16 @@ Examples:
                data-side-pagination="client"
                data-minimum-count-columns="2"
                data-page-size="20"
-               data-page-list="[20, 50, 100, All]"
+               data-page-list="[20, 50, 100, 500, All]"
                data-search="true"
-               data-detail-view="true"
-               data-detail-formatter="detailFormatter"
                data-show-columns="true"
-               data-show-multi-sort="true"
                data-show-export="true"
                data-export-types="['json', 'csv']"
                data-export-options='{ "fileName": "ztf-alerts",
-                                      "worksheetName": "ztf-alerts-sources1"
-                                     }'>
+                                          "worksheetName": "ztf-alerts"
+                                         }'>
         </table>
-{#    {% endif %}#}
+
     </div>
 
     <!-- Modal -->
@@ -150,10 +147,7 @@ Examples:
 
 {% endblock %}
 
-
 {% block js %}
-
-    <!-- Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <!-- Bootstrap table -->
@@ -162,15 +156,7 @@ Examples:
     <script src="{{-script_root-}}/static/js/tableExport.js"></script>
     <script src="{{-script_root-}}/static/js/bootstrap-table-export.js"></script>
     <script src="{{-script_root-}}/static/js/FileSaver.min.js"></script>
-    <script src="{{-script_root-}}/static/js/bootstrap-table-multiple-sort.js"></script>
-
-    <!-- Big int support for js -->
     <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
-
-    <!-- Julian dates -->
-    <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
-
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 
     <script>
         // Fancy table stuff
@@ -187,8 +173,6 @@ Examples:
                 return Math.max(560, window_height - top - 20);
             }
         }
-
-        var jd = new JulianDate();
 
         // build table using js
         $('#table').bootstrapTable({
@@ -229,26 +213,66 @@ Examples:
                     }
                 ],
                 [
-                    {% for field_id in ('programid', 'fid', 'rb',
-                                        'magpsf', 'sigmapsf',
-                                        'ra', 'dec') %}
                     {
-                        field: '{{field_id}}',
-                        title: '{{field_id}}',
+                        field: 'programid',
+                        title: 'programid',
                         align: 'center',
                         valign: 'middle',
                         sortable: true,
-                        {% if field_id in ('sigmapsf') %}
-                        visible: false,
-                        {% else %}
                         visible: true
-                        {% endif %}
                     },
-                    {% endfor %}
+                    {
+                        field: 'fid',
+                        title: 'fid',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'rb',
+                        title: 'rb',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'magpsf',
+                        title: 'magpsf',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'sigmapsf',
+                        title: 'sigmapsf',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'ra',
+                        title: 'R.A.',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'dec',
+                        title: 'Decl.',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    }
                 ]
             ],
             data: [
-                {% for alert in alerts %}
+                {%-for alert in alerts-%}
                    {% set candid = alert['candid'] %}
                    {% set objectId = alert['objectId'] %}
                     {
@@ -256,7 +280,6 @@ Examples:
                         candid: "{{candid}}",
 
                         obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss'),
-                        {#obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss') + "__{{ alert['candidate']['jd'] }}",#}
 
                         ra: "{{ alert['coordinates']['radec_str'][0] }}",
                         dec: "{{ alert['coordinates']['radec_str'][1] }}",
@@ -267,35 +290,13 @@ Examples:
                         magpsf: "{{alert['candidate']['magpsf']}}".slice(0, 5),
                         sigmapsf: "{{alert['candidate']['sigmapsf']}}".slice(0, 4)
                     },
-                {% endfor %}
+                {%-endfor-%}
             ]
         });
 
         // display details
         function detailFormatter(index, row, element) {
             var html = [];
-
-            {#let jdd = new JulianDate();#}
-            {#let date_utc = moment(jdd.julian(parseFloat(row['jd'])).getDate()).utc().format('YYYYMMDD');#}
-
-            {# todo: grab with ajax and plot? #}
-            {#// Preview light curves#}
-            {#html.push("<div class=\"row p-0 m-0\">");#}
-            {#html.push("<div class=\"col-md-12 p-0 m-0\">");#}
-            {#html.push("<div id='lc_" + index + "' style='width: 100\%; height: 400px;'></div>");#}
-            {#html.push("<script>var data = [{" +#}
-            {#             "x: " + row['mjd'] +", " +#}
-            {#             "y: " + row['mag'] +", " +#}
-                         {#"error_y: {type: 'data', array: " + row['magerr'] + ", visible: true}, " +#}
-                         {# lines+markers#}
-            {#             "line: {width: 0.5, color: '#00415a'}, " +#}
-            {#             "mode: 'lines+markers'} ]; " +#}
-            {#             "var layout = {yaxis: {autorange: 'reversed'}}; " +#}
-            {#             "Plotly.newPlot('lc_" + index + "', data, layout);<\/script>");#}
-            {#html.push("</div>");#}
-            {##}
-            {#// close row#}
-            {#html.push("</div>");#}
 
             // Buttons:
             html.push("<div class=\"row p-0 m-0\">");
@@ -311,7 +312,6 @@ Examples:
 
             return html.join('');
         }
-
 
         // reset height of table with search results
         function resetTableHeight() {
@@ -331,14 +331,6 @@ Examples:
             if( $('#table').length ) {
                 resetTableHeight();
             }
-        });
-
-        // on accordion collapse/show
-        $('#queryTab').on('hidden.bs.collapse', function () {
-          resetTableHeight();
-        });
-        $('#queryTab').on('shown.bs.collapse', function () {
-          resetTableHeight();
         });
 
         {# table sorting #}
@@ -367,28 +359,11 @@ Examples:
             return 0;
         }
 
-        {# expand all rows in table #}
-        function toggle_expansion(){
-            if ($("#expansion_toggle").hasClass('fa-plus')) {
-                $('#table').bootstrapTable('expandAllRows', false);
-            }
-            else {
-                $('#table').bootstrapTable('collapseAllRows', false);
-            }
-            $("#expansion_toggle").toggleClass('fa-plus fa-minus');
-        }
-
-        {# toggle cutout color invert #}
-        function toggle_invert_cutouts(){
-            $('.cutout').toggleClass('invert');
-        }
-
 
         {# init tooltips #}
         $(function () {
             $('[data-toggle="tooltip"]').tooltip()
         });
-
 
         {# actions #}
         {# download json as files #}
@@ -405,32 +380,6 @@ Examples:
                 window.URL.revokeObjectURL(url);
             }, 100);
         }
-
-{#        {% endif %}#}
-
-        // submit query
-        $(document).ready(function() {
-            $('#submit_query').click(function () {
-                bootbox.confirm({
-                    message: "Do you want to submit the query?",
-                    buttons: {
-                        cancel: {
-                            label: '<i class="fas fa-times"></i> Cancel'
-                        },
-                        confirm: {
-                            label: '<i class="fas fa-check"></i> Confirm'
-                        }
-                    },
-                    callback: function (result) {
-                        // console.log('This was logged in the callback: ' + result);
-                        // confirmed? emit request to server:
-                        if (result) {
-                            $('#query_form').submit();
-                        }
-                    }
-                });
-            });
-        });
 
         {# show flashing messages #}
         function showFlashingMessage(title, message, type) {
@@ -477,5 +426,4 @@ Examples:
         })
     </script>
     {% endif %}
-
 {% endblock %}
