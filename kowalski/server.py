@@ -1216,7 +1216,7 @@ async def web_query_grab(request):
 
 @routes.get('/lab/ztf-alerts')
 @login_required
-async def docs_handler(request):
+async def ztf_alert_get_handler(request):
     """
         Serve docs page for the browser
     :param request:
@@ -1233,6 +1233,139 @@ async def docs_handler(request):
                                               request,
                                               context)
     return response
+
+
+@routes.post('/lab/ztf-alerts')
+@login_required
+async def ztf_alert_post_handler(request):
+    """
+        Process query to own ZTF_alerts db from browser
+
+        714104325815015060
+        [('22:08:59.5326', '57:23:54.941')]
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    try:
+        _query = await request.json()
+    except Exception as _e:
+        print(f'Cannot extract json() from request, trying post(): {str(_e)}')
+        # _err = traceback.format_exc()
+        # print(_err)
+        _query = await request.post()
+    # print(_query)
+
+    try:
+        # parse query
+        q = dict()
+
+        # filter set?
+        if len(_query['filter']) > 2:
+            # construct filter
+            _filter = _query['filter']
+            if isinstance(_filter, str):
+                # passed string? evaluate:
+                _filter = literal_eval(_filter.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                _filter = _filter
+            else:
+                raise ValueError('Unsupported filter specification')
+
+            q = {**q, **_filter}
+
+        # cone search?
+        if len(_query['cone_search_radius']) > 0 and len(_query['radec']) > 8:
+            cone_search_radius = float(_query['cone_search_radius'])
+            # convert to rad:
+            if _query['cone_search_unit'] == 'arcsec':
+                cone_search_radius *= np.pi / 180.0 / 3600.
+            elif _query['cone_search_unit'] == 'arcmin':
+                cone_search_radius *= np.pi / 180.0 / 60.
+            elif _query['cone_search_unit'] == 'deg':
+                cone_search_radius *= np.pi / 180.0
+            elif _query['cone_search_unit'] == 'rad':
+                cone_search_radius *= 1
+            else:
+                raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
+
+            # parse coordinate list
+            # print(task['object_coordinates']['radec'])
+            objects = literal_eval(_query['radec'].strip())
+            # print(type(objects), isinstance(objects, dict), isinstance(objects, list))
+
+            # this could either be list [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
+            if isinstance(objects, list):
+                object_coordinates = objects
+                object_names = [str(obj_crd) for obj_crd in object_coordinates]
+            elif isinstance(objects, dict):
+                object_names, object_coordinates = zip(*objects.items())
+                object_names = list(map(str, object_names))
+            else:
+                raise ValueError('Unsupported type of object coordinates')
+
+            # print(object_names, object_coordinates)
+
+            object_position_query = dict()
+            object_position_query['$or'] = []
+
+            for oi, obj_crd in enumerate(object_coordinates):
+                # convert ra/dec into GeoJSON-friendly format
+                # print(obj_crd)
+                _ra, _dec = radec_str2geojson(*obj_crd)
+                # print(str(obj_crd), _ra, _dec)
+
+                object_position_query['$or'].append({'coordinates.radec_geojson':
+                                                         {'$geoWithin': {'$centerSphere': [[_ra, _dec],
+                                                                                           cone_search_radius]}}})
+
+            q = {**q, **object_position_query}
+            q = {'$and': [q]}
+
+        # print(q)
+        if len(q) == 0:
+            context = {'logo': config['server']['logo'],
+                       'user': session['user_id'],
+                       'data': [],
+                       'form': _query,
+                       'messages': [[f'Empty query', 'danger']]}
+
+        else:
+
+            alerts = await request.app['mongo']['ZTF_alerts'].find(q). \
+                sort([('candidate.jd', -1)]).to_list(length=None)
+
+            context = {'logo': config['server']['logo'],
+                       'user': session['user_id'],
+                       'alerts': alerts,
+                       'form': _query}
+
+            if len(alerts) == 0:
+                context['messages'] = [['No alerts found', 'info']]
+
+        response = aiohttp_jinja2.render_template('template-lab-ztf-alerts.html',
+                                                  request,
+                                                  context)
+        return response
+
+    except Exception as _e:
+
+        print(f'Error: {str(_e)}')
+
+        context = {'logo': config['server']['logo'],
+                   'user': session['user_id'],
+                   'alerts': [],
+                   'form': _query,
+                   'messages': [[f'Error: {str(_e)}', 'danger']]}
+
+        response = aiohttp_jinja2.render_template('template-lab-ztf-alerts.html',
+                                                  request,
+                                                  context)
+
+        return response
 
 
 ''' web endpoints '''

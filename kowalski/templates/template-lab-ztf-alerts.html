@@ -86,7 +86,7 @@ Examples:
 {% block body %}
 
 
-    <div class="container-fluid">
+    <div class="container-fluid ">
 
         <div id="toolbar" class="btn-group">
             <button type="button" class="btn btn-outline-dark"
@@ -158,6 +158,14 @@ Examples:
     <script src="{{-script_root-}}/static/js/FileSaver.min.js"></script>
     <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
 
+    <!-- Big int support for js -->
+    <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
+
+    <!-- Julian dates -->
+    <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+
     <script>
         // Fancy table stuff
         function getHeight() {
@@ -173,6 +181,8 @@ Examples:
                 return Math.max(560, window_height - top - 20);
             }
         }
+
+        var jd = new JulianDate();
 
         // build table using js
         $('#table').bootstrapTable({
@@ -380,6 +390,30 @@ Examples:
                 window.URL.revokeObjectURL(url);
             }, 100);
         }
+
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fas fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fas fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            $('#query_form').submit();
+                        }
+                    }
+                });
+            });
+        });
 
         {# show flashing messages #}
         function showFlashingMessage(title, message, type) {
