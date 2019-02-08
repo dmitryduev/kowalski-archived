@@ -1225,14 +1225,47 @@ async def ztf_alert_get_handler(request):
     # get session:
     session = await get_session(request)
 
-    # todo?
-
     context = {'logo': config['server']['logo'],
                'user': session['user_id']}
     response = aiohttp_jinja2.render_template('template-lab-ztf-alerts.html',
                                               request,
                                               context)
     return response
+
+
+@routes.get('/lab/ztf-alerts/{candid}')
+@login_required
+async def ztf_alert_get_handler(request):
+    """
+        Serve docs page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    candid = int(request.match_info['candid'])
+
+    alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
+                                                              {'cutoutScience': 0,
+                                                               'cutoutTemplate': 0,
+                                                               'cutoutDifference': 0})
+
+    frmt = request.query.get('format', 'web')
+    # print(frmt)
+
+    if frmt == 'json':
+        return web.json_response(alert, status=200, dumps=dumps)
+
+    elif frmt == 'web':
+
+        context = {'logo': config['server']['logo'],
+                   'user': session['user_id'],
+                   'alert': alert}
+        response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
+                                                  request,
+                                                  context)
+        return response
 
 
 @routes.post('/lab/ztf-alerts')
@@ -1335,7 +1368,10 @@ async def ztf_alert_post_handler(request):
 
         else:
 
-            alerts = await request.app['mongo']['ZTF_alerts'].find(q). \
+            # do not fetch/pass cutouts in bulk
+            alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'cutoutScience': 0,
+                                                                       'cutoutTemplate': 0,
+                                                                       'cutoutDifference': 0}). \
                 sort([('candidate.jd', -1)]).to_list(length=None)
 
             context = {'logo': config['server']['logo'],

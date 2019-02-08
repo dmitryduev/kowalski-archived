@@ -1,0 +1,121 @@
+{% extends "template.html" %}
+
+{# custom css #}
+{% block css %}
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/styles/default.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/jquery.json-viewer.css">
+{% endblock %}
+
+{% block nav_lab %}
+    active
+{% endblock %}
+
+
+{% block body %}
+
+    <div class="container">
+        <div class="row mb-2">
+            <div class="col-12">
+                <h3>Alert {{ alert['_id'] }}</h3>
+            </div>
+        </div>
+
+        <div class="row">
+            {# cutouts: #}
+            {% for cutout in ["science", "template", "difference"] %}
+            <div class="col-md-auto">
+                <figure class='figure m-1 align-top'>
+{#                    <img class='figure-img img-fluid mb-1' src='/data/{{ alert['_id'] }}/{{ cutout }}.jpg'>#}
+                    <figcaption class='figure-caption text-center'>{{ cutout }}</figcaption>
+                </figure>
+            </div>
+            {% endfor %}
+
+            {# lightcurve #}
+            <div class="col-md-4">
+                <figure class='figure ml-3 mt-1 mb-1 align-top'>
+                    <img class='figure-img img-fluid mb-1 mr-1' style='width: 295px'
+{#                         src='/data/{{ alert['_id'] }}/lightcurve.jpg'>#}
+                    <figcaption class='figure-caption text-center'>Light curve</figcaption>
+                </figure>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                {# Buttons:#}
+                <div class="col-1 p-0 m-0">
+                <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?download=json'
+                   class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Download JSON <i class='fas fa-download'></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-1">
+            <div class="col-12">
+{#                <pre><code class="json">{{alert|tojson_pretty|safe}}</code></pre>#}
+                <p>
+                    <pre id="json-renderer" class="pl-4 pr-4"></pre>
+                </p>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Big int support for js -->
+    <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
+
+    <!-- Julian dates -->
+    <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+
+    <!-- Highlight code-->
+    <script src="{{-script_root-}}/static/js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="{{-script_root-}}/static/js/jquery.json-viewer.js"></script>
+
+    <script>
+        var data = JSONbig.parse('{{-alert|tojson(indent=2)|safe|replace('\n', '')-}}');
+        {#var data = JSONbig.parse('{{ alert }}');#}
+        {#console.log(data);#}
+        $('#json-renderer').jsonViewer(data, {collapsed: true, withQuotes: true});
+        // open
+        $('#json-renderer').find(">:first-child").trigger("click");
+    </script>
+
+
+    <script>
+        {# show flashing messages #}
+        function showFlashingMessage(title, message, type) {
+            $.notify({title: title, message: message},
+                {placement: {
+                    from: "bottom",
+                    align: "right"
+                },
+                    type: type,
+                    template: '<div data-notify="container" class="col-xs-11 col-sm-3 alert alert-{0}" role="alert" ' +
+                    'style="max-width:400px; font-size: 0.75rem;">' +
+                    '<button type="button" aria-hidden="true" class="close" data-notify="dismiss">×</button>' +
+                    '<span data-notify="icon"></span> ' +
+                    '<span data-notify="title">{1}</span> ' +
+                    '<span data-notify="message">{2}</span>' +
+                    '<div class="progress" data-notify="progressbar">' +
+                    '<div class="progress-bar progress-bar-{0}" role="progressbar" aria-valuenow="0" ' +
+                    'aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>' +
+                    '</div>' +
+                    '<a href="{3}" target="{4}" data-notify="url"></a>' +
+                    '</div>'
+            });
+        }
+    </script>
+
+
+{% endblock %}
