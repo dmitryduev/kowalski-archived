@@ -34,7 +34,7 @@
             {# lightcurve #}
             <div class="col-md-4">
                 <figure class='figure ml-3 mt-1 mb-1 align-top'>
-                    <img class='figure-img img-fluid mb-1 mr-1' style='width: 295px'
+{#                    <img class='figure-img img-fluid mb-1 mr-1' style='width: 295px'#}
 {#                         src='/data/{{ alert['_id'] }}/lightcurve.jpg'>#}
                     <figcaption class='figure-caption text-center'>Light curve</figcaption>
                 </figure>
@@ -45,7 +45,7 @@
             <div class="col-12">
                 {# Buttons:#}
                 <div class="col-1 p-0 m-0">
-                <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?download=json'
+                <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?format=json'
                    class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Download JSON <i class='fas fa-download'></i></a>
                 </div>
             </div>

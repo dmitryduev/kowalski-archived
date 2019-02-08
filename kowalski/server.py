@@ -1,4 +1,5 @@
 from aiohttp import web
+from multidict import MultiDict
 import jinja2
 import aiohttp_jinja2
 from aiohttp_session import setup, get_session, session_middleware
@@ -1266,6 +1267,34 @@ async def ztf_alert_get_handler(request):
                                                   request,
                                                   context)
         return response
+
+
+@routes.get('/lab/ztf-alerts/{candid}/cutout/{cutout}')
+@login_required
+async def ztf_alert_get_cutout_handler(request):
+    """
+        Serve docs page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    candid = int(request.match_info['candid'])
+    cutout = request.match_info['cutout'].capitalize()
+
+    assert cutout in ['Science', 'Template', 'Difference']
+
+    alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
+                                                              {f'cutout{cutout}': 1})
+
+    cutout_data = loads(dumps([alert[f'cutout{cutout}']['stampData']]))[0]
+
+    # print(cutout_data)
+
+    return web.Response(body=cutout_data, content_type='image/fits',
+                        headers=MultiDict({'Content-Disposition':
+                                               f'Attachment;filename={alert[f"cutout{cutout}"]["fileName"]}'}),)
 
 
 @routes.post('/lab/ztf-alerts')
