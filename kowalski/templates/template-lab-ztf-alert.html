@@ -18,7 +18,7 @@
     <div class="container">
         <div class="row mb-2">
             <div class="col-12">
-                <h3>Alert {{ alert['_id'] }}</h3>
+                <h3>ZTF Alert {{ alert['_id'] }}</h3>
             </div>
         </div>
 
@@ -28,14 +28,16 @@
             {% for cutout in ["Science", "Template", "Difference"] %}
             <div class="col-md-auto">
                 <figure class='figure m-1 align-top'>
+                    <div class="JS9" id="JS9{{ cutout }}" data-width="180px" data-height="180px"></div>
+{#                    <div style="margin-top: 2px;">#}
+{#                        <div class="JS9Colorbar" id="JS9{{ cutout }}Colorbar"#}
+{#                             data-displays="JS9{{ cutout }}" data-width="180px"></div>#}
+{#                    </div>#}
                     <div class="JS9Menubar d-none" id="JS9{{ cutout }}Menubar"
                          data-displays="JS9{{ cutout }}" data-width="180px"></div>
-                    <div class="JS9" id="JS9{{ cutout }}" data-width="180px" data-height="180px"></div>
-                    <div style="margin-top: 2px;">
-                        <div class="JS9Colorbar" id="JS9{{ cutout }}Colorbar"
-                             data-displays="JS9{{ cutout }}" data-width="180px"></div>
-                    </div>
-                    <figcaption class='figure-caption text-center'>{{ cutout }}</figcaption>
+                    <figcaption class='mt-2 figure-caption text-center'>
+                        {{ cutout }} <a href="/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/{{ cutout }}"><i class='fas fa-download'></i></a>
+                    </figcaption>
                 </figure>
             </div>
             {% endfor %}
@@ -51,9 +53,9 @@
         </div>
 
         <div class="row">
-            <div class="col-12">
+            <div class="col-sm-12">
                 {# Buttons:#}
-                <div class="col-1 p-0 m-0">
+                <div class="col-sm-12 p-0 m-0">
 
                 <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'
                    onclick="toggleMenus()">Toggle JS9 Menus</a>
@@ -113,9 +115,9 @@
     <script>
         {# Cutouts #}
         document.addEventListener('DOMContentLoaded', function () {
-            JS9.Preload('/{{-alert["candid"]-}}/cutout/science/', {scale: 'log', onload: setZoom}, {display: 'JS9Science'});
-            JS9.Preload('/{{-alert["candid"]-}}/cutout/template/', {scale: 'log', onload: setZoom}, {display: 'JS9Template'});
-            JS9.Preload('/{{-alert["candid"]-}}/cutout/difference/', {scale: 'log', onload: setZoom}, {display: 'JS9Difference'});
+            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/science', {scale: 'log', onload: setZoom}, {display: 'JS9Science'});
+            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/template', {scale: 'log', onload: setZoom}, {display: 'JS9Template'});
+            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/difference', {scale: 'log', onload: setZoom}, {display: 'JS9Difference'});
             {#plotLightCurve();#}
         });
 

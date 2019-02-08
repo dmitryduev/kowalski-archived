@@ -157,6 +157,8 @@ div.JS9Message {
     font-family: Helvetica, sans-serif;
     font-size: 10pt;
     font-weight: 300;
+    /*color: lightcyan !important;*/
+    color: #68ceff !important;
 }
 
 /* div enclosing progress bar in message area */
