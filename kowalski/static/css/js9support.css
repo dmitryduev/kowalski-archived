@@ -1,0 +1,1064 @@
+@charset "UTF-8";
+/*!
+ * jQuery contextMenu - Plugin for simple contextMenu handling
+ *
+ * Version: v2.6.3
+ *
+ * Authors: Björn Brala (SWIS.nl), Rodney Rehm, Addy Osmani (patches for FF)
+ * Web: http://swisnl.github.io/jQuery-contextMenu/
+ *
+ * Copyright (c) 2011-2017 SWIS BV and contributors
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
+ *
+ * Date: 2017-10-30T19:03:13.936Z
+ */
+@-webkit-keyframes cm-spin {
+  0% {
+    -webkit-transform: translateY(-50%) rotate(0deg);
+            transform: translateY(-50%) rotate(0deg);
+  }
+  100% {
+    -webkit-transform: translateY(-50%) rotate(359deg);
+            transform: translateY(-50%) rotate(359deg);
+  }
+}
+@-o-keyframes cm-spin {
+  0% {
+    -webkit-transform: translateY(-50%) rotate(0deg);
+         -o-transform: translateY(-50%) rotate(0deg);
+            transform: translateY(-50%) rotate(0deg);
+  }
+  100% {
+    -webkit-transform: translateY(-50%) rotate(359deg);
+         -o-transform: translateY(-50%) rotate(359deg);
+            transform: translateY(-50%) rotate(359deg);
+  }
+}
+@keyframes cm-spin {
+  0% {
+    -webkit-transform: translateY(-50%) rotate(0deg);
+         -o-transform: translateY(-50%) rotate(0deg);
+            transform: translateY(-50%) rotate(0deg);
+  }
+  100% {
+    -webkit-transform: translateY(-50%) rotate(359deg);
+         -o-transform: translateY(-50%) rotate(359deg);
+            transform: translateY(-50%) rotate(359deg);
+  }
+}
+
+@font-face {
+  font-family: "context-menu-icons";
+  font-style: normal;
+  font-weight: normal;
+
+  src: url("font/context-menu-icons.eot?2wp27");
+  src: url("font/context-menu-icons.eot?2wp27#iefix") format("embedded-opentype"), url("font/context-menu-icons.woff2?2wp27") format("woff2"), url("font/context-menu-icons.woff?2wp27") format("woff"), url("font/context-menu-icons.ttf?2wp27") format("truetype");
+}
+
+.context-menu-icon-add:before {
+  content: "\EA01";
+}
+
+.context-menu-icon-copy:before {
+  content: "\EA02";
+}
+
+.context-menu-icon-cut:before {
+  content: "\EA03";
+}
+
+.context-menu-icon-delete:before {
+  content: "\EA04";
+}
+
+.context-menu-icon-edit:before {
+  content: "\EA05";
+}
+
+.context-menu-icon-loading:before {
+  content: "\EA06";
+}
+
+.context-menu-icon-paste:before {
+  content: "\EA07";
+}
+
+.context-menu-icon-quit:before {
+  content: "\EA08";
+}
+
+.context-menu-icon::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2em;
+  font-family: "context-menu-icons";
+  font-size: 1em;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  color: #2980b9;
+  text-align: center;
+  -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+       -o-transform: translateY(-50%);
+          transform: translateY(-50%);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.context-menu-icon.context-menu-hover:before {
+  color: #fff;
+}
+
+.context-menu-icon.context-menu-disabled::before {
+  color: #bbb;
+}
+
+.context-menu-icon.context-menu-icon-loading:before {
+  -webkit-animation: cm-spin 2s infinite;
+       -o-animation: cm-spin 2s infinite;
+          animation: cm-spin 2s infinite;
+}
+
+.context-menu-icon.context-menu-icon--fa {
+  display: list-item;
+  font-family: inherit;
+}
+.context-menu-icon.context-menu-icon--fa::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2em;
+  font-family: FontAwesome;
+  font-size: 1em;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  color: #2980b9;
+  text-align: center;
+  -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+       -o-transform: translateY(-50%);
+          transform: translateY(-50%);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.context-menu-icon.context-menu-icon--fa.context-menu-hover:before {
+  color: #fff;
+}
+.context-menu-icon.context-menu-icon--fa.context-menu-disabled::before {
+  color: #bbb;
+}
+
+.context-menu-list {
+  position: absolute;
+  display: inline-block;
+  min-width: 13em;
+  max-width: 26em;
+  padding: .25em 0;
+  margin: .3em;
+  font-family: inherit;
+  font-size: inherit;
+  list-style-type: none;
+  background: #fff;
+  border: 1px solid #bebebe;
+  border-radius: .2em;
+  -webkit-box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
+          box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
+}
+
+.context-menu-item {
+  position: relative;
+  padding: .2em 2em;
+  color: #2f2f2f;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+  background-color: #fff;
+}
+
+.context-menu-separator {
+  padding: 0;
+  margin: .35em 0;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.context-menu-item > label > input,
+.context-menu-item > label > textarea {
+  -webkit-user-select: text;
+     -moz-user-select: text;
+      -ms-user-select: text;
+          user-select: text;
+}
+
+.context-menu-item.context-menu-hover {
+  color: #fff;
+  cursor: pointer;
+  background-color: #2980b9;
+}
+
+.context-menu-item.context-menu-disabled {
+  color: #bbb;
+  cursor: default;
+  background-color: #fff;
+}
+
+.context-menu-input.context-menu-hover {
+  color: #2f2f2f;
+  cursor: default;
+}
+
+.context-menu-submenu:after {
+  position: absolute;
+  top: 50%;
+  right: .5em;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  content: '';
+  border-color: transparent transparent transparent #2f2f2f;
+  border-style: solid;
+  border-width: .25em 0 .25em .25em;
+  -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+       -o-transform: translateY(-50%);
+          transform: translateY(-50%);
+}
+
+/**
+ * Inputs
+ */
+.context-menu-item.context-menu-input {
+  padding: .3em .6em;
+}
+
+/* vertically align inside labels */
+.context-menu-input > label > * {
+  vertical-align: top;
+}
+
+/* position checkboxes and radios as icons */
+.context-menu-input > label > input[type="checkbox"],
+.context-menu-input > label > input[type="radio"] {
+  position: relative;
+  top: .12em;
+  margin-right: .4em;
+}
+
+.context-menu-input > label {
+  margin: 0;
+}
+
+.context-menu-input > label,
+.context-menu-input > label > input[type="text"],
+.context-menu-input > label > textarea,
+.context-menu-input > label > select {
+  display: block;
+  width: 100%;
+  -webkit-box-sizing: border-box;
+     -moz-box-sizing: border-box;
+          box-sizing: border-box;
+}
+
+.context-menu-input > label > textarea {
+  height: 7em;
+}
+
+.context-menu-item > .context-menu-list {
+  top: .3em;
+  /* re-positioned by js */
+  right: -.3em;
+  display: none;
+}
+
+.context-menu-item.context-menu-visible > .context-menu-list {
+  display: block;
+}
+
+.context-menu-accesskey {
+  text-decoration: underline;
+}
+.dhtmlwindow{
+position: absolute;
+border: 2px solid black;
+visibility: hidden;
+background-color: white;
+}
+
+.drag-handle{ /*CSS for Drag Handle*/
+padding: 1px;
+text-indent: 3px;
+font: bold 14px Arial;
+background-color: #CA0000;
+color: white;
+cursor: move;
+overflow: hidden;
+width: auto;
+filter:progid:DXImageTransform.Microsoft.alpha(opacity=100);
+-moz-opacity: 1;
+opacity: 1;
+}
+
+.drag-handle .drag-controls{ /*CSS for controls (min, close etc) within Drag Handle*/
+position: absolute;
+right: 1px;
+top: 2px;
+cursor: hand;
+cursor: pointer;
+}
+
+* html .drag-handle{ /*IE6 and below CSS hack. Width must be set to 100% in order for opaque title bar to render*/
+width: 100%;
+}
+
+
+.drag-contentarea{ /*CSS for Content Display Area div*/
+border-top: 1px solid brown;
+background-color: white;
+color: black;
+height: 150px;
+padding: 2px;
+overflow: auto;
+}
+
+.drag-statusarea{ /*CSS for Status Bar div (includes resizearea)*/
+border-top: 1px solid gray;
+background-color: #F8F8F8;
+height: 13px; /*height of resize image*/
+}
+
+
+.drag-resizearea{ /*CSS for Resize Area itself*/
+float: right;
+width: 13px; /*width of resize image*/
+height: 13px; /*height of resize image*/
+cursor: nw-resize;
+font-size: 0;
+}
+
+.osxA {
+  text-decoration: none;
+}
+
+.osxSpan {
+  line-height: 8px;
+  vertical-align: 0%;
+}
+
+.osxButtons {
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 4px;
+  line-height: 0px;
+}
+
+.osxButtons:hover a {
+  visibility: visible;
+}
+
+.osxClose {
+  background: #ff5c5c;
+  font-family: HelveticaNeue, 'Helvetica Neue', 'Lucida Grande', Arial, sans-serif;
+  font-size: 8pt;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #e33e41;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.osxClose:active {
+  background: #c14645;
+  border: 1px solid #b03537;
+}
+
+.osxClose:active .osxClosebutton {
+  color: #4e0002;
+}
+
+.osxClosebutton {
+  color: #820005;
+  visibility: hidden;
+  cursor: default;
+}
+
+.osxMinimize {
+  background: #ffbd4c;
+  font-family: HelveticaNeue, 'Helvetica Neue', 'Lucida Grande', Arial, sans-serif;
+  font-size: 8pt;
+  margin-left: 8px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #e09e3e;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.osxMinimize:active {
+  background: #c08e38;
+  border: 1px solid #af7c33;
+}
+
+.osxMinimize:active .osxMinimizebutton {
+  color: #5a2607;
+}
+
+.osxMinimizebutton {
+  color: #9a5518;
+  visibility: hidden;
+  cursor: default;
+}
+/* ######### CSS for Shade Tabs. Remove if not using ######### */
+
+.shadetabs{
+padding: 3px 0;
+margin-left: 0;
+margin-top: 1px;
+margin-bottom: 0;
+font: bold 12px Verdana;
+list-style-type: none;
+text-align: left; /*set to left, center, or right to align the menu as desired*/
+}
+
+.shadetabs li{
+display: inline;
+margin: 0;
+}
+
+.shadetabs li a{
+text-decoration: none;
+position: relative;
+z-index: 1;
+padding: 3px 7px;
+margin-right: 3px;
+border: 1px solid #778;
+color: #2d2b2b;
+background: white url(shade.gif) top left repeat-x;
+}
+
+.shadetabs li a:visited{
+color: #2d2b2b;
+}
+
+.shadetabs li a:hover{
+text-decoration: underline;
+color: #2d2b2b;
+}
+
+.shadetabs li a.selected{ /*selected main tab style */
+position: relative;
+top: 1px;
+}
+
+.shadetabs li a.selected{ /*selected main tab style */
+background-image: url(shadeactive.gif);
+border-bottom-color: white;
+}
+
+.shadetabs li a.selected:hover{ /*selected main tab style */
+text-decoration: none;
+}
+
+.tabcontent{
+display:none;
+}
+
+@media print {
+.tabcontent {
+display:block !important;
+}
+}
+
+/* ######### CSS for Inverted Modern Bricks II Tabs. Remove if not using ######### */
+
+.modernbricksmenu2{
+padding: 0;
+width: 362px;
+border-top: 5px solid #D25A0B; /*Brown color theme*/
+background: transparent;
+voice-family: "\"}\"";
+voice-family: inherit;
+}
+
+.modernbricksmenu2 ul{
+margin:0;
+margin-left: 10px; /*margin between first menu item and left browser edge*/
+padding: 0;
+list-style: none;
+}
+
+.modernbricksmenu2 li{
+display: inline;
+margin: 0 2px 0 0;
+padding: 0;
+text-transform:uppercase;
+}
+
+.modernbricksmenu2 a{
+float: left;
+display: block;
+font: bold 11px Arial;
+color: white;
+text-decoration: none;
+margin: 0 1px 0 0; /*Margin between each menu item*/
+padding: 5px 10px;
+background-color: black; /*Brown color theme*/
+border-top: 1px solid white;
+}
+
+.modernbricksmenu2 a:hover{
+background-color: #D25A0B; /*Brown color theme*/
+color: white;
+}
+
+.modernbricksmenu2 a.selected{ /*currently selected tab*/
+background-color: #D25A0B; /*Brown color theme*/
+color: white;
+border-color: #D25A0B; /*Brown color theme*/
+}
+
+.tabcontent{
+display:none;
+}
+
+@media print {
+.tabcontent {
+display:block !important;
+}
+}
+
+/* ######### CSS for Indented CSS Tabs. Remove if not using ######### */
+
+
+.indentmenu{
+font: bold 13px Arial;
+width: 100%; /*leave this value as is in most cases*/
+}
+
+.indentmenu ul{
+margin: 0;
+padding: 0;
+float: left;
+/* width: 80%; width of menu*/
+border-top: 1px solid navy; /*navy border*/
+background: black url(indentbg.gif) center center repeat-x;
+}
+
+.indentmenu ul li{
+display: inline;
+}
+
+.indentmenu ul li a{
+float: left;
+color: white; /*text color*/
+padding: 5px 11px;
+text-decoration: none;
+border-right: 1px solid navy; /*navy divider between menu items*/
+}
+
+.indentmenu ul li a:visited{
+color: white;
+}
+
+.indentmenu ul li a.selected{
+color: white !important;
+padding-top: 6px; /*shift text down 1px*/
+padding-bottom: 4px;
+background: black url(indentbg2.gif) center center repeat-x;
+}
+
+
+.tabcontentstyle{ /*style of tab content oontainer*/
+border: 1px solid gray;
+width: 450px;
+margin-bottom: 1em;
+padding: 10px;
+}
+
+.tabcontent{
+display:none;
+}
+
+@media print {
+.tabcontent {
+display:block !important;
+}
+}div.JS9BlendContainer {
+    padding: 2px;
+}
+
+div.JS9BlendImage {
+    margin: 5px;
+    background: #E9E9E9;
+    overflow: auto;
+}
+
+div.JS9BlendImageInactive {
+    padding: 10px;
+    border: 1px solid black;
+}
+
+div.JS9BlendImageActive {
+    padding: 9px;
+    border: 2px solid #00F000;
+}
+
+div.JS9BlendHeader {
+    border: 0px solid black;
+    background: #E9E9E9;
+    padding: 0px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+}
+
+#blendModeSelect {
+    width: 110px;
+}
+
+#blendModeSelect option {
+    width: 110px;
+}
+
+#blendOpacitySelect {
+    width: 80px;
+}
+
+#blendOpacitySelect option {
+    width: 80px;
+}
+
+#blendFile {
+    float: right;
+}
+
+#blendNoFile {
+    margin-left: 15px;
+}
+
+div.JS9BlinkContainer {
+    padding: 2px;
+}
+
+div.JS9BlinkImage {
+    margin: 5px;
+    background: #E9E9E9;
+    overflow: auto;
+}
+
+div.JS9BlinkImageInactive {
+    padding: 10px;
+    border: 1px solid black;
+}
+
+div.JS9BlinkImageActive {
+    padding: 9px;
+    border: 2px solid #00F000;
+}
+
+div.JS9BlinkHeader {
+    border: 0px solid black;
+    background: #E9E9E9;
+    padding: 0px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+}
+
+#blinkModeSelect {
+    width: 110px;
+}
+
+#blinkModeSelect option {
+    width: 110px;
+}
+
+#blinkOpacitySelect {
+    width: 80px;
+}
+
+#blinkOpacitySelect option {
+    width: 80px;
+}
+
+#blinkFile {
+    float: right;
+}
+
+#blinkNoFile {
+    margin-left: 15px;
+}
+
+canvas.JS9ColorbarCanvas {
+    border: 1px solid black;
+}
+
+canvas.JS9ColorbarTextCanvas {
+    background-color: white;
+}
+
+
+.JS9CubeContainer {
+    padding: 5px;
+}
+
+.JS9CubeLinegroup {
+    float: left;
+    position: relative;
+    top: 0px;
+    left: 0px;
+    width: 95%;
+    padding: 5px;
+    margin: 5px;
+}
+
+.JS9CubeRangeLine {
+  font-size: 9pt;
+}
+
+.JS9CubeRange {
+  vertical-align: middle;
+}
+
+.JS9CubeValue {
+  vertical-align: top;
+  text-align: center;
+}
+
+.JS9CubeOrder {
+  vertical-align: top;
+}
+
+div.JS9DivsContainer {
+    padding: 2px;
+}
+
+div.JS9DivsHeader {
+    border: 0px solid black;
+    background: #E9E9E9;
+    padding: 10px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+}
+
+div.JS9DivsDiv {
+    margin: 5px;
+    background: #E9E9E9;
+    overflow: auto;
+    padding: 10px;
+    border: 1px solid black;
+}
+
+span.JS9DivsSpan {
+    float: right;
+    margin-right: 10px;
+}
+
+span.JS9NoDivs {
+    margin-left: 15px;
+}
+
+div.JS9ImarithLinegroup {
+    float: left;
+    position: relative;
+    top: 0px;
+    left: 0px;
+    width: 95%;
+    padding: 5px;
+    margin: 5px;
+}
+
+div.JS9ImarithContainer {
+    padding: 5px;
+}
+div.JS9KeyboardContainer {
+    padding: 0px;
+    margin:  0px;
+}
+
+div.JS9KeyboardActionContainer {
+    padding: 0px;
+    margin:  0px;
+}
+
+div.JS9KeyboardItem {
+    padding: 0px;
+    margin:  0px;
+}
+
+div.JS9KeyboardText {
+    margin: 0px;
+    padding: 1px 1px 1px 30px;
+    background: #E9E9E9;
+    overflow: auto;
+    border: 1px solid transparent;
+    display: inline-block;
+    width: 120px;
+}
+
+div.JS9KeyboardAction {
+    margin:  0px 0px 5px 0px;
+    padding: 1px;
+    background: #E9E9E9;
+    overflow: auto;
+    border: 1px solid transparent;
+    display: inline-block;
+}
+
+div.JS9KeyboardHeader, div.JS9KeyboardFooter {
+    background: #E9E9E9;
+    text-align: left;
+    padding: 0px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+    border: 1px solid transparent;
+}
+
+button.JS9KeyboardButton {
+    margin: 0px 0px 5px 0px;
+}
+
+div.JS9LayersContainer {
+    padding: 2px;
+}
+
+div.JS9LayersHeader {
+    border: 0px solid black;
+    background: #E9E9E9;
+    padding: 0px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+}
+
+div.JS9LayersLayer {
+    margin: 5px;
+    background: #E9E9E9;
+    overflow: auto;
+}
+
+div.JS9LayersLayerInactive {
+    padding: 10px;
+    border: 1px solid black;
+}
+
+div.JS9LayersLayerActive {
+    padding: 9px;
+    border: 2px solid #00F000;
+}
+
+span.JS9LayersSpan {
+    float: right;
+    margin-right: 10px;
+}
+
+span.JS9NoLayers {
+    margin-left: 15px;
+}
+
+.JS9MefContainer {
+    padding: 10px;
+    overflow: auto;
+}
+
+.JS9MefExtension {
+    margin: 5px;
+    background: #E9E9E9;
+    overflow: auto;
+    font-size: 10pt;
+}
+
+.JS9MefHeader {
+    margin: 5px;
+    background: #E9E9E9;
+}
+
+.JS9MefInput {
+    margin: 5px;
+    background: #E9E9E9;
+}
+
+.JS9MefExtensionInactive {
+    padding: 0px;
+    border: 1px solid black;
+}
+
+.JS9MefExtensionActive {
+    padding: 0px;
+    border: 2px solid #00F000;
+}
+
+span.JS9MefStrike{
+    font-weight:bold; /*set line weight here*/
+    color:red;
+    text-decoration:line-through;
+}
+
+span.JS9MefStrike>span {
+    font-weight:normal;
+    color: black;
+}div.JS9MouseTouchContainer {
+    padding: 2px;
+}
+
+div.JS9MouseTouchText {
+    margin: 5px;
+    padding: 6px 6px 6px 10px;
+    background: #E9E9E9;
+    overflow: auto;
+    border: 1px solid transparent;
+}
+
+div.JS9MouseTouchAction {
+    margin: 5px;
+    padding: 6px;
+    background: #E9E9E9;
+    overflow: auto;
+    border: 1px solid black;
+}
+
+div.JS9MouseTouchHeader, div.JS9MouseTouchFooter {
+    background: #E9E9E9;
+    text-align: center;
+    padding: 0px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+    border: 1px solid transparent;
+}
+div.JS9SeparateContainer {
+    padding: 2px;
+}
+
+div.JS9SeparateImage {
+    margin: 5px;
+    background: #E9E9E9;
+    overflow: auto;
+}
+
+div.JS9SeparateImageInactive {
+    padding: 10px;
+    border: 1px solid black;
+}
+
+div.JS9SeparateImageActive {
+    padding: 9px;
+    border: 2px solid #00F000;
+}
+
+div.JS9SeparateHeader {
+    border: 0px solid black;
+    background: #E9E9E9;
+    padding: 0px;
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+}
+
+input.separateButton1 {
+    position: relative;
+    width: 120px;
+    left: 10px;
+}
+
+input.separateButton2 {
+    position: relative;
+    width: 90px;
+    left: 30px;
+}
+
+select.separateLayoutSelect {
+   margin-right: 5px;
+}
+
+#separateFile {
+    float: right;
+}
+
+#separateNoFile {
+    margin-left: 15px;
+}
+
+.JS9ToolbarContainer{
+    border-style: solid;
+    border-color: black;
+    border-width: 0px;
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0.0, #ebebeb, color-stop(1.0, #d5d5d5)));
+    background: -webkit-linear-gradient(top, #ebebeb, #d5d5d5);
+    background: -moz-linear-gradient(top, #ebebeb, #d5d5d5);
+    background: -ms-linear-gradient(top, #ebebeb, #d5d5d5);
+    background: -o-linear-gradient(top, #ebebeb, #d5d5d5);
+    background: linear-gradient(top, #ebebeb, #d5d5d5);
+}
+
+.JS9ToolbarDiv{
+    overflow: auto;
+    border-style: solid;
+    border-color: black;
+    border-width: 0px;
+    margin: 0px;
+    padding: 8px 0px 8px 0px;
+}
+
+.JS9ToolbarButtonDiv{
+    margin:  0px 0px 0px 2px;
+    padding: 2px;
+    display: inline;
+}
+
+.JS9ToolbarImageButton{
+    padding: 2px;
+    margin: 0px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.JS9ToolbarImageButton:focus {
+    outline: 2px dotted grey;
+}
+
+.JS9ToolbarButtonButton{
+    vertical-align: middle;
+    background-color: white;
+    border: 1px black solid;
+    color: black;
+    padding: 6px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 10px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+.JS9ToolbarButtonButton:focus {
+    outline: 2px dotted grey;
+}
+
+.JS9ToolbarTooltip{
+    position: relative;
+    z-index: 999;
+    background: #E9E9E9;
+    padding: 9px;
+    border: 1px solid grey;
+    font-family: Helvetica, sans-serif;
+    font-size: 10pt;
+    display: none;
+}
+

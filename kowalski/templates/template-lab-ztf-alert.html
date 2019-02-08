@@ -4,6 +4,8 @@
 {% block css %}
     <link rel="stylesheet" href="{{-script_root-}}/static/css/styles/default.css">
     <link rel="stylesheet" href="{{-script_root-}}/static/css/jquery.json-viewer.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/js9support.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/js9.css">
 {% endblock %}
 
 {% block nav_lab %}
@@ -21,11 +23,18 @@
         </div>
 
         <div class="row">
+
             {# cutouts: #}
-            {% for cutout in ["science", "template", "difference"] %}
+            {% for cutout in ["Science", "Template", "Difference"] %}
             <div class="col-md-auto">
                 <figure class='figure m-1 align-top'>
-{#                    <img class='figure-img img-fluid mb-1' src='/data/{{ alert['_id'] }}/{{ cutout }}.jpg'>#}
+                    <div class="JS9Menubar d-none" id="JS9{{ cutout }}Menubar"
+                         data-displays="JS9{{ cutout }}" data-width="180px"></div>
+                    <div class="JS9" id="JS9{{ cutout }}" data-width="180px" data-height="180px"></div>
+                    <div style="margin-top: 2px;">
+                        <div class="JS9Colorbar" id="JS9{{ cutout }}Colorbar"
+                             data-displays="JS9{{ cutout }}" data-width="180px"></div>
+                    </div>
                     <figcaption class='figure-caption text-center'>{{ cutout }}</figcaption>
                 </figure>
             </div>
@@ -45,6 +54,9 @@
             <div class="col-12">
                 {# Buttons:#}
                 <div class="col-1 p-0 m-0">
+
+                <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'
+                   onclick="toggleMenus()">Toggle JS9 Menus</a>
                 <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?format=json'
                    class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Download JSON <i class='fas fa-download'></i></a>
                 </div>
@@ -67,6 +79,12 @@
 
     <!-- Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- JS9 -->
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9prefs.js"></script>
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9support.min.js"></script>
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9.min.js"></script>
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9plugins.js"></script>
 
     <!-- Big int support for js -->
     <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
@@ -93,6 +111,24 @@
 
 
     <script>
+        {# Cutouts #}
+        document.addEventListener('DOMContentLoaded', function () {
+            JS9.Preload('/{{-alert["candid"]-}}/cutout/science/', {scale: 'log', onload: setZoom}, {display: 'JS9Science'});
+            JS9.Preload('/{{-alert["candid"]-}}/cutout/template/', {scale: 'log', onload: setZoom}, {display: 'JS9Template'});
+            JS9.Preload('/{{-alert["candid"]-}}/cutout/difference/', {scale: 'log', onload: setZoom}, {display: 'JS9Difference'});
+            plotLightCurve();
+        });
+
+        function toggleMenus() {
+            menus = document.getElementsByClassName('JS9Menubar');
+            for (var i = 0; i < menus.length; i++) {
+                menus[i].classList.toggle('d-none');
+            }
+        }
+
+        function setZoom(display) {
+            JS9.SetZoom('ToFit', {display: display});
+        }
         {# show flashing messages #}
         function showFlashingMessage(title, message, type) {
             $.notify({title: title, message: message},
