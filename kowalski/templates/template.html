@@ -119,37 +119,10 @@
 
 <!-- JavaScript -->
 <script src="{{-script_root-}}/static/js/popper.min.js"></script>
-<script src="{{-script_root-}}/static/js/masonry.pkgd.js"></script>
 <script src="{{-script_root-}}/static/js/bootstrap.min.js"></script>
 <script src="{{-script_root-}}/static/js/bootbox.min.js"></script>
 <script src="{{-script_root-}}/static/js/bootstrap-notify.js"></script>
 
-
-<script type="text/javascript">
-    $(function() {
-        // init masonry grid
-        $('.grid--full-width').masonry({
-            // set itemSelector so .grid-sizer is not used in layout
-            itemSelector: '.grid-item--full-width',
-            // use element for option
-            columnWidth: '.grid-sizer--full-width',
-            percentPosition: true,
-            horizontalOrder: true,
-            gutter: 20
-        });
-        // init masonry grid
-        $('.grid').masonry({
-            // set itemSelector so .grid-sizer is not used in layout
-            itemSelector: '.grid-item',
-            // use element for option
-            columnWidth: '.grid-sizer',
-            percentPosition: true,
-            horizontalOrder: true,
-            gutter: 20
-        });
-    });
-
-</script>
 
 {# show flashing messages #}
 <script>
