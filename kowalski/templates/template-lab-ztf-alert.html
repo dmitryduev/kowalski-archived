@@ -186,6 +186,91 @@
         function setZoom(display) {
             JS9.SetZoom('ToFit', {display: display});
         }
+
+        {# Light curves #}
+        var data_det = [];
+        var data_non_det = [];
+
+        function plot_lc(x_axis="dt") {
+            {#// flush first:#}
+            {#Plotly.newPlot('lc');#}
+
+            let layout = {xaxis: {autorange: true},
+                          yaxis: {autorange: 'reversed'},
+                          showlegend: true,
+                          {#automargin: true,#}
+                          margin: {b: 30, t: 30, l: 50, r: 50, pad: 1},
+            };
+
+            {% for lc in lc_candid %}
+                {% if lc['lc_type'] == 'temporal' %}
+                    let data_{{ loop.index }} = {
+                        x: [],
+                        dt: {{ lc['dt'] | safe }},
+                        days_ago: {{ lc['days_ago'] }},
+                        mjd: {{ lc['mjd'] }},
+                        hjd: {{ lc['hjd'] }},
+                        jd: {{ lc['jd'] }},
+                        y: {{ lc['mag'] }},
+                        error_y: {type: 'data',
+                                  array: {{ lc['magerr'] }},
+                                  width: 2,
+                                  thickness: 0.8,
+                                  opacity: 0.5,
+                                  visible: true},
+                        {#line: {shape: 'spline', width: 0.5},#}
+                        mode: 'markers',
+                        name: 'LC_{{ loop.index }}'
+                    };
+
+                    // set x:
+                    if (x_axis === 'mjd') {
+                        data_{{ loop.index }}.x = data_{{ loop.index }}.mjd
+                    }
+                    else if (x_axis === 'jd') {
+                        data_{{ loop.index }}.x = data_{{ loop.index }}.jd
+                    }
+                    else if (x_axis === 'hjd') {
+                        data_{{ loop.index }}.x = data_{{ loop.index }}.hjd
+                    }
+                    else if (x_axis === 'days ago') {
+                        data_{{ loop.index }}.x = data_{{ loop.index }}.days_ago
+                    }
+                    else {
+                        data_{{ loop.index }}.x = data_{{ loop.index }}.dt
+                    }
+
+                    data_det.push(data_{{ loop.index }});
+                    {#Plotly.plot('lc', data_{{ loop.index }}, layout);#}
+
+                {% endif %}
+            {% endfor %}
+
+            if (x_axis === 'days ago') {
+                // revese x axis
+                layout.xaxis.autorange = 'reversed';
+            }
+
+            // plot detections
+            Plotly.newPlot('lc', data_det, layout);
+            // todo: plot non-detection
+        }
+
+        {% if lc_candid | length > 0 %}
+        $(document).ready(function() {
+            // wait for whole document to load before plotting light curves
+            plot_lc();
+        });
+
+        $('#epoch').on('change', function() {
+            // change x axis
+            // console.log(this.value);
+            data = [];
+            plot_lc(this.value);
+        });
+
+        {% endif %}
+
         {# show flashing messages #}
         function showFlashingMessage(title, message, type) {
             $.notify({title: title, message: message},
