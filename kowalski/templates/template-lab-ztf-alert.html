@@ -67,6 +67,53 @@
 
         <div class="row mt-2">
             <div class="col-12">
+                <h5>Light curves from the alert packet</h5>
+
+                {% if lc_candid | length == 0 %}
+                {# this should never happen! #}
+                <p>No photometry available.</p>
+
+                {% else %}
+
+                <div id="lc" style="width: 100%; height: 300px;"></div>
+
+                <div class="form-group row mt-2">
+                    <label for="epoch" class="col-lg-2 control-label">
+                        Epoch:
+                    </label>
+
+                    <div class="col-md-4">
+                        <select class="form-control form-control-sm col-lg-6" id="epoch" name="epoch">
+                            <option>date</option>
+                            <option>mjd</option>
+                            <option>jd</option>
+                            <option>hjd</option>
+                            <option>days ago</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr>
+
+                <p class="mt-2">
+                {% for lc in lc_candid %}
+                    {% if lc['lc_type'] == 'temporal' %}
+                        {% set lc_info = {'telescope': lc['telescope'],
+                                          'instrument': lc['instrument'],
+                                          'filter': lc['filter'],
+                                          'id': lc['id']} %}
+                        <b>Light curve {{ loop.index }}:</b> {{ lc_info | safe }}<br>
+                    {% endif %}
+                {% endfor %}
+                </p>
+
+                <hr>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row mt-2">
+            <div class="col-12">
                 <h5>Composite light curves for {{ alert['objectId'] }}</h5>
                 {{ lc_candid }}
             </div>

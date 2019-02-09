@@ -1266,7 +1266,8 @@ async def ztf_alert_get_handler(request):
         if is_star(dflc):
             print('It is a star!')
             # variable object? take into account flux in ref images:
-            pass
+            lc_candid = []
+
         else:
             # up to three individual lcs
             lc_candid = []
@@ -1317,7 +1318,8 @@ async def ztf_alert_get_handler(request):
                                                                               axis=0, ignore_index=True, sort=False)
 
                 # sort by date and fill NaNs with zeros
-                lc_joint.sort_values(by=['mjd'], inplace=True).fillna(0)
+                lc_joint.sort_values(by=['mjd'], inplace=True)
+                lc_joint = lc_joint.fillna(0)
 
                 lc_save = {"telescope": "PO:1.2m",
                            "instrument": "ZTF",
