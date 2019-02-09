@@ -1238,7 +1238,7 @@ async def ztf_alert_get_handler(request):
 @login_required
 async def ztf_alert_get_handler(request):
     """
-        Serve docs page for the browser
+        Serve alert page for the browser
     :param request:
     :return:
     """
@@ -1260,9 +1260,80 @@ async def ztf_alert_get_handler(request):
 
     elif frmt == 'web':
 
+        # todo: make packet light curve
+        dflc = make_dataframe(alert)
+
+        if is_star(dflc):
+            print('It is a star!')
+            # variable object? take into account flux in ref images:
+            pass
+        else:
+            # up to three individual lcs
+            lc_candid = []
+
+            # mjds:
+            dflc['mjd'] = dflc.jd - 2400000.5
+
+            dflc['datetime'] = dflc['mjd'].apply(lambda x: mjd_to_datetime(x))
+            # strings for plotly:
+            dflc['dt'] = dflc['datetime'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
+
+            dflc.sort_values(by=['mjd'], inplace=True)
+
+            # fractional days ago
+            dflc['days_ago'] = dflc['datetime'].apply(lambda x:
+                                                      (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
+
+            for fid in (1, 2, 3):
+                # print(fid)
+                # get detections in this filter:
+                w = (dflc.fid == fid) & ~dflc.magpsf.isnull()
+                lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
+                                     dflc.loc[w, 'mjd'], dflc.loc[w, 'magpsf'], dflc.loc[w, 'sigmapsf']],
+                                    axis=1, ignore_index=True, sort=False) if np.sum(w) else None
+                if lc_dets is not None:
+                    lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
+
+                wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
+
+                lc_non_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
+                                         dflc.loc[w, 'mjd'], dflc.loc[w, 'diffmaglim']],
+                                        axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
+                if lc_non_dets is not None:
+                    lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_ulim']
+
+                if lc_dets is None and lc_non_dets is None:
+                    continue
+
+                lc_joint = None
+
+                if lc_dets is not None:
+                    # print(lc_dets)
+                    # print(lc_dets.to_dict('records'))
+                    lc_joint = lc_dets
+                if lc_non_dets is not None:
+                    # print(lc_non_dets.to_dict('records'))
+                    lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
+                                                                              axis=0, ignore_index=True, sort=False)
+
+                # sort by date and fill NaNs with zeros
+                lc_joint.sort_values(by=['mjd'], inplace=True).fillna(0)
+
+                lc_save = {"telescope": "PO:1.2m",
+                           "instrument": "ZTF",
+                           "filter": fid,
+                           "id": candid,
+                           "lc_type": "temporal",
+                           "data": lc_joint.to_dict('records')
+                           }
+                lc_candid.append(lc_save)
+
+        # todo: make composite light curve from all packets for alert['objectId']
+
         context = {'logo': config['server']['logo'],
                    'user': session['user_id'],
-                   'alert': alert}
+                   'alert': alert,
+                   'lc_candid': lc_candid}
         response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
                                                   request,
                                                   context)
