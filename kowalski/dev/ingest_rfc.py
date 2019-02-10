@@ -158,14 +158,16 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    _collection = 'RFC_2017c'
+    # _collection = 'RFC_2017c'
+    _collection = 'RFC_2018d'
 
     # number of records to insert
     batch_size = 2048
     batch_num = 1
     documents = []
 
-    f_in = '/_tmp/rfc_2017c_cat.txt'
+    # f_in = '/_tmp/rfc_2017c_cat.txt'
+    f_in = '/_tmp/rfc_2018d_cat.txt'
 
     field_names = ['category', 'IVS_name', 'J2000_name', 'ra', 'dec', 'ra_error_mas',
                    'dec_error_mas', 'corr', 'n_obs',
@@ -220,8 +222,9 @@ if __name__ == '__main__':
                 _radec_geojson = [_ra - 180.0, _dec]
                 doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                        'coordinates': _radec_geojson}
-                # radians:
-                doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                # radians and degrees:
+                doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                 # print(doc['coordinates'])
                 documents.append(doc)
