@@ -1235,28 +1235,27 @@ async def ztf_alert_get_handler(request):
 
 
 def assemble_lc(dflc):
+    # mjds:
+    dflc['mjd'] = dflc.jd - 2400000.5
 
-    if is_star(dflc):
+    dflc['datetime'] = dflc['mjd'].apply(lambda x: mjd_to_datetime(x))
+    # strings for plotly:
+    dflc['dt'] = dflc['datetime'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
+
+    dflc.sort_values(by=['mjd'], inplace=True)
+
+    # fractional days ago
+    dflc['days_ago'] = dflc['datetime'].apply(lambda x:
+                                              (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
+
+    if is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
         print('It is a star!')
-        # variable object? take into account flux in ref images:
+        # variable object/star? take into account flux in ref images:
         lc = []
 
     else:
-        # up to three individual lcs
+        # not a star (transient): up to three individual lcs
         lc = []
-
-        # mjds:
-        dflc['mjd'] = dflc.jd - 2400000.5
-
-        dflc['datetime'] = dflc['mjd'].apply(lambda x: mjd_to_datetime(x))
-        # strings for plotly:
-        dflc['dt'] = dflc['datetime'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
-
-        dflc.sort_values(by=['mjd'], inplace=True)
-
-        # fractional days ago
-        dflc['days_ago'] = dflc['datetime'].apply(lambda x:
-                                                  (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
 
         for fid in (1, 2, 3):
             # print(fid)
@@ -1297,6 +1296,7 @@ def assemble_lc(dflc):
             lc_save = {"telescope": "PO:1.2m",
                        "instrument": "ZTF",
                        "filter": fid,
+                       "source": "alert_stream",
                        "id": dflc.loc[0, 'candid'],
                        "lc_type": "temporal",
                        "data": lc_joint.to_dict('records')
@@ -1340,15 +1340,35 @@ async def ztf_alert_get_handler(request):
 
     # todo: make packet light curve
     dflc = make_dataframe(alert)
+    lc_alert = assemble_lc(dflc)
 
-    lc_candid = assemble_lc(dflc)
+    # pre-process for plotly:
+    lc_candid = []
+    for lc_ in lc_alert:
+        lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
+                'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
+                'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
+        for dp in lc_['data']:
+            if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
+                for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
+                    lc__['lc_nodet_u'][kk].append(dp[kk])
+            if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
+                for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
+                    lc__['lc_nodet_l'][kk].append(dp[kk])
+            if ('mag' in dp) and (dp['mag'] > 0.01):
+                for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
+                    lc__['lc_det'][kk].append(dp[kk])
+        lc_['data'] = lc__
+        lc_candid.append(lc_)
 
     # todo: make composite light curve from all packets for alert['objectId']
+    lc_objectId = []
 
     context = {'logo': config['server']['logo'],
                'user': session['user_id'],
                'alert': alert,
-               'lc_candid': lc_candid}
+               'lc_candid': lc_candid,
+               'lc_objectId': lc_objectId}
     response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
                                               request,
                                               context)

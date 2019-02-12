@@ -304,6 +304,6 @@ def make_dataframe(packets):
         return pd.concat([df, df_prv], ignore_index=True, sort=False)
 
 
-def is_star(dflc, match_radius_arcsec=1.5e-3, star_galaxy_threshold=0.4):
+def is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
     return (dflc.loc[0, 'distpsnr1'] < match_radius_arcsec) & (dflc.loc[0, 'sgscore1'] > star_galaxy_threshold)
 

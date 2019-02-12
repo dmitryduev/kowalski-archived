@@ -50,24 +50,31 @@
 {#                    <figcaption class='figure-caption text-center'>Light curve</figcaption>#}
 {#                </figure>#}
 {#            </div>#}
+
+            <div class="col-md-auto">
+                <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'
+                   onclick="toggleMenus()">Toggle JS9 Menus</a>
+            </div>
+
         </div>
 
         <div class="row">
             <div class="col-sm-12">
                 {# Buttons:#}
-                <div class="col-sm-12 p-0 m-0">
-
-                <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'
-                   onclick="toggleMenus()">Toggle JS9 Menus</a>
-                <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?format=json'
-                   class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Download JSON <i class='fas fa-download'></i></a>
-                </div>
+{#                <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'#}
+{#                   onclick="toggleMenus()">Toggle JS9 Menus</a>#}
+{#                <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?format=json'#}
+{#                   class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Download JSON <i class='fas fa-download'></i></a>#}
+                <hr>
             </div>
         </div>
 
         <div class="row mt-2">
             <div class="col-12">
-                <h5>Light curves from the alert packet</h5>
+                <h5>Light curves from the alert packet
+                    <a download='{{alert['candid']}}.lc.json'
+                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?download=lc_alert"><i class='fas fa-download'></i></a>
+                </h5>
 
                 {% if lc_candid | length == 0 %}
                 {# this should never happen! #}
@@ -87,7 +94,6 @@
                             <option>date</option>
                             <option>mjd</option>
                             <option>jd</option>
-                            <option>hjd</option>
                             <option>days ago</option>
                         </select>
                     </div>
@@ -107,8 +113,8 @@
                 {% endfor %}
                 </p>
 
-                <hr>
                 {% endif %}
+                <hr>
             </div>
         </div>
 
@@ -116,12 +122,16 @@
             <div class="col-12">
                 <h5>Composite light curves for {{ alert['objectId'] }}</h5>
 {#                {{ lc_candid }}#}
+                <hr>
             </div>
         </div>
 
         <div class="row mt-1">
             <div class="col-12">
-                <h5>Avro-packet contents</h5>
+                <h5>Alert packet contents
+                    <a download='{{alert['candid']}}.json'
+                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?download=alert"><i class='fas fa-download'></i></a>
+                </h5>
 {#                <pre><code class="json">{{alert|tojson_pretty|safe}}</code></pre>#}
                 <p>
                     <pre id="json-renderer" class="pl-4 pr-4"></pre>
@@ -188,8 +198,10 @@
         }
 
         {# Light curves #}
+        var lc_colors = {1: '#28a745', 2: '#dc3545', 3: '#343a40'};
         var data_det = [];
-        var data_non_det = [];
+        var data_non_det_u = [];
+        var data_non_det_l = [];
 
         function plot_lc(x_axis="dt") {
             {#// flush first:#}
@@ -197,78 +209,78 @@
 
             let layout = {xaxis: {autorange: true},
                           yaxis: {autorange: 'reversed'},
-                          showlegend: true,
-                          {#automargin: true,#}
                           margin: {b: 30, t: 30, l: 50, r: 50, pad: 1},
             };
 
+            {# iterate over individual light-curves #}
             {% for lc in lc_candid %}
-                {% set lc_det = {'dt': [], 'days_ago': [], 'mjd': [], 'jd': [], 'mag': [], 'magerr': []} %}
-                {% set lc_nodet_u = {'dt': [], 'days_ago': [], 'mjd': [], 'jd': [], 'mag_ulim': []} %}
-                {% set lc_nodet_l = {'dt': [], 'days_ago': [], 'mjd': [], 'jd': [], 'mag_llim': []} %}
-                {% for dp in lc['data'] %}
-                    {% if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01) %}
-                        {{ lc_nodet_u['dt'].append(dp['dt']) }}
-                        {{ lc_nodet_u['days_ago'].append(dp['days_ago']) }}
-                        {{ lc_nodet_u['mjd'].append(dp['mjd']) }}
-                        {{ lc_nodet_u['jd'].append(dp['jd']) }}
-                        {{ lc_nodet_u['mag_ulim'].append(dp['mag_ulim']) }}
-                    {% elif ('mag_llim' in dp) and (dp['mag_llim'] > 0.01) %}
-                        {{ lc_nodet_l['dt'].append(dp['dt']) }}
-                        {{ lc_nodet_l['days_ago'].append(dp['days_ago']) }}
-                        {{ lc_nodet_l['mjd'].append(dp['mjd']) }}
-                        {{ lc_nodet_l['jd'].append(dp['jd']) }}
-                        {{ lc_nodet_l['mag_llim'].append(dp['mag_llim']) }}
-                    {% else %}
-                        {{ dp | safe }}
-                        {{ lc_det['dt'].append(dp['dt']) }}
-                        {{ lc_det['days_ago'].append(dp['days_ago']) }}
-                        {{ lc_det['mjd'].append(dp['mjd']) }}
-                        {{ lc_det['jd'].append(dp['jd']) }}
-                        {{ lc_det['mag'].append(dp['mag']) }}
-                        {{ lc_det['magerr'].append(dp['magerr']) }}
+                {% set lc_ind = loop.index %}
+
+                {# iterate over detections and non-detections #}
+                {% for key in lc['data'] %}
+                    
+                    {% set lc_dn_ind = loop.index %}
+
+                    {% if lc['data'][key]['dt'] | length > 0 %}
+                        let data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }} = {
+                            x: [],
+                            dt: {{ lc['data'][key]['dt'] | safe }},
+                            days_ago: {{ lc['data'][key]['days_ago'] }},
+                            mjd: {{ lc['data'][key]['mjd'] }},
+                            jd: {{ lc['data'][key]['jd'] }},
+                            {% if key == 'lc_det' %}
+                            y: {{ lc['data'][key]['mag'] }},
+                            error_y: {type: 'data',
+                                      array: {{ lc['data'][key]['magerr'] }},
+                                      width: 2,
+                                      thickness: 0.8,
+                                      opacity: 0.5,
+                                      visible: true},
+                            name: 'LC_{{ lc_ind }}',
+                            marker: {color: lc_colors[{{ lc['filter'] }}]},
+                            showlegend: true,
+                            {% elif key == 'lc_nodet_u' %}
+                            y: {{ lc['data'][key]['mag_ulim'] }},
+                            marker: {symbol: 'triangle-down', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
+                            showlegend: false,
+                            {% elif key == 'lc_nodet_l' %}
+                            y: {{ lc['data'][key]['mag_llim'] }},
+                            marker: {symbol: 'triangle-up', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
+                            showlegend: false,
+                            {% endif %}
+
+                            mode: 'markers'
+                        };
+
+                        // set x:
+                        if (x_axis === 'mjd') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.mjd
+                        }
+                        else if (x_axis === 'jd') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.jd
+                        }
+                        else if (x_axis === 'hjd') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.hjd
+                        }
+                        else if (x_axis === 'days ago') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.days_ago
+                        }
+                        else {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.dt
+                        }
+
+                        {% if key == 'lc_det' %}
+                        data_det.push(data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }});
+                        {#Plotly.plot('lc', data_{{ loop.index }}, layout);#}
+                        {% elif key == 'lc_nodet_u' %}
+                        data_non_det_u.push(data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }});
+                        {% elif key == 'lc_nodet_l' %}
+                        data_non_det_l.push(data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }});
+                        {% endif %}
+
                     {% endif %}
                 {% endfor %}
-                {% if lc_det['dt'] | length > 0 %}
-                    let data_{{ loop.index }} = {
-                        x: [],
-                        dt: {{ lc_det['dt'] | safe }},
-                        days_ago: {{ lc_det['days_ago'] }},
-                        mjd: {{ lc_det['mjd'] }},
-                        jd: {{ lc_det['jd'] }},
-                        y: {{ lc_det['mag'] }},
-                        error_y: {type: 'data',
-                                  array: {{ lc_det['magerr'] }},
-                                  width: 2,
-                                  thickness: 0.8,
-                                  opacity: 0.5,
-                                  visible: true},
-                        {#line: {shape: 'spline', width: 0.5},#}
-                        mode: 'markers',
-                        name: 'LC_{{ loop.index }}'
-                    };
-
-                    // set x:
-                    if (x_axis === 'mjd') {
-                        data_{{ loop.index }}.x = data_{{ loop.index }}.mjd
-                    }
-                    else if (x_axis === 'jd') {
-                        data_{{ loop.index }}.x = data_{{ loop.index }}.jd
-                    }
-                    else if (x_axis === 'hjd') {
-                        data_{{ loop.index }}.x = data_{{ loop.index }}.hjd
-                    }
-                    else if (x_axis === 'days ago') {
-                        data_{{ loop.index }}.x = data_{{ loop.index }}.days_ago
-                    }
-                    else {
-                        data_{{ loop.index }}.x = data_{{ loop.index }}.dt
-                    }
-
-                    data_det.push(data_{{ loop.index }});
-                    {#Plotly.plot('lc', data_{{ loop.index }}, layout);#}
-
-                {% endif %}
+                    
             {% endfor %}
 
             if (x_axis === 'days ago') {
@@ -278,7 +290,9 @@
 
             // plot detections
             Plotly.newPlot('lc', data_det, layout);
-            // todo: plot non-detection
+            // plot non-detection
+            Plotly.plot('lc', data_non_det_u, layout);
+            Plotly.plot('lc', data_non_det_l, layout);
         }
 
         {% if lc_candid | length > 0 %}
@@ -290,7 +304,9 @@
         $('#epoch').on('change', function() {
             // change x axis
             // console.log(this.value);
-            data = [];
+            data_det = [];
+            data_non_det_u = [];
+            data_non_det_l = [];
             plot_lc(this.value);
         });
 
