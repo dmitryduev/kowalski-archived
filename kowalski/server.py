@@ -120,7 +120,7 @@ async def auth_middleware(request, handler):
 
     response = await handler(request)
     toc = time.time()
-    print(f"Auth middleware took {toc-tic} seconds to execute")
+    # print(f"Auth middleware took {toc-tic} seconds to execute")
 
     return response
 
@@ -1252,6 +1252,148 @@ def assemble_lc(dflc):
         print('It is a star!')
         # variable object/star? take into account flux in ref images:
         lc = []
+
+        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
+        # which makes inferring upper limits more difficult
+        # fix it this sloppy way:
+        # for fid in (1, 2, 3):
+        #     if fid in dflc.fid.values:
+        #         wfieldrcid = (dflc.fid == fid) & ~dflc.field.isnull() & ~dflc.rcid.isnull()
+        #         wnofieldrcid = (dflc.fid == fid) & dflc.field.isnull() & dflc.rcid.isnull()
+        #         tmp = dflc.loc[wfieldrcid].iloc[0]
+        #         # print(fid, tmp.field, tmp.rcid)
+        #         dflc.loc[wnofieldrcid, 'field'] = int(tmp.field)
+        #         dflc.loc[wnofieldrcid, 'rcid'] = int(tmp.rcid)
+
+        grp = dflc.groupby(['fid', 'field', 'rcid'])
+        impute_magnr = grp['magnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
+        # print(impute_magnr)
+        impute_sigmagnr = grp['sigmagnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
+        # print(impute_sigmagnr)
+
+        for idx, grpi in grp:
+            w = np.isnan(grpi['magnr'])
+            w2 = grpi[w].index
+            dflc.loc[w2, 'magnr'] = impute_magnr[idx]
+            dflc.loc[w2, 'sigmagnr'] = impute_sigmagnr[idx]
+
+        # print(dflc)
+
+        dflc['sign'] = 2 * (dflc['isdiffpos'] == 't') - 1
+
+        # from ztf_pipelines_deliverables, reference image zps are fixed
+
+        ref_zps = {1: 26.325, 2: 26.275, 3: 25.660}
+        dflc['magzpref'] = dflc['fid'].apply(lambda x: ref_zps[x])
+        # fixme?: see email from Frank Masci from Feb 7, 2019
+        # dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magnr']))
+        dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpref'] - dflc['magnr']))
+
+        dflc['ref_sigflux'] = dflc['sigmagnr'] / 1.0857 * dflc['ref_flux']
+
+        dflc['difference_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magpsf']))
+        dflc['difference_sigflux'] = dflc['sigmapsf'] / 1.0857 * dflc['difference_flux']
+
+        dflc['dc_flux'] = dflc['ref_flux'] + dflc['sign'] * dflc['difference_flux']
+        # errors are correlated, so these are conservative choices
+        w = dflc['difference_sigflux'] > dflc['ref_sigflux']
+        dflc.loc[w, 'dc_sigflux'] = np.sqrt(dflc.loc[w, 'difference_flux'] ** 2 - dflc.loc[w, 'ref_sigflux'] ** 2)
+        dflc.loc[~w, 'dc_sigflux'] = np.sqrt(dflc.loc[~w, 'difference_flux'] ** 2 + dflc.loc[~w, 'ref_sigflux'] ** 2)
+
+        dflc['dc_mag'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux'])
+        dflc['dc_sigmag'] = dflc['dc_sigflux'] / dflc['dc_flux'] * 1.0857
+        # print(dflc['dc_mag'])
+
+        # if we have a nondetection that means that there's no flux +/- 5 sigma from the ref flux
+        # (unless it's a bad subtraction)
+        dflc['difference_fluxlim'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['diffmaglim']))
+        dflc['dc_flux_ulim'] = dflc['ref_flux'] + dflc['difference_fluxlim']
+        dflc['dc_flux_llim'] = dflc['ref_flux'] - dflc['difference_fluxlim']
+        dflc['dc_mag_ulim'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux_ulim'])
+        dflc['dc_mag_llim'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux_llim'])
+        # print(dflc['dc_mag_ulim'])
+
+        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
+        # which makes inferring upper limits more difficult
+        # fix it this sloppy way:
+        for fid in (1, 2, 3):
+            if fid in dflc.fid.values:
+                ref_flux = None
+                w = (dflc.fid == fid) & ~dflc.magpsf.isnull() & (dflc.distnr <= 5)
+                if np.sum(w):
+                    ref_mag = np.float64(dflc.iloc[0]['magnr'])
+                    ref_flux = np.float64(10 ** (0.4 * (27 - ref_mag)))
+
+                wnodet_old = (dflc.fid == fid) & dflc.magpsf.isnull() & dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0)
+                if np.sum(wnodet_old) and (ref_flux is not None):
+                    # if we have a non-detection that means that there's no flux +/- 5 sigma from
+                    # the ref flux (unless it's a bad subtraction)
+                    difference_fluxlim = np.float64(10 ** (0.4 * (27 - dflc.loc[wnodet_old, 'diffmaglim'].values)))
+                    dc_flux_ulim = ref_flux + difference_fluxlim
+                    dc_flux_llim = ref_flux - difference_fluxlim
+
+                    if not isinstance(dc_flux_ulim, np.ndarray):
+                        dc_flux_ulim = np.array([dc_flux_ulim])
+                    if not isinstance(dc_flux_llim, np.ndarray):
+                        dc_flux_llim = np.array([dc_flux_llim])
+
+                    # mask bad values:
+                    w_u_good = dc_flux_ulim > 0
+                    w_l_good = dc_flux_llim > 0
+
+                    dflc.loc[wnodet_old, 'dc_mag_ulim'] = 27 - 2.5 * np.log10(dc_flux_ulim[w_u_good])
+                    dflc.loc[wnodet_old, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dc_flux_llim[w_l_good])
+
+        # corrections done, now proceed with assembly
+        for fid in (1, 2, 3):
+            # print(fid)
+            # get detections in this filter:
+            w = (dflc.fid == fid) & ~dflc.magpsf.isnull()
+            lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
+                                 dflc.loc[w, 'mjd'], dflc.loc[w, 'dc_mag'], dflc.loc[w, 'dc_sigmag']],
+                                axis=1, ignore_index=True, sort=False) if np.sum(w) else None
+            if lc_dets is not None:
+                lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
+
+            wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
+            # print(wnodet)
+
+            lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
+                                     dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'dc_mag_llim'],
+                                     dflc.loc[wnodet, 'dc_mag_ulim']],
+                                    axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
+            if lc_non_dets is not None:
+                lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_llim', 'mag_ulim']
+
+            if lc_dets is None and lc_non_dets is None:
+                continue
+
+            lc_joint = None
+
+            if lc_dets is not None:
+                # print(lc_dets)
+                # print(lc_dets.to_dict('records'))
+                lc_joint = lc_dets
+            if lc_non_dets is not None:
+                # print(lc_non_dets.to_dict('records'))
+                lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
+                                                                          axis=0, ignore_index=True, sort=False)
+
+            # sort by date and fill NaNs with zeros
+            lc_joint.sort_values(by=['mjd'], inplace=True)
+            print(lc_joint)
+            lc_joint = lc_joint.fillna(0)
+
+            lc_save = {"telescope": "PO:1.2m",
+                       "instrument": "ZTF",
+                       "filter": fid,
+                       "source": "alert_stream",
+                       "comment": "corrected for flux in the reference image",
+                       "id": dflc.loc[0, 'candid'],
+                       "lc_type": "temporal",
+                       "data": lc_joint.to_dict('records')
+                       }
+            lc.append(lc_save)
 
     else:
         # not a star (transient): up to three individual lcs
