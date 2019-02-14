@@ -24,7 +24,7 @@ services:
       - data:/data
       - /data/ztf/tmp/:/_tmp
       # fixme:
-      - /supernova-data2/Matchfiles/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/:/matchfiles
+      #- /supernova-data2/Matchfiles/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/:/matchfiles
     expose:
       - "4000"
     links:
