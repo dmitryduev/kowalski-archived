@@ -1234,7 +1234,7 @@ async def ztf_alert_get_handler(request):
     return response
 
 
-def assemble_lc(dflc):
+def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
     # mjds:
     dflc['mjd'] = dflc.jd - 2400000.5
 
@@ -1248,7 +1248,7 @@ def assemble_lc(dflc):
     dflc['days_ago'] = dflc['datetime'].apply(lambda x:
                                               (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
 
-    if is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
+    if is_star(dflc, match_radius_arcsec=match_radius_arcsec, star_galaxy_threshold=star_galaxy_threshold):
         # print('It is a star!')
         # variable object/star? take into account flux in ref images:
         lc = []
@@ -1472,6 +1472,10 @@ async def ztf_alert_get_handler(request):
 
     candid = int(request.match_info['candid'])
 
+    # pass as optional get params to control is_star
+    match_radius_arcsec = request.query.get('match_radius_arcsec', 1.5)
+    star_galaxy_threshold = request.query.get('star_galaxy_threshold', 0.4)
+
     alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
                                                               {'cutoutScience': 0,
                                                                'cutoutTemplate': 0,
@@ -1488,13 +1492,15 @@ async def ztf_alert_get_handler(request):
 
         elif download == 'lc_alert':
             dflc = make_dataframe(alert)
-            lc_candid = assemble_lc(dflc)
+            lc_candid = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+                                    star_galaxy_threshold=star_galaxy_threshold)
             return web.json_response(lc_candid, status=200, dumps=dumps)
 
     if alert is not None and (len(alert) > 0):
         # todo: make packet light curve
         dflc = make_dataframe(alert)
-        lc_alert = assemble_lc(dflc)
+        lc_alert = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+                               star_galaxy_threshold=star_galaxy_threshold)
 
         # pre-process for plotly:
         lc_candid = []
