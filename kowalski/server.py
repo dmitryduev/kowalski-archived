@@ -1473,8 +1473,8 @@ async def ztf_alert_get_handler(request):
     candid = int(request.match_info['candid'])
 
     # pass as optional get params to control is_star
-    match_radius_arcsec = request.query.get('match_radius_arcsec', 1.5)
-    star_galaxy_threshold = request.query.get('star_galaxy_threshold', 0.4)
+    match_radius_arcsec = float(request.query.get('match_radius_arcsec', 1.5))
+    star_galaxy_threshold = float(request.query.get('star_galaxy_threshold', 0.4))
 
     alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
                                                               {'cutoutScience': 0,
