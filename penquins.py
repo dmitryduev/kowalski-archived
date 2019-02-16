@@ -98,7 +98,9 @@ class Kowalski(object):
 
         return access_token
 
-    def query(self, query, timeout: Num=5*3600):
+    def query(self, query, timeout: Num = 5*3600):
+
+        # todo: add retries arg: automatically try to reconnect if connection dropped for some reason
 
         try:
             _query = deepcopy(query)

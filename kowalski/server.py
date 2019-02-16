@@ -1215,7 +1215,7 @@ async def web_query_grab(request):
 ''' ZTF Alert Lab API '''
 
 
-@routes.get('/lab/ztf-alerts')
+@routes.get('/lab/ztf-alerts', name='ztf-alerts')
 @login_required
 async def ztf_alert_get_handler(request):
     """
@@ -1253,17 +1253,10 @@ def assemble_lc(dflc):
         # variable object/star? take into account flux in ref images:
         lc = []
 
-        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
-        # which makes inferring upper limits more difficult
-        # fix it this sloppy way:
-        # for fid in (1, 2, 3):
-        #     if fid in dflc.fid.values:
-        #         wfieldrcid = (dflc.fid == fid) & ~dflc.field.isnull() & ~dflc.rcid.isnull()
-        #         wnofieldrcid = (dflc.fid == fid) & dflc.field.isnull() & dflc.rcid.isnull()
-        #         tmp = dflc.loc[wfieldrcid].iloc[0]
-        #         # print(fid, tmp.field, tmp.rcid)
-        #         dflc.loc[wnofieldrcid, 'field'] = int(tmp.field)
-        #         dflc.loc[wnofieldrcid, 'rcid'] = int(tmp.rcid)
+        # fix old alerts:
+        dflc.replace('None', np.nan, inplace=True)
+
+        # print(dflc[['fid', 'field', 'rcid']])
 
         grp = dflc.groupby(['fid', 'field', 'rcid'])
         impute_magnr = grp['magnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
@@ -1314,7 +1307,7 @@ def assemble_lc(dflc):
                                              2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
         dflc.loc[w_dc_flux_good, 'dc_sigmag'] = dflc.loc[w_dc_flux_good, 'dc_sigflux'] / \
                                                 dflc.loc[w_dc_flux_good, 'dc_flux'] * 1.0857
-        # print(dflc['dc_mag'])
+        # print(dflc[['dc_mag', 'difference_flux', 'dc_flux', 'ref_flux']])
 
         # if we have a nondetection that means that there's no flux +/- 5 sigma from the ref flux
         # (unless it's a bad subtraction)
@@ -1429,8 +1422,8 @@ def assemble_lc(dflc):
 
             wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
 
-            lc_non_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
-                                     dflc.loc[w, 'mjd'], dflc.loc[w, 'diffmaglim']],
+            lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
+                                     dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'diffmaglim']],
                                     axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
             if lc_non_dets is not None:
                 lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_ulim']
@@ -1498,41 +1491,47 @@ async def ztf_alert_get_handler(request):
             lc_candid = assemble_lc(dflc)
             return web.json_response(lc_candid, status=200, dumps=dumps)
 
-    # todo: make packet light curve
-    dflc = make_dataframe(alert)
-    lc_alert = assemble_lc(dflc)
+    if alert is not None and (len(alert) > 0):
+        # todo: make packet light curve
+        dflc = make_dataframe(alert)
+        lc_alert = assemble_lc(dflc)
 
-    # pre-process for plotly:
-    lc_candid = []
-    for lc_ in lc_alert:
-        lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
-                'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
-                'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
-        for dp in lc_['data']:
-            if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
-                for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
-                    lc__['lc_nodet_u'][kk].append(dp[kk])
-            if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
-                for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
-                    lc__['lc_nodet_l'][kk].append(dp[kk])
-            if ('mag' in dp) and (dp['mag'] > 0.01):
-                for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
-                    lc__['lc_det'][kk].append(dp[kk])
-        lc_['data'] = lc__
-        lc_candid.append(lc_)
+        # pre-process for plotly:
+        lc_candid = []
+        for lc_ in lc_alert:
+            lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
+                    'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
+                    'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
+            for dp in lc_['data']:
+                if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
+                        lc__['lc_nodet_u'][kk].append(dp[kk])
+                if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
+                        lc__['lc_nodet_l'][kk].append(dp[kk])
+                if ('mag' in dp) and (dp['mag'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
+                        lc__['lc_det'][kk].append(dp[kk])
+            lc_['data'] = lc__
+            lc_candid.append(lc_)
 
-    # todo: make composite light curve from all packets for alert['objectId']
-    lc_objectId = []
+        # todo: make composite light curve from all packets for alert['objectId']
+        lc_objectId = []
 
-    context = {'logo': config['server']['logo'],
-               'user': session['user_id'],
-               'alert': alert,
-               'lc_candid': lc_candid,
-               'lc_objectId': lc_objectId}
-    response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
-                                              request,
-                                              context)
-    return response
+        context = {'logo': config['server']['logo'],
+                   'user': session['user_id'],
+                   'alert': alert,
+                   'lc_candid': lc_candid,
+                   'lc_objectId': lc_objectId}
+        response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
+                                                  request,
+                                                  context)
+        return response
+
+    else:
+        # redirect to alerts lab page
+        location = request.app.router['ztf-alerts'].url_for()
+        raise web.HTTPFound(location=location)
 
 
 @routes.get('/lab/ztf-alerts/{candid}/cutout/{cutout}')
