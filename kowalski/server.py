@@ -1249,7 +1249,7 @@ def assemble_lc(dflc):
                                               (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
 
     if is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
-        print('It is a star!')
+        # print('It is a star!')
         # variable object/star? take into account flux in ref images:
         lc = []
 
@@ -1288,8 +1288,11 @@ def assemble_lc(dflc):
         dflc['magzpref'] = dflc['fid'].apply(lambda x: ref_zps[x])
 
         # 'magzpsci' was not there for older alerts
-        w = dflc.magzpsci.isnull()
-        dflc.loc[w, 'magzpsci'] = dflc.loc[w, 'magzpref']
+        if 'magzpsci' in dflc.columns:
+            w = dflc.magzpsci.isnull()
+            dflc.loc[w, 'magzpsci'] = dflc.loc[w, 'magzpref']
+        else:
+            dflc['magzpsci'] = dflc['magzpref']
 
         # fixme?: see email from Frank Masci from Feb 7, 2019
         dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magnr']))
@@ -1306,8 +1309,11 @@ def assemble_lc(dflc):
         dflc.loc[w, 'dc_sigflux'] = np.sqrt(dflc.loc[w, 'difference_flux'] ** 2 - dflc.loc[w, 'ref_sigflux'] ** 2)
         dflc.loc[~w, 'dc_sigflux'] = np.sqrt(dflc.loc[~w, 'difference_flux'] ** 2 + dflc.loc[~w, 'ref_sigflux'] ** 2)
 
-        dflc['dc_mag'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux'])
-        dflc['dc_sigmag'] = dflc['dc_sigflux'] / dflc['dc_flux'] * 1.0857
+        w_dc_flux_good = dflc['dc_flux'] > 0
+        dflc.loc[w_dc_flux_good, 'dc_mag'] = dflc.loc[w_dc_flux_good, 'magzpsci'] - \
+                                             2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
+        dflc.loc[w_dc_flux_good, 'dc_sigmag'] = dflc.loc[w_dc_flux_good, 'dc_sigflux'] / \
+                                                dflc.loc[w_dc_flux_good, 'dc_flux'] * 1.0857
         # print(dflc['dc_mag'])
 
         # if we have a nondetection that means that there's no flux +/- 5 sigma from the ref flux
@@ -1315,8 +1321,12 @@ def assemble_lc(dflc):
         dflc['difference_fluxlim'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['diffmaglim']))
         dflc['dc_flux_ulim'] = dflc['ref_flux'] + dflc['difference_fluxlim']
         dflc['dc_flux_llim'] = dflc['ref_flux'] - dflc['difference_fluxlim']
-        dflc['dc_mag_ulim'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux_ulim'])
-        dflc['dc_mag_llim'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux_llim'])
+        w_dc_flux_ulim_good = dflc['dc_flux_ulim'] > 0
+        w_dc_flux_llim_good = dflc['dc_flux_llim'] > 0
+        dflc.loc[w_dc_flux_ulim_good, 'dc_mag_ulim'] = dflc.loc[w_dc_flux_ulim_good, 'magzpsci'] - \
+                                                       2.5 * np.log10(dflc.loc[w_dc_flux_ulim_good, 'dc_flux_ulim'])
+        dflc.loc[w_dc_flux_llim_good, 'dc_mag_llim'] = dflc.loc[w_dc_flux_llim_good, 'magzpsci'] - \
+                                                       2.5 * np.log10(dflc.loc[w_dc_flux_llim_good, 'dc_flux_llim'])
         # print(dflc['dc_mag_ulim'])
 
         # print(dflc[['magzpref', 'magzpsci', 'ref_flux', 'ref_sigflux', 'difference_flux', 'difference_sigflux']])
@@ -1350,7 +1360,7 @@ def assemble_lc(dflc):
                                dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_llim > 0)
 
                     dflc.loc[w_u_good, 'dc_mag_ulim'] = 27 - 2.5 * np.log10(dflc.loc[w_u_good, 'dc_flux_ulim'])
-                    dflc.loc[w_l_good, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dflc.loc[w_u_good, 'dc_flux_llim'])
+                    dflc.loc[w_l_good, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dflc.loc[w_l_good, 'dc_flux_llim'])
 
         # corrections done, now proceed with assembly
         for fid in (1, 2, 3):
