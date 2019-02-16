@@ -1284,10 +1284,16 @@ def assemble_lc(dflc):
         # from ztf_pipelines_deliverables, reference image zps are fixed
 
         ref_zps = {1: 26.325, 2: 26.275, 3: 25.660}
+
         dflc['magzpref'] = dflc['fid'].apply(lambda x: ref_zps[x])
+
+        # 'magzpsci' was not there for older alerts
+        w = dflc.magzpsci.isnull()
+        dflc.loc[w, 'magzpsci'] = dflc.loc[w, 'magzpref']
+
         # fixme?: see email from Frank Masci from Feb 7, 2019
-        # dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magnr']))
-        dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpref'] - dflc['magnr']))
+        dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magnr']))
+        # dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpref'] - dflc['magnr']))
 
         dflc['ref_sigflux'] = dflc['sigmagnr'] / 1.0857 * dflc['ref_flux']
 
@@ -1313,6 +1319,8 @@ def assemble_lc(dflc):
         dflc['dc_mag_llim'] = dflc['magzpsci'] - 2.5 * np.log10(dflc['dc_flux_llim'])
         # print(dflc['dc_mag_ulim'])
 
+        # print(dflc[['magzpref', 'magzpsci', 'ref_flux', 'ref_sigflux', 'difference_flux', 'difference_sigflux']])
+
         # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
         # which makes inferring upper limits more difficult
         # fix it this sloppy way:
@@ -1321,28 +1329,28 @@ def assemble_lc(dflc):
                 ref_flux = None
                 w = (dflc.fid == fid) & ~dflc.magpsf.isnull() & (dflc.distnr <= 5)
                 if np.sum(w):
-                    ref_mag = np.float64(dflc.iloc[0]['magnr'])
+                    ref_mag = np.float64(dflc.loc[w].iloc[0]['magnr'])
                     ref_flux = np.float64(10 ** (0.4 * (27 - ref_mag)))
+                    # print(fid, ref_mag, ref_flux)
 
-                wnodet_old = (dflc.fid == fid) & dflc.magpsf.isnull() & dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0)
+                wnodet_old = (dflc.fid == fid) & dflc.magpsf.isnull() & \
+                             dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0)
+
                 if np.sum(wnodet_old) and (ref_flux is not None):
                     # if we have a non-detection that means that there's no flux +/- 5 sigma from
                     # the ref flux (unless it's a bad subtraction)
-                    difference_fluxlim = np.float64(10 ** (0.4 * (27 - dflc.loc[wnodet_old, 'diffmaglim'].values)))
-                    dc_flux_ulim = ref_flux + difference_fluxlim
-                    dc_flux_llim = ref_flux - difference_fluxlim
-
-                    if not isinstance(dc_flux_ulim, np.ndarray):
-                        dc_flux_ulim = np.array([dc_flux_ulim])
-                    if not isinstance(dc_flux_llim, np.ndarray):
-                        dc_flux_llim = np.array([dc_flux_llim])
+                    dflc.loc[wnodet_old, 'difference_fluxlim'] = 10 ** (0.4 * (27 - dflc.loc[wnodet_old, 'diffmaglim']))
+                    dflc.loc[wnodet_old, 'dc_flux_ulim'] = ref_flux + dflc.loc[wnodet_old, 'difference_fluxlim']
+                    dflc.loc[wnodet_old, 'dc_flux_llim'] = ref_flux - dflc.loc[wnodet_old, 'difference_fluxlim']
 
                     # mask bad values:
-                    w_u_good = dc_flux_ulim > 0
-                    w_l_good = dc_flux_llim > 0
+                    w_u_good = (dflc.fid == fid) & dflc.magpsf.isnull() & \
+                               dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_ulim > 0)
+                    w_l_good = (dflc.fid == fid) & dflc.magpsf.isnull() & \
+                               dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_llim > 0)
 
-                    dflc.loc[wnodet_old, 'dc_mag_ulim'] = 27 - 2.5 * np.log10(dc_flux_ulim[w_u_good])
-                    dflc.loc[wnodet_old, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dc_flux_llim[w_l_good])
+                    dflc.loc[w_u_good, 'dc_mag_ulim'] = 27 - 2.5 * np.log10(dflc.loc[w_u_good, 'dc_flux_ulim'])
+                    dflc.loc[w_l_good, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dflc.loc[w_u_good, 'dc_flux_llim'])
 
         # corrections done, now proceed with assembly
         for fid in (1, 2, 3):
@@ -1381,7 +1389,7 @@ def assemble_lc(dflc):
 
             # sort by date and fill NaNs with zeros
             lc_joint.sort_values(by=['mjd'], inplace=True)
-            print(lc_joint)
+            # print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
             lc_save = {"telescope": "PO:1.2m",
