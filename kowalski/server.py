@@ -1509,8 +1509,18 @@ async def ztf_alert_get_handler(request):
                                     star_galaxy_threshold=star_galaxy_threshold)
             return web.json_response(lc_candid, status=200, dumps=dumps)
 
+        elif download == 'lc_object':
+            obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
+                                                                {'cutoutScience': 0,
+                                                                 'cutoutTemplate': 0,
+                                                                 'cutoutDifference': 0}).to_list(length=None)
+            dflc = make_dataframe(obj)
+            lc_object = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+                                    star_galaxy_threshold=star_galaxy_threshold)
+            return web.json_response(lc_object, status=200, dumps=dumps)
+
     if alert is not None and (len(alert) > 0):
-        # todo: make packet light curve
+        # make packet light curve
         dflc = make_dataframe(alert)
         lc_alert = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
                                star_galaxy_threshold=star_galaxy_threshold)
@@ -1535,7 +1545,33 @@ async def ztf_alert_get_handler(request):
             lc_candid.append(lc_)
 
         # todo: make composite light curve from all packets for alert['objectId']
-        lc_objectId = []
+        obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
+                                                            {'cutoutScience': 0,
+                                                             'cutoutTemplate': 0,
+                                                             'cutoutDifference': 0}).to_list(length=None)
+        # print([o['_id'] for o in obj])
+        dflc = make_dataframe(obj)
+        lc_obj = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+                             star_galaxy_threshold=star_galaxy_threshold)
+
+        # pre-process for plotly:
+        lc_object = []
+        for lc_ in lc_obj:
+            lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
+                    'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
+                    'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
+            for dp in lc_['data']:
+                if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
+                        lc__['lc_nodet_u'][kk].append(dp[kk])
+                if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
+                        lc__['lc_nodet_l'][kk].append(dp[kk])
+                if ('mag' in dp) and (dp['mag'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
+                        lc__['lc_det'][kk].append(dp[kk])
+            lc_['data'] = lc__
+            lc_object.append(lc_)
 
         # print(lc_candid)
 
@@ -1543,7 +1579,7 @@ async def ztf_alert_get_handler(request):
                    'user': session['user_id'],
                    'alert': alert,
                    'lc_candid': lc_candid,
-                   'lc_objectId': lc_objectId}
+                   'lc_object': lc_object}
         response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
                                                   request,
                                                   context)

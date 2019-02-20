@@ -166,3 +166,7 @@ margin-bottom: var(--vertical-spacing);}*/
 .invert {
     filter: invert(100%);
 }
+
+.title-blue {
+    color: #003366
+}
