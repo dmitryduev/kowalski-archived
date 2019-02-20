@@ -73,7 +73,7 @@
             <div class="col-12">
                 <h5 class="title-blue">Light curves from the alert packet
                     <a download='{{alert['candid']}}.lc.json'
-                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?download=lc_alert"><i class='fas fa-download'></i></a>
+                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?match_radius_arcsec={{-match_radius_arcsec-}}&star_galaxy_threshold={{-star_galaxy_threshold-}}&download=lc_alert"><i class='fas fa-download'></i></a>
                 </h5>
 
                 {% if lc_candid | length == 0 %}
@@ -137,7 +137,7 @@
             <div class="col-12">
                 <h5 class="title-blue">Composite light curves for {{ alert['objectId'] }}
                     <a download='{{alert['objectId']}}.lc.json'
-                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?download=lc_object"><i class='fas fa-download'></i></a>
+                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?match_radius_arcsec={{-match_radius_arcsec-}}&star_galaxy_threshold={{-star_galaxy_threshold-}}&download=lc_object"><i class='fas fa-download'></i></a>
                 </h5>
 
                 {% if lc_object | length == 0 %}
@@ -458,14 +458,14 @@
             }
 
             // plot detections. there should always be at least one detection since there's an alert
-            if (data_det.length > 0) {
+            if (data_det_object.length > 0) {
                 Plotly.newPlot('lc_object', data_det_object, layout);
             }
             // plot non-detections
-            if (data_non_det_u.length > 0) {
+            if (data_non_det_u_object.length > 0) {
                 Plotly.plot('lc_object', data_non_det_u_object, layout);
             }
-            if (data_non_det_l.length > 0) {
+            if (data_non_det_l_object.length > 0) {
                 Plotly.plot('lc_object', data_non_det_l_object, layout);
             }
         }

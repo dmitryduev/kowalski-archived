@@ -1267,7 +1267,8 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
             dflc.loc[w, 'field'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
                                                                         int(os.path.basename(x).split('_')[2][1:]))
 
-        # print(dflc[['fid', 'field', 'rcid']])
+        # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        #     print(dflc[['fid', 'field', 'rcid', 'magnr']])
 
         grp = dflc.groupby(['fid', 'field', 'rcid'])
         impute_magnr = grp['magnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
@@ -1577,6 +1578,8 @@ async def ztf_alert_get_handler(request):
 
         context = {'logo': config['server']['logo'],
                    'user': session['user_id'],
+                   'match_radius_arcsec': match_radius_arcsec,
+                   'star_galaxy_threshold': star_galaxy_threshold,
                    'alert': alert,
                    'lc_candid': lc_candid,
                    'lc_object': lc_object}
