@@ -1256,6 +1256,17 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
         # fix old alerts:
         dflc.replace('None', np.nan, inplace=True)
 
+        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
+        # which makes inferring upper limits more difficult
+        # fix using pdiffimfilename:
+        w = dflc.rcid.isnull()
+        if np.sum(w):
+            dflc.loc[w, 'rcid'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
+                                                      ccd_quad_2_rc(ccd=int(os.path.basename(x).split('_')[4][1:]),
+                                                                    quad=int(os.path.basename(x).split('_')[6][1:])))
+            dflc.loc[w, 'field'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
+                                                                        int(os.path.basename(x).split('_')[2][1:]))
+
         # print(dflc[['fid', 'field', 'rcid']])
 
         grp = dflc.groupby(['fid', 'field', 'rcid'])
@@ -1452,6 +1463,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
                        "instrument": "ZTF",
                        "filter": fid,
                        "source": "alert_stream",
+                       "comment": "no corrections applied. using raw magpsf, sigmapsf, and diffmaglim",
                        "id": dflc.loc[0, 'candid'],
                        "lc_type": "temporal",
                        "data": lc_joint.to_dict('records')

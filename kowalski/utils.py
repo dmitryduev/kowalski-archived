@@ -307,3 +307,13 @@ def make_dataframe(packets):
 def is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
     return (dflc.loc[0, 'distpsnr1'] < match_radius_arcsec) & (dflc.loc[0, 'sgscore1'] > star_galaxy_threshold)
 
+
+def ccd_quad_2_rc(ccd: int, quad: int) -> int:
+    # assert ccd in range(1, 17)
+    # assert quad in range(1, 5)
+    b = (ccd - 1) * 4
+    rc = b + quad - 1
+    return rc
+
+
+# filters = {'zg': 1, 'zr': 2, 'zi': 3}
