@@ -1280,7 +1280,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
 
         dflc['magzpref'] = dflc['fid'].apply(lambda x: ref_zps[x])
 
-        # 'magzpsci' was not there for older alerts
+        # 'magzpsci' was not there in older alerts
         if 'magzpsci' in dflc.columns:
             w = dflc.magzpsci.isnull()
             dflc.loc[w, 'magzpsci'] = dflc.loc[w, 'magzpref']
@@ -1392,7 +1392,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
 
             # sort by date and fill NaNs with zeros
             lc_joint.sort_values(by=['mjd'], inplace=True)
-            # print(lc_joint)
+            print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
             lc_save = {"telescope": "PO:1.2m",
@@ -1407,6 +1407,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
             lc.append(lc_save)
 
     else:
+        # print('Not a star!')
         # not a star (transient): up to three individual lcs
         lc = []
 
@@ -1444,6 +1445,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
 
             # sort by date and fill NaNs with zeros
             lc_joint.sort_values(by=['mjd'], inplace=True)
+            print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
             lc_save = {"telescope": "PO:1.2m",
@@ -1456,6 +1458,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
                        }
             lc.append(lc_save)
 
+    # print(lc)
     return lc
 
 
@@ -1523,6 +1526,8 @@ async def ztf_alert_get_handler(request):
 
         # todo: make composite light curve from all packets for alert['objectId']
         lc_objectId = []
+
+        # print(lc_candid)
 
         context = {'logo': config['server']['logo'],
                    'user': session['user_id'],

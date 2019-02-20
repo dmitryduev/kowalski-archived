@@ -234,6 +234,7 @@
                                       array: {{ lc['data'][key]['magerr'] }},
                                       width: 2,
                                       thickness: 0.8,
+                                      color: lc_colors[{{ lc['filter'] }}],
                                       opacity: 0.5,
                                       visible: true},
                             name: 'LC_{{ lc_ind }}',
@@ -241,10 +242,12 @@
                             showlegend: true,
                             {% elif key == 'lc_nodet_u' %}
                             y: {{ lc['data'][key]['mag_ulim'] }},
+                            name: 'LC_{{ lc_ind }}_nodet_u',
                             marker: {symbol: 'triangle-down', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
                             showlegend: false,
                             {% elif key == 'lc_nodet_l' %}
                             y: {{ lc['data'][key]['mag_llim'] }},
+                            name: 'LC_{{ lc_ind }}_nodet_l',
                             marker: {symbol: 'triangle-up', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
                             showlegend: false,
                             {% endif %}
@@ -288,11 +291,17 @@
                 layout.xaxis.autorange = 'reversed';
             }
 
-            // plot detections
-            Plotly.newPlot('lc', data_det, layout);
-            // plot non-detection
-            Plotly.plot('lc', data_non_det_u, layout);
-            Plotly.plot('lc', data_non_det_l, layout);
+            // plot detections. there should always be at least one detection since there's an alert
+            if (data_det.length > 0) {
+                Plotly.newPlot('lc', data_det, layout);
+            }
+            // plot non-detections
+            if (data_non_det_u.length > 0) {
+                Plotly.plot('lc', data_non_det_u, layout);
+            }
+            if (data_non_det_l.length > 0) {
+                Plotly.plot('lc', data_non_det_l, layout);
+            }
         }
 
         {% if lc_candid | length > 0 %}
