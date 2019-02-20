@@ -1318,7 +1318,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
                                              2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
         dflc.loc[w_dc_flux_good, 'dc_sigmag'] = dflc.loc[w_dc_flux_good, 'dc_sigflux'] / \
                                                 dflc.loc[w_dc_flux_good, 'dc_flux'] * 1.0857
-        # print(dflc[['dc_mag', 'difference_flux', 'dc_flux', 'ref_flux']])
+        # print(dflc[['dc_mag', 'difference_flux', 'dc_flux', 'ref_flux', 'sign']])
 
         # if we have a nondetection that means that there's no flux +/- 5 sigma from the ref flux
         # (unless it's a bad subtraction)
@@ -1335,13 +1335,11 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
 
         # print(dflc[['magzpref', 'magzpsci', 'ref_flux', 'ref_sigflux', 'difference_flux', 'difference_sigflux']])
 
-        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
-        # which makes inferring upper limits more difficult
-        # fix it this sloppy way:
+        # if some of the above produces NaNs for some reason, try fixing it sloppy way:
         for fid in (1, 2, 3):
             if fid in dflc.fid.values:
                 ref_flux = None
-                w = (dflc.fid == fid) & ~dflc.magpsf.isnull() & (dflc.distnr <= 5)
+                w = (dflc.fid == fid) & ~dflc.magpsf.isnull() & (dflc.distnr <= match_radius_arcsec)
                 if np.sum(w):
                     ref_mag = np.float64(dflc.loc[w].iloc[0]['magnr'])
                     ref_flux = np.float64(10 ** (0.4 * (27 - ref_mag)))
@@ -1403,7 +1401,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
 
             # sort by date and fill NaNs with zeros
             lc_joint.sort_values(by=['mjd'], inplace=True)
-            print(lc_joint)
+            # print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
             lc_save = {"telescope": "PO:1.2m",
@@ -1456,7 +1454,7 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
 
             # sort by date and fill NaNs with zeros
             lc_joint.sort_values(by=['mjd'], inplace=True)
-            print(lc_joint)
+            # print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
             lc_save = {"telescope": "PO:1.2m",
