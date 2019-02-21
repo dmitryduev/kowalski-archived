@@ -1311,8 +1311,8 @@ def assemble_lc(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_g
         dflc['dc_flux'] = dflc['ref_flux'] + dflc['sign'] * dflc['difference_flux']
         # errors are correlated, so these are conservative choices
         w = dflc['difference_sigflux'] > dflc['ref_sigflux']
-        dflc.loc[w, 'dc_sigflux'] = np.sqrt(dflc.loc[w, 'difference_flux'] ** 2 - dflc.loc[w, 'ref_sigflux'] ** 2)
-        dflc.loc[~w, 'dc_sigflux'] = np.sqrt(dflc.loc[~w, 'difference_flux'] ** 2 + dflc.loc[~w, 'ref_sigflux'] ** 2)
+        dflc.loc[w, 'dc_sigflux'] = np.sqrt(dflc.loc[w, 'difference_sigflux'] ** 2 - dflc.loc[w, 'ref_sigflux'] ** 2)
+        dflc.loc[~w, 'dc_sigflux'] = np.sqrt(dflc.loc[~w, 'difference_sigflux'] ** 2 + dflc.loc[~w, 'ref_sigflux'] ** 2)
 
         w_dc_flux_good = dflc['dc_flux'] > 0
         dflc.loc[w_dc_flux_good, 'dc_mag'] = dflc.loc[w_dc_flux_good, 'magzpsci'] - \
