@@ -1234,7 +1234,7 @@ async def ztf_alert_get_handler(request):
     return response
 
 
-def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
+def assemble_lc(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
     # mjds:
     dflc['mjd'] = dflc.jd - 2400000.5
 
@@ -1405,12 +1405,17 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
             # print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
+            # single or multiple alert packets used?
+            lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
+                if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
+            # print(lc_id)
+
             lc_save = {"telescope": "PO:1.2m",
                        "instrument": "ZTF",
                        "filter": fid,
                        "source": "alert_stream",
                        "comment": "corrected for flux in the reference image",
-                       "id": dflc.loc[0, 'candid'],
+                       "id": lc_id,
                        "lc_type": "temporal",
                        "data": lc_joint.to_dict('records')
                        }
@@ -1458,12 +1463,17 @@ def assemble_lc(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
             # print(lc_joint)
             lc_joint = lc_joint.fillna(0)
 
+            # single or multiple alert packets used?
+            lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
+                if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
+            # print(lc_id)
+
             lc_save = {"telescope": "PO:1.2m",
                        "instrument": "ZTF",
                        "filter": fid,
                        "source": "alert_stream",
                        "comment": "no corrections applied. using raw magpsf, sigmapsf, and diffmaglim",
-                       "id": dflc.loc[0, 'candid'],
+                       "id": lc_id,
                        "lc_type": "temporal",
                        "data": lc_joint.to_dict('records')
                        }
@@ -1506,7 +1516,8 @@ async def ztf_alert_get_handler(request):
 
         elif download == 'lc_alert':
             dflc = make_dataframe(alert)
-            lc_candid = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+            lc_candid = assemble_lc(dflc, objectId=alert['objectId'], composite=False,
+                                    match_radius_arcsec=match_radius_arcsec,
                                     star_galaxy_threshold=star_galaxy_threshold)
             return web.json_response(lc_candid, status=200, dumps=dumps)
 
@@ -1516,14 +1527,16 @@ async def ztf_alert_get_handler(request):
                                                                  'cutoutTemplate': 0,
                                                                  'cutoutDifference': 0}).to_list(length=None)
             dflc = make_dataframe(obj)
-            lc_object = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+            lc_object = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
+                                    match_radius_arcsec=match_radius_arcsec,
                                     star_galaxy_threshold=star_galaxy_threshold)
             return web.json_response(lc_object, status=200, dumps=dumps)
 
     if alert is not None and (len(alert) > 0):
         # make packet light curve
         dflc = make_dataframe(alert)
-        lc_alert = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+        lc_alert = assemble_lc(dflc, objectId=alert['objectId'], composite=False,
+                               match_radius_arcsec=match_radius_arcsec,
                                star_galaxy_threshold=star_galaxy_threshold)
 
         # pre-process for plotly:
@@ -1552,7 +1565,8 @@ async def ztf_alert_get_handler(request):
                                                              'cutoutDifference': 0}).to_list(length=None)
         # print([o['_id'] for o in obj])
         dflc = make_dataframe(obj)
-        lc_obj = assemble_lc(dflc, match_radius_arcsec=match_radius_arcsec,
+        lc_obj = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
+                             match_radius_arcsec=match_radius_arcsec,
                              star_galaxy_threshold=star_galaxy_threshold)
 
         # pre-process for plotly:

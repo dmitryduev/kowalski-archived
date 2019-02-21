@@ -42,15 +42,6 @@
             </div>
             {% endfor %}
 
-            {# lightcurve #}
-{#            <div class="col-md-4">#}
-{#                <figure class='figure ml-3 mt-1 mb-1 align-top'>#}
-{#                    <img class='figure-img img-fluid mb-1 mr-1' style='width: 295px'#}
-{#                         src='/data/{{ alert['_id'] }}/lightcurve.jpg'>#}
-{#                    <figcaption class='figure-caption text-center'>Light curve</figcaption>#}
-{#                </figure>#}
-{#            </div>#}
-
             <div class="col-md-auto">
                 <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'
                    onclick="toggleMenus()">Toggle JS9 Menus</a>
@@ -107,10 +98,15 @@
                         {% set lc_info = {'telescope': lc['telescope'],
                                           'instrument': lc['instrument'],
                                           'filter': lc['filter'],
-                                          'id': lc['id']} %}
+                                          'comment': lc['comment']} %}
                         <b>Light curve {{ loop.index }}:</b> {{ lc_info | safe }}<br>
                     {% endif %}
                 {% endfor %}
+                </p>
+
+                <p class="mt-2">
+                    <span class="badge badge-primary">Note</span>
+                    <b>match_radius_arcsec</b>={{-match_radius_arcsec-}}, <b>star_galaxy_threshold</b>={{-star_galaxy_threshold-}}<br>
                 </p>
 
                 {% endif %}
@@ -170,10 +166,16 @@
                     {% if lc['lc_type'] == 'temporal' %}
                         {% set lc_info = {'telescope': lc['telescope'],
                                           'instrument': lc['instrument'],
-                                          'filter': lc['filter']} %}
+                                          'filter': lc['filter'],
+                                          'comment': lc['comment']} %}
                         <b>Light curve {{ loop.index }}:</b> {{ lc_info | safe }}<br>
                     {% endif %}
                 {% endfor %}
+                </p>
+
+                <p class="mt-2">
+                    <span class="badge badge-primary">Note</span>
+                    <b>match_radius_arcsec</b>={{-match_radius_arcsec-}}, <b>star_galaxy_threshold</b>={{-star_galaxy_threshold-}}<br>
                 </p>
 
                 {% endif %}
