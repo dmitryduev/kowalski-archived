@@ -1414,7 +1414,7 @@ def assemble_lc(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_g
                        "instrument": "ZTF",
                        "filter": fid,
                        "source": "alert_stream",
-                       "comment": "corrected for flux in the reference image",
+                       "comment": "corrected for flux in reference image",
                        "id": lc_id,
                        "lc_type": "temporal",
                        "data": lc_joint.to_dict('records')
