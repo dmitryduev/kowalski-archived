@@ -1632,6 +1632,9 @@ async def ztf_alert_get_cutout_handler(request):
 
     cutout_data = loads(dumps([alert[f'cutout{cutout}']['stampData']]))[0]
 
+    # unzipped fits name
+    fits_name = pathlib.Path(alert[f"cutout{cutout}"]["fileName"]).with_suffix('')
+
     # unzip and flip about y axis on the server side
     with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
         unzipped = io.BytesIO(f.read())
@@ -1639,9 +1642,6 @@ async def ztf_alert_get_cutout_handler(request):
             data_flipped_y = np.flipud(hdu[0].data)
             hdu[0].data = data_flipped_y
             hdu.flush()
-
-            # unzipped fits name
-            fits_name = pathlib.Path(alert[f"cutout{cutout}"]["fileName"]).with_suffix('')
 
             return web.Response(body=unzipped.getvalue(), content_type='image/fits',
                                 headers=MultiDict({'Content-Disposition': f'Attachment;filename={fits_name}'}), )
