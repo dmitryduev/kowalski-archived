@@ -99,7 +99,7 @@
                                           'instrument': lc['instrument'],
                                           'filter': lc['filter'],
                                           'comment': lc['comment']} %}
-                        <b>Light curve {{ loop.index }}:</b> {{ lc_info | safe }}<br>
+                        <b>LC_{{ loop.index }}:</b> {{ lc_info | safe }}<br>
                     {% endif %}
                 {% endfor %}
                 </p>
@@ -168,7 +168,7 @@
                                           'instrument': lc['instrument'],
                                           'filter': lc['filter'],
                                           'comment': lc['comment']} %}
-                        <b>Light curve {{ loop.index }}:</b> {{ lc_info | safe }}<br>
+                        <b>LC_{{ loop.index }}:</b> {{ lc_info | safe }}<br>
                     {% endif %}
                 {% endfor %}
                 </p>
@@ -289,12 +289,12 @@
                             y: {{ lc['data'][key]['mag_ulim'] }},
                             name: 'LC_{{ lc_ind }}_nodet_u',
                             marker: {symbol: 'triangle-down', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
-                            showlegend: false,
+                            showlegend: true,
                             {% elif key == 'lc_nodet_l' %}
                             y: {{ lc['data'][key]['mag_llim'] }},
                             name: 'LC_{{ lc_ind }}_nodet_l',
                             marker: {symbol: 'triangle-up', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
-                            showlegend: false,
+                            showlegend: true,
                             {% endif %}
 
                             mode: 'markers'
