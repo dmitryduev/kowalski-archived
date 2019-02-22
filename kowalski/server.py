@@ -1632,20 +1632,19 @@ async def ztf_alert_get_cutout_handler(request):
 
     cutout_data = loads(dumps([alert[f'cutout{cutout}']['stampData']]))[0]
 
+    # unzip and flip about y axis on the server side
     with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
-        with fits.open(io.BytesIO(f.read())) as hdu:
-            # print(hdu[0].data)
-            header = hdu[0].header
+        unzipped = io.BytesIO(f.read())
+        with fits.open(unzipped, mode='update') as hdu:
             data_flipped_y = np.flipud(hdu[0].data)
+            hdu[0].data = data_flipped_y
+            hdu.flush()
 
-        hdu = fits.PrimaryHDU(data_flipped_y, header=header)
-        stamp_fits = fits.HDUList([hdu])
+            # unzipped fits name
+            fits_name = pathlib.Path(alert[f"cutout{cutout}"]["fileName"]).with_suffix('')
 
-    # print(cutout_data)
-
-    return web.Response(body=stamp_fits, content_type='image/fits',
-                        headers=MultiDict({'Content-Disposition':
-                                               f'Attachment;filename={alert[f"cutout{cutout}"]["fileName"]}'}),)
+            return web.Response(body=unzipped.getvalue(), content_type='image/fits',
+                                headers=MultiDict({'Content-Disposition': f'Attachment;filename={fits_name}'}), )
 
 
 @routes.post('/lab/ztf-alerts')
