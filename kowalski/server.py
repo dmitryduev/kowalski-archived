@@ -24,6 +24,9 @@ import numpy as np
 import string
 import random
 import traceback
+from astropy.io import fits
+import io
+import gzip
 
 from utils import *
 
@@ -1629,9 +1632,18 @@ async def ztf_alert_get_cutout_handler(request):
 
     cutout_data = loads(dumps([alert[f'cutout{cutout}']['stampData']]))[0]
 
+    with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
+        with fits.open(io.BytesIO(f.read())) as hdu:
+            # print(hdu[0].data)
+            header = hdu[0].header
+            data_flipped_y = np.flipud(hdu[0].data)
+
+        hdu = fits.PrimaryHDU(data_flipped_y, header=header)
+        stamp_fits = fits.HDUList([hdu])
+
     # print(cutout_data)
 
-    return web.Response(body=cutout_data, content_type='image/fits',
+    return web.Response(body=stamp_fits, content_type='image/fits',
                         headers=MultiDict({'Content-Disposition':
                                                f'Attachment;filename={alert[f"cutout{cutout}"]["fileName"]}'}),)
 
