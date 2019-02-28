@@ -267,6 +267,14 @@ Examples:
                         visible: false
                     },
                     {
+                        field: 'pdiffimfilename',
+                        title: 'pdiffimfilename',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
                         field: 'ra',
                         title: 'R.A.',
                         align: 'center',
@@ -301,7 +309,8 @@ Examples:
                         fid: "{{alert['candidate']['fid']}}",
                         rb: "{{alert['candidate']['rb']}}".slice(0, 4),
                         magpsf: "{{alert['candidate']['magpsf']}}".slice(0, 5),
-                        sigmapsf: "{{alert['candidate']['sigmapsf']}}".slice(0, 4)
+                        sigmapsf: "{{alert['candidate']['sigmapsf']}}".slice(0, 4),
+                        pdiffimfilename: "{{alert['candidate']['pdiffimfilename']}}"
                     },
                 {%-endfor-%}
             ]
