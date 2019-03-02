@@ -1753,10 +1753,13 @@ async def ztf_alert_post_handler(request):
         else:
 
             # do not fetch/pass cutouts in bulk
+            # alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'cutoutScience': 0,
+            #                                                            'cutoutTemplate': 0,
+            #                                                            'cutoutDifference': 0}). \
+            #     sort([('candidate.jd', -1)]).to_list(length=None)
             alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'cutoutScience': 0,
                                                                        'cutoutTemplate': 0,
-                                                                       'cutoutDifference': 0}). \
-                sort([('candidate.jd', -1)]).to_list(length=None)
+                                                                       'cutoutDifference': 0}).to_list(length=None)
 
             context = {'logo': config['server']['logo'],
                        'user': session['user_id'],
