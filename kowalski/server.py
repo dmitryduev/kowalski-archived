@@ -1757,7 +1757,7 @@ async def ztf_alert_post_handler(request):
             #                                                            'cutoutTemplate': 0,
             #                                                            'cutoutDifference': 0}). \
             #     sort([('candidate.jd', -1)]).to_list(length=None)
-            alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'prv_candidates':0,
+            alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'prv_candidates': 0,
                                                                        'cutoutScience': 0,
                                                                        'cutoutTemplate': 0,
                                                                        'cutoutDifference': 0}).to_list(length=None)
