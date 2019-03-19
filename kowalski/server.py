@@ -1513,10 +1513,11 @@ async def ztf_alert_get_handler(request):
     match_radius_arcsec = float(request.query.get('match_radius_arcsec', 1.5))
     star_galaxy_threshold = float(request.query.get('star_galaxy_threshold', 0.4))
 
-    alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
-                                                              {'cutoutScience': 0,
-                                                               'cutoutTemplate': 0,
-                                                               'cutoutDifference': 0})
+    # alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
+    #                                                           {'cutoutScience': 0,
+    #                                                            'cutoutTemplate': 0,
+    #                                                            'cutoutDifference': 0})
+    alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid})
 
     download = request.query.get('download', None)
     # frmt = request.query.get('format', 'web')

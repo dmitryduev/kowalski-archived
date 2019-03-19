@@ -24,7 +24,10 @@ def fetch_lc_radecs(_radecs):
 
     times = []
 
+    ids = set()
+
     for nb in range(num_batches):
+        # print(_radecs[nb * batch_size: (nb + 1) * batch_size])
         q = {"query_type": "cone_search",
              "object_coordinates": {
                  "radec": f"{_radecs[nb * batch_size: (nb + 1) * batch_size]}",
@@ -41,7 +44,8 @@ def fetch_lc_radecs(_radecs):
                                                          "data.programid": 1,
                                                          "data.hjd": 1,
                                                          "data.mag": 1,
-                                                         "data.magerr": 1}}
+                                                         "data.magerr": 1
+                                                         }}
              }
              }
 
@@ -55,6 +59,9 @@ def fetch_lc_radecs(_radecs):
         data = r['result_data']
         # TODO: your magic here
         # print(data)
+        for sc, sources in data['ZTF_sources_20181220'].items():
+            ids = ids.union([s['_id'] for s in sources])
+        print(len(ids))
         # FIXME: Must filter out data.programid == 1 data
 
     print(f'min: {np.min(times)}')
@@ -64,13 +71,19 @@ def fetch_lc_radecs(_radecs):
 
 if __name__ == '__main__':
 
-    c_path = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/agn.txt'
+    # c_path = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/agn.txt'
+    c_path = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/liner'
 
-    df = pd.read_csv(c_path, sep='\t', header=None, names=['id', 'ra', 'dec'])
-    ras = df.ra.values
-    decs = df.dec.values
+    # df = pd.read_csv(c_path, sep='\t', header=None, names=['id', 'ra', 'dec'])
+    # df = pd.read_fwf(c_path, header=None, names=['id', 'ra', 'dec'])
+    # print(df)
+    # ras = df.ra.values
+    # decs = df.dec.values
+    #
+    # radecs = list(zip(ras, decs))
 
-    radecs = list(zip(ras, decs))
+    with open(c_path) as f:
+        radecs = [tuple(map(float, l.split()[1:])) for l in f.readlines()]
 
     ''' single thread: '''
     fetch_lc_radecs(radecs)
