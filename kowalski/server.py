@@ -564,7 +564,7 @@ async def ztf_alert_stats_get_handler(request):
 
     date = utc.strftime('%B %-d, %Y')
 
-    total = await request.app['mongo'].ZTF_alerts.estimated_document_count({})
+    total = await request.app['mongo'].ZTF_alerts.estimated_document_count()
 
     last_date = await request.app['mongo'].ZTF_alerts.find({}, {'_id': 0,
                                                                 'candidate.jd': 1}
