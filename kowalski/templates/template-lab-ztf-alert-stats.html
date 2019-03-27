@@ -25,7 +25,7 @@
             <div class="col-md-12 mt-2">
                 <p>Total alerts since February 9, 2018 (UTC): {{ "{:,d}".format(stats['total']) }}</p>
 
-{#                <p>Latest alert: {{ last_date }} (UTC)</p><br>#}
+                <p>Latest alert: {{ last_date }} (UTC)</p><br>
 
                 <p>Total alerts for {{ date }} (UTC): {{ "{:,d}".format(stats['total_date']) }}</p>
 
@@ -35,8 +35,8 @@
                         <li>programid {{ pid }}: {{ "{:,d}".format(stats['total_date_programid'][pid]) }}</li>
                     {% endfor %}
                     </ul>
-{#                    <br>#}
-{#                    <p> Fields observed: {{ stats['fields'] }}</p>#}
+                    <br>
+                    <p> Fields observed: {{ stats['fields'] }}</p>
                 {% endif %}
             </div>
 
