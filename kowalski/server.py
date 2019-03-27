@@ -1579,6 +1579,7 @@ async def ztf_alert_get_handler(request):
     #                                                            'cutoutTemplate': 0,
     #                                                            'cutoutDifference': 0})
     alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid})
+    alert = loads(dumps(alert))
 
     download = request.query.get('download', None)
     # frmt = request.query.get('format', 'web')
@@ -2052,7 +2053,8 @@ async def app_factory():
                   'JWT_EXP_DELTA_SECONDS': 30 * 86400 * 3}
 
     # render templates with jinja2
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./templates'))
+    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('./templates'),
+                         filters={'tojson_pretty': to_pretty_json})
 
     # set up browser sessions
     fernet_key = config['misc']['fernet_key'].encode()

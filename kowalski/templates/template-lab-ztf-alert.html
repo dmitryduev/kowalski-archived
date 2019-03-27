@@ -213,7 +213,7 @@
     <script src="{{-script_root-}}/static/js/jquery.json-viewer.js"></script>
 
     <script>
-        var data = JSONbig.parse('{{-alert|tojson(indent=2)|safe|replace('\n', '')-}}');
+        var data = JSONbig.parse('{{-alert|tojson_pretty|safe|replace('\n', '')-}}');
         {#var data = JSONbig.parse('{{ alert }}');#}
         {#console.log(data);#}
         $('#json-renderer').jsonViewer(data, {collapsed: true, withQuotes: true});

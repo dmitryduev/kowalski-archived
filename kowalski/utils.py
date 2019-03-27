@@ -9,6 +9,7 @@ import datetime
 import pytz
 import base64
 import bcrypt
+from bson.json_util import dumps
 
 from typing import Union
 
@@ -37,6 +38,11 @@ def check_password_hash(encoded, password):
     hashed = base64.b64decode(encoded)
     is_correct = bcrypt.hashpw(password, hashed) == hashed
     return is_correct
+
+
+def to_pretty_json(value):
+    # return dumps(value, indent=4)  # , separators=(',', ': ')
+    return dumps(value, separators=(',', ': '))
 
 
 def radec_str2rad(_ra_str, _dec_str):
