@@ -539,6 +539,66 @@ async def edit_user(request):
         return web.json_response({'message': '403 Forbidden'}, status=403)
 
 
+''' ZTF alert stats'''
+
+
+@routes.get('/lab/ztf-alert-stats', name='ztf-alert-stats')
+@login_required
+async def ztf_alert_stats_get_handler(request):
+    """
+        Serve docs page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    q = request.query
+    if 'date' in q:
+        utc = datetime.datetime.strptime(q['date'], '%Y%m%d')
+    else:
+        utc = utc_now()
+
+    utc_sod = datetime.datetime(utc.year, utc.month, utc.day)
+    jd_sod = jd(utc_sod)
+
+    date = utc.strftime('%B %-d, %Y')
+
+    total = await request.app['mongo'].ZTF_alerts.count_documents({})
+
+    last_date = await request.app['mongo'].ZTF_alerts.find({}, {'_id': 0,
+                                                                'candidate.jd': 1}
+                                                           ).sort([('candidate.jd', -1)]).limit(1).to_list(length=None)
+    last_date = jd_to_datetime(last_date[0]['candidate']['jd']) if len(last_date) > 0 else datetime.datetime(2018, 2, 9)
+    last_date = last_date.strftime('%B %-d, %Y, %H:%M:%S')
+    # print(last_date)
+
+    total_date = await request.app['mongo'].ZTF_alerts.count_documents({'candidate.jd': {'$gt': jd_sod,
+                                                                                         '$lt': jd_sod + 1}})
+
+    fields = await request.app['mongo'].ZTF_alerts.distinct('candidate.field', {'candidate.jd': {'$gt': jd_sod,
+                                                                                                 '$lt': jd_sod + 1}})
+    fields = sorted(list(map(int, fields)))
+
+    stats = dict()
+    stats['total'] = total
+    stats['total_date'] = total_date
+    stats['total_date_programid'] = {pid: await request.app['mongo'].ZTF_alerts.count_documents({
+        'candidate.jd': {'$gt': jd_sod, '$lt': jd_sod + 1}, 'candidate.programid': pid}) for pid in range(4)}
+    stats['fields'] = fields
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id'],
+               'date': date,
+               'stats': stats,
+               'last_date': last_date}
+
+    response = aiohttp_jinja2.render_template('template-lab-ztf-alert-stats.html',
+                                              request,
+                                              context)
+    return response
+
+
 ''' query API '''
 
 regex = dict()
