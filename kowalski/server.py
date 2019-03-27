@@ -566,11 +566,12 @@ async def ztf_alert_stats_get_handler(request):
 
     total = await request.app['mongo'].ZTF_alerts.count_documents({})
 
-    last_date = await request.app['mongo'].ZTF_alerts.find({}, {'_id': 0,
-                                                                'candidate.jd': 1}
-                                                           ).sort([('candidate.jd', -1)]).limit(1).to_list(length=1)
-    last_date = jd_to_datetime(last_date[0]['candidate']['jd']) if len(last_date) > 0 else datetime.datetime(2018, 2, 9)
-    last_date = last_date.strftime('%B %-d, %Y, %H:%M:%S')
+    # last_date = await request.app['mongo'].ZTF_alerts.find({}, {'_id': 0,
+    #                                                             'candidate.jd': 1}
+    #                                                        ).sort([('candidate.jd', -1)]).limit(1).to_list(length=1)
+    # last_date = jd_to_datetime(last_date[0]['candidate']['jd']) if len(last_date) > 0 else datetime.datetime(2018, 2, 9)
+    # last_date = last_date.strftime('%B %-d, %Y, %H:%M:%S')
+    last_date = None
     # print(last_date)
 
     total_date = await request.app['mongo'].ZTF_alerts.count_documents({'candidate.jd': {'$gt': jd_sod,
