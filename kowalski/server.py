@@ -848,7 +848,8 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             # _select = eval(query['query'])
             # _select = literal_eval(qq)
 
-            if ('.find_one(' in qq) or ('.count_documents(' in qq) or ('.index_information(' in qq):
+            if ('.find_one(' in qq) or ('.count_documents(' in qq) \
+                    or ('.index_information(' in qq) or ('.distinct(' in qq):
                 _select = await _select
 
             # make it look like json
