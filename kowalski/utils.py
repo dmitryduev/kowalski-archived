@@ -311,7 +311,11 @@ def make_dataframe(packets):
 
 
 def is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
-    return (dflc.loc[0, 'distpsnr1'] < match_radius_arcsec) & (dflc.loc[0, 'sgscore1'] > star_galaxy_threshold)
+    try:
+        return (dflc.loc[0, 'distpsnr1'] < match_radius_arcsec) & (dflc.loc[0, 'sgscore1'] > star_galaxy_threshold)
+    except Exception as _e:
+        # print(_e)
+        return False
 
 
 def ccd_quad_2_rc(ccd: int, quad: int) -> int:
