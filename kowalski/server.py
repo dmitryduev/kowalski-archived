@@ -1359,6 +1359,10 @@ def assemble_lc(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_g
 
         # print(dflc)
 
+        # fix weird isdiffpos'es:
+        w_1 = dflc['isdiffpos'] == '1'
+        dflc.loc[w_1, 'isdiffpos'] = 't'
+
         dflc['sign'] = 2 * (dflc['isdiffpos'] == 't') - 1
 
         # from ztf_pipelines_deliverables, reference image zps are fixed
