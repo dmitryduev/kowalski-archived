@@ -55,7 +55,7 @@ def radec_str2rad(_ra_str, _dec_str):
     _ra = list(map(float, _ra_str.split(':')))
     _ra = (_ra[0] + _ra[1] / 60.0 + _ra[2] / 3600.0) * np.pi / 12.
     _dec = list(map(float, _dec_str.split(':')))
-    _sign = np.sign(_dec[0]) if _dec[0] != 0 else 1
+    _sign = 1 if _dec[0] > 0 else -1
     _dec = _sign * (abs(_dec[0]) + abs(_dec[1]) / 60.0 + abs(_dec[2]) / 3600.0) * np.pi / 180.
 
     return _ra, _dec
