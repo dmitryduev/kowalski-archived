@@ -180,7 +180,10 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                 #     doc[k] = int(doc[k])
                 # for k in ('ra', 'dec', 'z', 'zerr', 'absMagG', 'absMagR'):
                 #     doc[k] = float(doc[k])
-                doc['created_at'] = datetime.datetime.strptime(doc['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                try:
+                    doc['created_at'] = datetime.datetime.strptime(doc['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                except:
+                    doc['created_at'] = datetime.datetime.strptime(doc['created_at'], '%Y-%m-%d %H:%M:%S')
                 doc['dchisq'] = list(eval(doc['dchisq']))
 
                 # GeoJSON for 2D indexing
