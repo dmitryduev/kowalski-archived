@@ -165,7 +165,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     for ii, dff in enumerate(pd.read_csv(_file, chunksize=_batch_size)):
 
-        print(f'Processing batch # {ii + 1}')
+        print(f'{_file}: processing batch # {ii + 1}')
 
         dff.rename(index=str, columns={'objID': '_id'}, inplace=True)
         batch = dff.to_dict(orient='records')
