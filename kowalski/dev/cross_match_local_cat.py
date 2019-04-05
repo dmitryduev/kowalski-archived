@@ -68,8 +68,8 @@ if __name__ == '__main__':
     c_path = 'kowalski/dev/cat.csv'
 
     # 1M sources
-    # df = pd.read_csv('kowalski/dev/cat.csv', nrows=1e6)
-    df = pd.read_csv('kowalski/dev/cat.csv', nrows=3e3)
+    df = pd.read_csv(c_path, nrows=1e5)
+    # df = pd.read_csv('./cat.csv', nrows=1e4)
     # print(df)
     ras = df.ra.values
     decs = df.dec.values
@@ -80,10 +80,10 @@ if __name__ == '__main__':
     xmatch(radecs)
 
     ''' multiple threads: '''
-    # pool = ProcessPoolExecutor(3)
-    #
-    # for batch in yield_batch(radecs, num_batches=50):
-    #     pool.submit(xmatch, _radecs=batch)
-    #
-    # # wait for everything to finish
-    # pool.shutdown(wait=True)
+    pool = ProcessPoolExecutor(40)
+
+    for batch in yield_batch(radecs, num_batches=40):
+        pool.submit(xmatch, _radecs=batch)
+
+    # wait for everything to finish
+    pool.shutdown(wait=True)
