@@ -1,7 +1,7 @@
 from penquins import Kowalski
 import pandas as pd
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from time import time
 
 
@@ -81,6 +81,7 @@ if __name__ == '__main__':
 
     ''' multiple threads: '''
     pool = ProcessPoolExecutor(40)
+    # pool = ThreadPoolExecutor(40)
 
     for batch in yield_batch(radecs, num_batches=40):
         pool.submit(xmatch, _radecs=batch)

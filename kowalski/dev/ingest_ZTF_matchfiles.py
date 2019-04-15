@@ -162,8 +162,8 @@ def ccd_quad_2_rc(ccd: int, quad: int) -> int:
 filters = {'zg': 1, 'zr': 2, 'zi': 3}
 
 
-def process_file(_file, _collections, _batch_size=2048, keep_all=False,
-                 verbose=False, _dry_run=False):
+def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
+                 _rm_file=False, verbose=False, _dry_run=False):
 
     # connect to MongoDB:
     if verbose:
@@ -193,8 +193,8 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
 
             rc = ccd_quad_2_rc(ccd=ccd, quad=quad)
             baseid = int(1e13 + field * 1e9 + rc * 1e7 + filt * 1e6)
-            # print(f'{ff}: {field} {filt} {ccd} {quad}')
-            print(f'{ff}: baseid {baseid}')
+            # print(f'{_file}: {field} {filt} {ccd} {quad}')
+            print(f'{_file}: baseid {baseid}')
 
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
@@ -252,20 +252,20 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                             continue
 
                         # dump unwanted fields:
-                        if not keep_all:
+                        if not _keep_all:
                             # do not store all fields to save space
-                            sources_fields_to_keep = ('bestastrometricrms', 'bestchisq', 'bestcon', 'bestlineartrend',
-                                                      'bestmagrms', 'bestmaxslope', 'bestmeanmag', 'bestmedianabsdev',
-                                                      'bestmedianmag', 'bestminmag', 'bestmaxmag',
-                                                      'bestnabovemeanbystd', 'bestnbelowmeanbystd',
-                                                      'bestnconsecabovemeanbystd', 'bestnconsecbelowmeanbystd',
-                                                      'bestnconsecfrommeanbystd',
-                                                      'bestnmedianbufferrange',
-                                                      'bestnpairposslope', 'bestpercentiles', 'bestskewness',
-                                                      'bestsmallkurtosis', 'beststetsonj', 'beststetsonk',
-                                                      'bestvonneumannratio', 'bestweightedmagrms',
-                                                      'bestweightedmeanmag',
-                                                      'dec', 'matchid', 'nbestobs', 'ngoodobs', 'ngoodobs',
+                            sources_fields_to_keep = ('astrometricrms', 'chisq', 'con', 'lineartrend',
+                                                      'magrms', 'maxslope', 'meanmag', 'medianabsdev',
+                                                      'medianmag', 'minmag', 'maxmag',
+                                                      'nabovemeanbystd', 'nbelowmeanbystd',
+                                                      'nconsecabovemeanbystd', 'nconsecbelowmeanbystd',
+                                                      'nconsecfrommeanbystd',
+                                                      'nmedianbufferrange',
+                                                      'npairposslope', 'percentiles', 'skewness',
+                                                      'smallkurtosis', 'stetsonj', 'stetsonk',
+                                                      'vonneumannratio', 'weightedmagrms',
+                                                      'weightedmeanmag',
+                                                      'dec', 'matchid', 'nobs', 'ngoodobs',
                                                       'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
 
                             doc_keys = list(doc.keys())
@@ -287,7 +287,7 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                         # generate unique _id:
                         doc['_id'] = baseid + doc['matchid']
 
-                        doc['iqr'] = doc['bestpercentiles'][8] - doc['bestpercentiles'][3]
+                        doc['iqr'] = doc['percentiles'][8] - doc['percentiles'][3]
 
                         # doc['matchfile'] = ff_basename
                         doc['filter'] = filt
@@ -322,12 +322,12 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
                         doc['data'] = doc_data
                         # print(doc['data'])
 
-                        if not keep_all:
+                        if not _keep_all:
                             # do not store all fields to save space
                             if len(doc_data) > 0:
                                 sourcedata_fields_to_keep = ('catflags', 'chi', 'dec', 'expid', 'hjd',
                                                              'mag', 'magerr', 'programid',
-                                                             'psfmag', 'psfmagerr', 'ra', 'relphotflags',
+                                                             'ra',  # 'relphotflags',
                                                              'sharp', 'snr')
                                 doc_keys = list(doc_data[0].keys())
                                 for ddi, ddp in enumerate(doc['data']):
@@ -389,6 +389,9 @@ def process_file(_file, _collections, _batch_size=2048, keep_all=False,
 
     # disconnect from db:
     try:
+        if _rm_file:
+            os.remove(_file)
+            print(f'Successfully removed {_file}')
         _client.close()
         if verbose:
             print('Successfully disconnected from db')
@@ -402,12 +405,14 @@ if __name__ == '__main__':
                                      description='')
 
     parser.add_argument('--keepall', action='store_true', help='keep all fields from the matchfiles?')
+    parser.add_argument('--rm', action='store_true', help='remove matchfiles after ingestion?')
     parser.add_argument('--dryrun', action='store_true', help='dry run?')
 
     args = parser.parse_args()
 
     dry_run = args.dryrun
     keep_all = args.keepall
+    rm_file = args.rm
 
     # connect to MongoDB:
     print('Connecting to DB')
@@ -417,8 +422,11 @@ if __name__ == '__main__':
     # collections = {'exposures': 'ZTF_matchfiles_exposures_20181219',
     #                'sources': 'ZTF_matchfiles_sources_20181219'}
 
-    collections = {'exposures': 'ZTF_exposures_20181220',
-                   'sources': 'ZTF_sources_20181220'}
+    # collections = {'exposures': 'ZTF_exposures_20181220',
+    #                'sources': 'ZTF_sources_20181220'}
+
+    collections = {'exposures': 'ZTF_exposures_20190412',
+                   'sources': 'ZTF_sources_20190412'}
 
     # create indices:
     print('Creating indices')
@@ -426,9 +434,9 @@ if __name__ == '__main__':
         db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                  ('_id', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('bestchisq', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('bestmedianmag', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('nbestobs', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('chisq', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('medianmag', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('ngoodobs', pymongo.ASCENDING)], background=True)
         # db[collections['sources']].create_index([('nobs', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('refchi', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('refmag', pymongo.ASCENDING)], background=True)
@@ -446,7 +454,7 @@ if __name__ == '__main__':
     # files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
 
     # production
-    _location = '/matchfiles/'
+    _location = '/_tmp/ztf_matchfiles_20181219_test/'
     files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
     # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
@@ -466,7 +474,7 @@ if __name__ == '__main__':
     # for ff in files[::-1]:
     for ff in sorted(files):
         pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
-                    keep_all=keep_all, verbose=True, _dry_run=dry_run)
+                    _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
