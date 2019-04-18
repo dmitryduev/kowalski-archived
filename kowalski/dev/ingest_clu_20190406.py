@@ -229,7 +229,7 @@ if __name__ == '__main__':
                 documents.append(doc)
 
                 # time.sleep(1)
-                print(doc)
+                # print(doc)
                 # input()
 
                 # insert batch, then flush
