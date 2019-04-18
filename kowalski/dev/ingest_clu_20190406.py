@@ -27,6 +27,13 @@ def utc_now():
     return datetime.datetime.now(pytz.utc)
 
 
+def yield_batch(seq, num_batches: int = 20):
+    batch_size = int(np.ceil(len(seq) / num_batches))
+
+    for nb in range(num_batches):
+        yield seq[nb*batch_size: (nb+1)*batch_size]
+
+
 def connect_to_db():
     """ Connect to the mongodb database
 
@@ -163,7 +170,9 @@ if __name__ == '__main__':
 
     clu_fits = '/_tmp/clu/CLU_20190406.hdf5'
 
-    for ii, dff in enumerate(pd.read_hdf(clu_fits, key='data', chunksize=batch_size)):
+    data = pd.read_hdf(clu_fits, key='data')
+
+    for ii, dff in enumerate(yield_batch(data, num_batches=100)):
 
         print(f'Processing batch # {ii+1}')
 
