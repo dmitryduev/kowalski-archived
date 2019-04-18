@@ -153,15 +153,15 @@ if __name__ == '__main__':
 
     # connect to MongoDB:
     print('Connecting to DB')
-    # client, db = connect_to_db()
+    client, db = connect_to_db()
     print('Successfully connected')
 
     _collection = 'CLU_20190406'
 
     # create 2d index:
     print('Creating 2d index')
-    # db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
-    #                               ('_id', pymongo.ASCENDING)], background=True)
+    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                  ('_id', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 2048
@@ -221,11 +221,6 @@ if __name__ == '__main__':
                 doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
                 doc['coordinates']['radec_deg'] = [_ra, _dec]
 
-                # print(doc['coordinates'])
-
-                # insert into PanSTARRS collection. don't do that! too much overhead
-                # db[_collection].insert_one(doc)
-                # insert_db_entry(db, _collection=_collection, _db_entry=doc)
                 documents.append(doc)
 
                 # time.sleep(1)
@@ -235,7 +230,7 @@ if __name__ == '__main__':
                 # insert batch, then flush
                 if len(documents) == batch_size:
                     print(f'inserting batch #{batch_num}')
-                    # insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+                    insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
                     # flush:
                     documents = []
                     batch_num += 1
@@ -248,6 +243,6 @@ if __name__ == '__main__':
         # stuff left from the last file?
         if len(documents) > 0:
             print(f'inserting batch #{batch_num}')
-            # insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
+            insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
 
-        print('All done')
+    print('All done')
