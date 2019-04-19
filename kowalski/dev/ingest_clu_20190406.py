@@ -226,7 +226,7 @@ if __name__ == '__main__':
 
         #
         if len(documents) > 0:
-            print(f'inserting chunk #{ii}')
+            print(f'inserting chunk #{ii+1}')
             insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
 
     print('All done')
