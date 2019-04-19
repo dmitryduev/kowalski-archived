@@ -626,6 +626,7 @@ def parse_query(task, save: bool=False):
             go_on = True in [s in str(task['query']) for s in ['.aggregate(',
                                                                '.map_reduce(',
                                                                '.distinct(',
+                                                               '.estimated_document_count(',
                                                                '.count_documents(',
                                                                '.index_information(',
                                                                '.find_one(',
@@ -848,7 +849,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             # _select = eval(query['query'])
             # _select = literal_eval(qq)
 
-            if ('.find_one(' in qq) or ('.count_documents(' in qq) \
+            if ('.find_one(' in qq) or ('.count_documents(' in qq)  or ('.estimated_document_count(' in qq) \
                     or ('.index_information(' in qq) or ('.distinct(' in qq):
                 _select = await _select
 
