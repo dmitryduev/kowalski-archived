@@ -158,7 +158,7 @@ class Kowalski(object):
         """
         try:
             _query = {"query_type": "general_search",
-                      "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+                      "query": "db['{:}'].find_one({{}}, {{'_id': 1}})".format(collection),
                       "kwargs": {"save": False}
                       }
             if self.v:
