@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     for nb in range(num_batches):
         qu = {"query_type": "general_search",
-              "query": "db['ZTF_sources_20181220'].find({}, " +
+              "query": "db['ZTF_sources_20190412'].find({}, " +
                        "{'_id': 1, 'data.programid': 1, 'data.hjd': 1, " +
                        f"'data.mag': 1, 'data.magerr': 1}}).skip({nb*batch_size}).limit({batch_size})"
               }

@@ -35,7 +35,7 @@ def fetch_lc_radecs(_radecs):
                  "cone_search_unit": "arcsec"
              },
              "catalogs": {
-                 "ZTF_sources_20181220": {"filter": {},
+                 "ZTF_sources_20190412": {"filter": {},
                                           "projection": {"_id": 1,
                                                          "filter": 1,
                                                          "data.expid": 1,

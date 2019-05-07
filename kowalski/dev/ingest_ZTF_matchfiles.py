@@ -441,6 +441,9 @@ if __name__ == '__main__':
         db[collections['sources']].create_index([('refchi', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('refmag', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('refmagerr', pymongo.ASCENDING)], background=True)
+        db[collections['sources']].create_index([('field', pymongo.ASCENDING),
+                                                 ('ccd', pymongo.ASCENDING),
+                                                 ('quad', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
         # db[collections['sources']].create_index([('data.expid', pymongo.ASCENDING)], background=True)
 
