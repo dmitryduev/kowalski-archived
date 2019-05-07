@@ -47,6 +47,14 @@
                    onclick="toggleMenus()">Toggle JS9 Menus</a>
             </div>
 
+            <div class="col-md-auto">
+                <span class="badge badge-secondary">{{ alert['coordinates']['radec_str'][0] }}</span>&nbsp;
+                <span class="badge badge-secondary">{{ alert['coordinates']['radec_str'][1] }}</span><br>
+                fid: {{ alert['candidate']['fid'] }}<br>
+                isdiffpos: {{ alert['candidate']['isdiffpos'] }}<br>
+                rb: {{ "{:.3f}".format(alert['candidate']['rb']) }}
+            </div>
+
         </div>
 
         <div class="row">
