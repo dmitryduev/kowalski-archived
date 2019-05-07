@@ -59,7 +59,7 @@ def fetch_lc_radecs(_radecs):
         data = r['result_data']
         # TODO: your magic here
         # print(data)
-        for sc, sources in data['ZTF_sources_20181220'].items():
+        for sc, sources in data['ZTF_sources_20190412'].items():
             ids = ids.union([s['_id'] for s in sources])
         print(len(ids))
         # FIXME: Must filter out data.programid == 1 data
