@@ -36,7 +36,7 @@
                     <div class="JS9Menubar d-none" id="JS9{{ cutout }}Menubar"
                          data-displays="JS9{{ cutout }}" data-width="180px"></div>
                     <figcaption class='mt-2 figure-caption text-center'>
-                        {{ cutout }} <a href="/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/{{ cutout }}"><i class='fas fa-download'></i></a>
+                        {{ cutout }} <a href="/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/{{ cutout }}/fits"><i class='fas fa-download'></i></a>
                     </figcaption>
                 </figure>
             </div>
@@ -233,9 +233,9 @@
     <script>
         {# Cutouts #}
         document.addEventListener('DOMContentLoaded', function () {
-            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/science', {scale: 'log', onload: setZoom}, {display: 'JS9Science'});
-            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/template', {scale: 'log', onload: setZoom}, {display: 'JS9Template'});
-            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/difference', {scale: 'log', onload: setZoom}, {display: 'JS9Difference'});
+            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/science/fits', {scale: 'log', onload: setZoom}, {display: 'JS9Science'});
+            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/template/fits', {scale: 'log', onload: setZoom}, {display: 'JS9Template'});
+            JS9.Preload('/lab/ztf-alerts/{{-alert["candid"]-}}/cutout/difference/fits', {scale: 'log', onload: setZoom}, {display: 'JS9Difference'});
             {#plotLightCurve();#}
         });
 

@@ -157,7 +157,6 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
 {% endblock %}
 
 {% block js %}
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <!-- Bootstrap table -->
     <script src="{{-script_root-}}/static/js/bootstrap-table.js"></script>
@@ -195,6 +194,9 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
         // build table using js
         $('#table').bootstrapTable({
             height: getHeight(),
+            onExpandRow: function (index, row, $detail) {
+                {#console.log($detail);#}
+            },
             columns: [
                 [
                     {
@@ -325,19 +327,46 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
         function detailFormatter(index, row, element) {
             var html = [];
 
+            // Cutouts + LC
+            {#html.push("<div class='row mb-1'>");#}
+            html.push("<div class=\"col-sm-12 p-0 m-0\">");
+            {# cutouts: #}
+            {% for cutout in ["Science", "Template", "Difference"] %}
+            {#html.push("<div class=\"col-md-auto\">");#}
+            html.push("<figure class='figure m-1 align-top'>");
+            html.push("<img src='/lab/ztf-alerts/" + row["candid"] + "/cutout/{{ cutout }}/png'>");
+            html.push("</figure>");
+            {#html.push("</div>");#}
+            {% endfor %}
+            html.push("</div>");
+            {#html.push("</div>");#}
+
             // Buttons:
-            html.push("<div class=\"row p-0 m-0\">");
-            html.push("<div class=\"col-12 p-0 m-0\">");
+            {#html.push("<div class=\"row p-0 m-0\">");#}
+            html.push("<div class='col-sm-12 p-0 m-0'>");
             // details:
             {#html.push("<br>");#}
             html.push("<a target='_blank' role='button' " + "href='/lab/ztf-alerts/" + row['candid'] +
-                "' class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Details <i class='fas fa-external-link-alt'></i></a>");
+                "' class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top btn-details' onshow='alert()'>Details <i class='fas fa-external-link-alt'></i></a>");
             html.push("</div>");
+            {#html.push("</div>");#}
 
-            // close buttons row
-            html.push("</div>");
+            {#element.html(html);#}
 
             return html.join('');
+        }
+
+
+
+        function toggleMenus() {
+            menus = document.getElementsByClassName('JS9Menubar');
+            for (var i = 0; i < menus.length; i++) {
+                menus[i].classList.toggle('d-none');
+            }
+        }
+
+        function setZoom(display) {
+            JS9.SetZoom('ToFit', {display: display});
         }
 
         // reset height of table with search results

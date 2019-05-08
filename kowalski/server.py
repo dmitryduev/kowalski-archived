@@ -27,6 +27,9 @@ import traceback
 from astropy.io import fits
 import io
 import gzip
+from matplotlib.colors import LogNorm
+import matplotlib.pyplot as plt
+from PIL import Image
 
 from utils import *
 
@@ -1690,11 +1693,11 @@ async def ztf_alert_get_handler(request):
         raise web.HTTPFound(location=location)
 
 
-@routes.get('/lab/ztf-alerts/{candid}/cutout/{cutout}')
+@routes.get('/lab/ztf-alerts/{candid}/cutout/{cutout}/{file_format}')
 @login_required
 async def ztf_alert_get_cutout_handler(request):
     """
-        Serve docs page for the browser
+        Serve cutouts as fits
     :param request:
     :return:
     """
@@ -1703,8 +1706,10 @@ async def ztf_alert_get_cutout_handler(request):
 
     candid = int(request.match_info['candid'])
     cutout = request.match_info['cutout'].capitalize()
+    file_format = request.match_info['file_format']
 
     assert cutout in ['Science', 'Template', 'Difference']
+    assert file_format in ['fits', 'png']
 
     alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
                                                               {f'cutout{cutout}': 1})
@@ -1720,15 +1725,50 @@ async def ztf_alert_get_cutout_handler(request):
             header = hdu[0].header
             data_flipped_y = np.flipud(hdu[0].data)
 
-    hdu = fits.PrimaryHDU(data_flipped_y, header=header)
-    # hdu = fits.PrimaryHDU(data_flipped_y)
-    hdul = fits.HDUList([hdu])
+    if file_format == 'fits':
+        hdu = fits.PrimaryHDU(data_flipped_y, header=header)
+        # hdu = fits.PrimaryHDU(data_flipped_y)
+        hdul = fits.HDUList([hdu])
 
-    stamp_fits = io.BytesIO()
-    hdul.writeto(fileobj=stamp_fits)
+        stamp_fits = io.BytesIO()
+        hdul.writeto(fileobj=stamp_fits)
 
-    return web.Response(body=stamp_fits.getvalue(), content_type='image/fits',
-                        headers=MultiDict({'Content-Disposition': f'Attachment;filename={fits_name}'}), )
+        return web.Response(body=stamp_fits.getvalue(), content_type='image/fits',
+                            headers=MultiDict({'Content-Disposition': f'Attachment;filename={fits_name}'}), )
+
+    if file_format == 'png':
+        # pil_img = Image.fromarray(data_flipped_y).convert("L")
+        # buff = io.BytesIO()
+        # # pil_img.save(buff, format="JPEG")
+        # pil_img.save(buff, format="PNG")
+        # buff.seek(0)
+        #
+        # return web.Response(body=buff, content_type='image/png')
+
+        buff = io.BytesIO()
+        plt.close('all')
+        fig = plt.figure()
+        fig.set_size_inches(4, 4, forward=False)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+
+        # remove nans:
+        img = np.array(data_flipped_y)
+        img = np.nan_to_num(img)
+
+        if cutout != 'Difference':
+            # img += np.min(img)
+            img[img <= 0] = np.median(img)
+            # plt.imshow(img, cmap='gray', norm=LogNorm(), origin='lower')
+            plt.imshow(img, cmap=plt.cm.bone, norm=LogNorm(), origin='lower')
+        else:
+            # plt.imshow(img, cmap='gray', origin='lower')
+            plt.imshow(img, cmap=plt.cm.bone, origin='lower')
+        plt.savefig(buff, dpi=42)
+
+        buff.seek(0)
+        return web.Response(body=buff, content_type='image/png')
 
 
 @routes.post('/lab/ztf-alerts')
