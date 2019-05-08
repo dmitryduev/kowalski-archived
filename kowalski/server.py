@@ -1697,7 +1697,7 @@ async def ztf_alert_get_handler(request):
 @login_required
 async def ztf_alert_get_cutout_handler(request):
     """
-        Serve cutouts as fits
+        Serve cutouts as fits or png
     :param request:
     :return:
     """
