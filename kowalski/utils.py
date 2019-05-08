@@ -303,8 +303,7 @@ def make_dataframe(packets):
             dfs.append(df)
             dfs.append(df_prv)
         # drop duplicate entries. decide using jd
-        return pd.concat(dfs, ignore_index=True, sort=False).drop_duplicates(subset='jd',
-                                                                             inplace=True).reset_index(drop=True)
+        return pd.concat(dfs, ignore_index=True, sort=False).drop_duplicates(subset='jd').reset_index(drop=True)
     else:
         # single packet
         df = pd.DataFrame(packets['candidate'], index=[0])
