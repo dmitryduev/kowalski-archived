@@ -50,5 +50,6 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=mongoadmin
       - MONGO_INITDB_ROOT_PASSWORD=mongoadminsecret
     volumes:
-    - mongodb:/data/db
+      - mongodb:/data/db
+      #- /data/ztf/ztf_dr1/:/data/dr1
     restart: always
