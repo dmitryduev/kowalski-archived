@@ -953,6 +953,9 @@ async def query(request):
     try:
         # parse query
         known_query_types = ('cone_search', 'general_search')
+        # todo: add separate query types for the most in-demand cases:
+        # known_query_types = ('cone_search', 'general_search',
+        #                      'find', 'find_one', 'aggregate')
 
         assert _query['query_type'] in known_query_types, \
             f'query_type {_query["query_type"]} not in {str(known_query_types)}'
