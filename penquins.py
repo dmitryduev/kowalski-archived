@@ -98,6 +98,10 @@ class Kowalski(object):
 
         return access_token
 
+    def lab(self):
+        # todo: get individual ZTF alert contents, cutouts, and (compound) light curves
+        pass
+
     def query(self, query, timeout: Num = 5*3600):
 
         # todo: add retries arg: automatically try to reconnect if connection dropped for some reason
