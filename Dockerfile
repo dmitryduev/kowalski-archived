@@ -29,10 +29,10 @@ WORKDIR /app
 
 # install python libs
 COPY kowalski/requirements.txt /app/
-#RUN pip install -r /app/requirements.txt
-# install bleeding-edge version of aiohttp first:
-RUN git clone https://github.com/aio-libs/aiohttp.git && /usr/local/bin/python /app/aiohttp/setup.py install && \
-    pip install -r /app/requirements.txt
+RUN pip install -r /app/requirements.txt
+# install bleeding-edge version of aiohttp first?
+#RUN git clone https://github.com/aio-libs/aiohttp.git && /usr/local/bin/python /app/aiohttp/setup.py install && \
+#    pip install -r /app/requirements.txt
 
 # copy over the secrets:
 COPY secrets.json /app/
