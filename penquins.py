@@ -2,6 +2,7 @@ import string
 import random
 import traceback
 import os
+import time
 from copy import deepcopy
 from typing import Union
 import requests
@@ -9,7 +10,7 @@ from bson.json_util import loads
 
 
 ''' PENQUINS - Processing ENormous Queries of ztf Users INStantaneously '''
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 Num = Union[int, float]
@@ -72,39 +73,42 @@ class Kowalski(object):
                 print(e)
             return False
 
-    def authenticate(self):
+    def authenticate(self, retries: int = 3):
         """
             Authenticate user, return access token
         :return:
         """
 
-        # try:
-        # post username and password, get access token
-        auth = requests.post(f'{self.base_url}/auth',
-                             json={"username": self.username, "password": self.password,
-                                   "penquins.__version__": __version__})
+        for retry in range(retries):
+            # post username and password, get access token
+            auth = requests.post(f'{self.base_url}/auth',
+                                 json={"username": self.username, "password": self.password,
+                                       "penquins.__version__": __version__})
 
-        if self.v:
-            print(auth.json())
+            if auth.status_code == requests.codes.ok:
+                if self.v:
+                    print(auth.json())
 
-        if 'token' not in auth.json():
-            print('Authentication failed')
-            raise Exception(auth.json()['message'])
+                if 'token' not in auth.json():
+                    print('Authentication failed')
+                    raise Exception(auth.json()['message'])
 
-        access_token = auth.json()['token']
+                access_token = auth.json()['token']
 
-        if self.v:
-            print('Successfully authenticated')
+                if self.v:
+                    print('Successfully authenticated')
 
-        return access_token
+                return access_token
+
+            else:
+                # bad status code? sleep before retrying, maybe no connections available due to high load
+                time.sleep(0.5)
 
     def lab(self):
         # todo: get individual ZTF alert contents, cutouts, and (compound) light curves
         pass
 
-    def query(self, query, timeout: Num = 5*3600):
-
-        # todo: add retries arg: automatically try to reconnect if connection dropped for some reason
+    def query(self, query, timeout: Num = 5*3600, retries: int = 3):
 
         try:
             _query = deepcopy(query)
@@ -127,58 +131,77 @@ class Kowalski(object):
 
                     _query['kwargs']['_id'] = _id
 
-            resp = self.session.put(os.path.join(self.base_url, 'query'),
-                                    json=_query, headers=self.headers, timeout=timeout)
+            for retry in range(retries):
+                resp = self.session.put(os.path.join(self.base_url, 'query'),
+                                        json=_query, headers=self.headers, timeout=timeout)
 
-            # print(resp)
+                # print(resp)
 
-            return loads(resp.text)
+                if resp.status_code == requests.codes.ok:
+                    return loads(resp.text)
+                else:
+                    # bad status code? sleep before retrying, maybe no connections available due to high load
+                    time.sleep(0.5)
 
         except Exception as _e:
             _err = traceback.format_exc()
 
             return {'status': 'failed', 'message': _err}
 
-    def get_query(self, query_id: str, part: QueryPart = 'result'):
+    def get_query(self, query_id: str, part: QueryPart = 'result', retries: int = 3):
         """
             Fetch json for task or result by query id
         :param query_id:
         :param part:
+        :param retries:
         :return:
         """
         try:
-            result = self.session.post(os.path.join(self.base_url, 'query'),
-                                       json={'task_id': query_id, 'part': part}, headers=self.headers)
+            for retry in range(retries):
+                result = self.session.post(os.path.join(self.base_url, 'query'),
+                                           json={'task_id': query_id, 'part': part}, headers=self.headers)
 
-            _result = {'task_id': query_id, 'result': loads(result.text)}
+                if result.status_code == requests.codes.ok:
+                    _result = {'task_id': query_id, 'result': loads(result.text)}
 
-            return _result
+                    return _result
+
+                else:
+                    # bad status code? sleep before retrying, maybe no connections available due to high load
+                    time.sleep(0.5)
 
         except Exception as _e:
             _err = traceback.format_exc()
 
             return {'status': 'failed', 'message': _err}
 
-    def delete_query(self, query_id: str):
+    def delete_query(self, query_id: str, retries: int = 3):
         """
             Delete query by query_id
         :param query_id:
+        :param retries:
         :return:
         """
         try:
-            result = self.session.delete(os.path.join(self.base_url, 'query'),
-                                         json={'task_id': query_id}, headers=self.headers)
+            for retry in range(retries):
+                result = self.session.delete(os.path.join(self.base_url, 'query'),
+                                             json={'task_id': query_id}, headers=self.headers)
 
-            _result = loads(result.text)
+                if result.status_code == requests.codes.ok:
+                    _result = loads(result.text)
 
-            return _result
+                    return _result
+
+                else:
+                    # bad status code? sleep before retrying, maybe no connections available due to high load
+                    time.sleep(0.5)
 
         except Exception as _e:
             _err = traceback.format_exc()
 
             return {'status': 'failed', 'message': _err}
 
-    def check_connection(self, collection='ZTF_alerts') -> bool:
+    def check_connection(self, collection='RFC_2018d') -> bool:
         """
             Check connection to Kowalski with a trivial query
         :return: True if connection ok, False otherwise
