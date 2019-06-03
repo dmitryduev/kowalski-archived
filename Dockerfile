@@ -24,18 +24,21 @@ RUN mkdir -p /app && mkdir -p /app/logs && mkdir -p /data && mkdir -p /_tmp && m
 ## Create the log file to be able to run tail
 #RUN touch /var/log/cron.log
 
+# change working directory to /app
+WORKDIR /app
+
 # install python libs
 COPY kowalski/requirements.txt /app/
-RUN pip install -r /app/requirements.txt
+#RUN pip install -r /app/requirements.txt
+# install bleeding-edge version of aiohttp first:
+RUN git clone https://github.com/aio-libs/aiohttp.git && /usr/local/bin/python /app/aiohttp/setup.py install && \
+    pip install -r /app/requirements.txt
 
 # copy over the secrets:
 COPY secrets.json /app/
 
 # copy over the code
 ADD kowalski/ /app/
-
-# change working directory to /app
-WORKDIR /app
 
 #fixme: vvv
 RUN git clone https://github.com/ZwickyTransientFacility/ztf-avro-alert.git
