@@ -55,5 +55,5 @@ RUN python generate_secrets.py
 #CMD cron && crontab /etc/cron.d/fetch-cron && /bin/bash
 #CMD /bin/bash
 #CMD /usr/local/bin/gunicorn -w 8 --bind 0.0.0.0:4000 --worker-tmp-dir /dev/shm --worker-class aiohttp.GunicornWebWorker server:app_factory
-#CMD /usr/local/bin/gunicorn -w 20 --bind 0.0.0.0:4000 --worker-tmp-dir /dev/shm --worker-class aiohttp.GunicornUVLoopWebWorker server:app_factory
-CMD /usr/local/bin/python server.py
+CMD /usr/local/bin/gunicorn -w 40 --bind 0.0.0.0:4000 --worker-tmp-dir /dev/shm --worker-class aiohttp.GunicornUVLoopWebWorker server:app_factory
+#CMD /usr/local/bin/python server.py
