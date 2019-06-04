@@ -859,7 +859,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             # make it look like json
             # print(list(_select))
             if isinstance(_select, int) or isinstance(_select, float) or \
-                    isinstance(_select, list) or isinstance(_select, dict):
+                    isinstance(_select, list) or isinstance(_select, dict) or (_select is None):
                 query_result['query_result'] = _select
             else:
                 query_result['query_result'] = await _select.to_list(length=None)

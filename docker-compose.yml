@@ -41,6 +41,7 @@ services:
 
   mongo:
     image: mongo
+    # fixme: numactl
 #    build: ./db
 #    privileged: true
     expose:
