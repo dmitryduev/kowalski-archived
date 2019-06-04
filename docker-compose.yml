@@ -40,8 +40,9 @@ services:
 
 
   mongo:
-    image: mongo
-#    build: ./db
+#    image: mongo
+    build: ./db
+    privileged: true
     expose:
       - "27017"
     # fixme:
