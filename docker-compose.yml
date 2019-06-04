@@ -40,7 +40,8 @@ services:
 
 
   mongo:
-    image: mongo
+#    image: mongo
+    build: ./db
     expose:
       - "27017"
     # fixme:
