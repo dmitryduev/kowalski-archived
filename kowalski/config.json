@@ -10,6 +10,7 @@
     "path_app": "/app",
     "path_docs": "/app/doc/",
     "path_logs": "/app/logs/",
+    "path_ml_models": "/app/models/",
     "path_data": "/data/",
     "path_alerts": "/_tmp/ztf_alerts/",
     "path_queries": "/data/queries/",
@@ -35,6 +36,12 @@
   "kafka-topics": {
       "cmd": "/kafka_2.11-2.2.0/bin/kafka-topics.sh"
     },
+
+  "ml_models": {
+    "braai": {
+      "version":  "d6_m7"
+    }
+  },
 
   "misc": {
     "supported_penquins_versions": ["1.0.0", "1.0.1", "1.0.2", "1.1.0", "1.2.0"],

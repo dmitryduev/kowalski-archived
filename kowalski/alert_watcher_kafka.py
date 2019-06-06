@@ -20,6 +20,12 @@ import pytz
 from numba import jit
 import numpy as np
 
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import normalize
+import gzip
+import io
+from astropy.io import fits
+
 
 ''' load config and secrets '''
 with open('/app/config.json') as cjson:
@@ -43,6 +49,20 @@ def time_stamps():
     """
     return datetime.datetime.now().strftime('%Y%m%d_%H:%M:%S'), \
            datetime.datetime.utcnow().strftime('%Y%m%d_%H:%M:%S')
+
+
+''' load ML models '''
+ml_models = dict()
+for m in config['ml_models']:
+    try:
+        m_v = config["ml_models"][m]["version"]
+        ml_models[m] = {'model': load_model(f'/app/models/{m}_{m_v}.h5'),
+                        'version': m_v}
+    except Exception as e:
+        print(*time_stamps(), f'Error loading ML model {m} version {m_v}')
+        traceback.print_exc()
+        print(e)
+        continue
 
 
 @jit
@@ -398,6 +418,10 @@ class AlertConsumer(object):
         # candid+objectId is a unique combination:
         doc['_id'] = f"{alert['candid']}_{alert['objectId']}"
 
+        # placeholders for cross-matches and classifications
+        doc['cross_matches'] = dict()
+        doc['classifications'] = dict()
+
         # GeoJSON for 2D indexing
         doc['coordinates'] = {}
         doc['coordinates']['epoch'] = doc['candidate']['jd']
@@ -447,6 +471,10 @@ class AlertConsumer(object):
                 print(*time_stamps(), self.topic, record['objectId'], record['candid'])
                 # Apply filter to each alert
                 # alert_filter(record, stamp_dir)
+                tic = time.time()
+                scores = alert_filter__ml(record)
+                toc = time.time()
+                print(scores, toc-tic)
 
                 # get avro packet path:
                 alert_dir = '_'.join(record['candidate']['pdiffimfilename'].split('_')[:-1]) + '_alerts'
@@ -581,6 +609,60 @@ def alert_filter(alert, stampdir=None):
             write_stamp_file(
                 alert.get('cutoutScience'), stampdir)
     return
+
+
+def make_triplet(alert, to_tpu: bool = False):
+    """
+        Feed in alert packet
+    """
+    cutout_dict = dict()
+
+    for cutout in ('science', 'template', 'difference'):
+        # cutout_data = loads(dumps([alert[f'cutout{cutout.capitalize()}']['stampData']]))[0]
+        cutout_data = alert[f'cutout{cutout.capitalize()}']['stampData']
+
+        # unzip
+        with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
+            with fits.open(io.BytesIO(f.read())) as hdu:
+                data = hdu[0].data
+                # replace nans with zeros
+                cutout_dict[cutout] = np.nan_to_num(data)
+                # normalize
+                cutout_dict[cutout] = normalize(cutout_dict[cutout])
+
+        # pad to 63x63 if smaller
+        shape = cutout_dict[cutout].shape
+        if shape != (63, 63):
+            # print(f'Shape of {candid}/{cutout}: {shape}, padding to (63, 63)')
+            cutout_dict[cutout] = np.pad(cutout_dict[cutout], [(0, 63 - shape[0]), (0, 63 - shape[1])],
+                                         mode='constant', constant_values=1e-9)
+
+    triplet = np.zeros((63, 63, 3))
+    triplet[:, :, 0] = cutout_dict['science']
+    triplet[:, :, 1] = cutout_dict['template']
+    triplet[:, :, 2] = cutout_dict['difference']
+
+    if to_tpu:
+        # Edge TPUs require additional processing
+        triplet = np.rint(triplet * 128 + 128).astype(np.uint8).flatten()
+
+    return triplet
+
+
+def alert_filter__ml(alert):
+    """Filter to apply to each alert.
+       See schemas: https://github.com/ZwickyTransientFacility/ztf-avro-alert
+    """
+
+    scores = dict()
+
+    ''' braai '''
+    triplet = make_triplet(alert)
+    braai = ml_models['braai']['model'].predict(x=[triplet])[0]
+    scores['braai'] = braai
+    scores['braai_version'] = ml_models['braai']['version']
+
+    return scores
 
 
 def listener(topic, bootstrap_servers='', offset_reset='earliest',
