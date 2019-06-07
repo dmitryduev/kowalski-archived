@@ -195,10 +195,10 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
                                         {'candidate': 0, 'prv_candidates': 0, 'coordinates': 0})
 
-    # for alert in tqdm.tqdm(cursor, total=num_doc):
-    for alert in cursor.limit(1):
+    # for alert in cursor.limit(1):
+    for alert in tqdm.tqdm(cursor, total=num_doc):
         scores = alert_filter__ml(alert, ml_models)
-        print(alert['candid'], scores)
+        # print(alert['candid'], scores)
         db[collection_alerts].update_one({'_id': alert['_id']},
                                          {'$set': {'classifications': scores}})
 
