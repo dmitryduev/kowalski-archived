@@ -153,8 +153,8 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
                                         {'candidate': 0, 'prv_candidates': 0, 'coordinates': 0})
 
-    for doc in tqdm.tqdm(cursor, total=num_doc):
-        pass
+    for alert in tqdm.tqdm(cursor, total=num_doc):
+        triplet = make_triplet(alert)
 
 
 if __name__ == '__main__':
