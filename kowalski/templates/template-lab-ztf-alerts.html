@@ -227,7 +227,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                     {
                         field: 'candidate',
                         title: 'candidate',
-                        colspan: 12,
+                        colspan: 13,
                         align: 'center',
                         valign: 'middle'
                     }
@@ -284,6 +284,14 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                     {
                         field: 'rb',
                         title: 'rb',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'drb',
+                        title: 'drb',
                         align: 'center',
                         valign: 'middle',
                         sortable: true,
@@ -350,9 +358,10 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         dec_deg: "{{alert['candidate']['dec']}}",
                         xpos: "{{'{:.2f}'.format(alert['candidate']['xpos'])}}",
                         ypos: "{{'{:.2f}'.format(alert['candidate']['ypos'])}}",
-                        rb: "{{alert['candidate']['rb']}}".slice(0, 4),
-                        magpsf: "{{alert['candidate']['magpsf']}}".slice(0, 5),
-                        sigmapsf: "{{alert['candidate']['sigmapsf']}}".slice(0, 4),
+                        rb: "{{'{:.2f}'.format(alert['candidate']['rb'])}}",
+                        drb: "{{'{:.2f}'.format(alert['classifications']['braai'])}}",
+                        magpsf: "{{'{:.2f}'.format(alert['candidate']['magpsf'])}}",
+                        sigmapsf: "{{'{:.2f}'.format(alert['candidate']['sigmapsf'])}}",
                         pdiffimfilename: "{{alert['candidate']['pdiffimfilename']}}"
                     },
                 {%-endfor-%}
