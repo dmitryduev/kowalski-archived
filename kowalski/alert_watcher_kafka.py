@@ -472,7 +472,8 @@ class AlertConsumer(object):
                 # Apply filter to each alert
                 # alert_filter(record, stamp_dir)
                 tic = time.time()
-                scores = alert_filter__ml(record)
+                # scores = alert_filter__ml(record)
+                scores = []
                 toc = time.time()
                 print(scores, toc-tic)
 
