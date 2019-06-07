@@ -186,6 +186,7 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
 
     # db[collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
     #                                     ('classifications.braai', pymongo.DESCENDING),
+    #                                     ('candidate.rb', pymongo.DESCENDING),
     #                                     ('candid', pymongo.DESCENDING)],
     #                                    background=True)
 
