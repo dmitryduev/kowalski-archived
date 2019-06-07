@@ -227,7 +227,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                     {
                         field: 'candidate',
                         title: 'candidate',
-                        colspan: 8,
+                        colspan: 12,
                         align: 'center',
                         valign: 'middle'
                     }
@@ -248,6 +248,38 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         valign: 'middle',
                         sortable: true,
                         visible: true
+                    },
+                    {
+                        field: 'ra_deg',
+                        title: 'ra',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'dec_deg',
+                        title: 'dec',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'xpos',
+                        title: 'xpos',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'ypos',
+                        title: 'ypos',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
                     },
                     {
                         field: 'rb',
@@ -314,6 +346,10 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
 
                         programid: "{{alert['candidate']['programid']}}",
                         fid: "{{alert['candidate']['fid']}}",
+                        ra_deg: "{{alert['candidate']['ra']}}",
+                        dec_deg: "{{alert['candidate']['dec']}}",
+                        xpos: "{{alert['candidate']['xpos']}}",
+                        ypos: "{{alert['candidate']['ypos']}}",
                         rb: "{{alert['candidate']['rb']}}".slice(0, 4),
                         magpsf: "{{alert['candidate']['magpsf']}}".slice(0, 5),
                         sigmapsf: "{{alert['candidate']['sigmapsf']}}".slice(0, 4),
