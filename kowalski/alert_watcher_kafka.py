@@ -468,13 +468,13 @@ class AlertConsumer(object):
             for record in msg_decoded:
                 # print(*time_stamps(), self.topic, record['objectId'], record['candid'], self.num_partitions)
                 print(*time_stamps(), self.topic, record['objectId'], record['candid'])
+
                 # Apply filter to each alert
                 # alert_filter(record, stamp_dir)
-                tic = time.time()
-                scores = alert_filter__ml(record, ml_models=self.ml_models)
-                # scores = []
-                toc = time.time()
-                print(scores, toc-tic)
+                # tic = time.time()
+                # scores = alert_filter__ml(record, ml_models=self.ml_models)
+                # toc = time.time()
+                # print(scores, toc-tic)
 
                 # get avro packet path:
                 alert_dir = '_'.join(record['candidate']['pdiffimfilename'].split('_')[:-1]) + '_alerts'
@@ -496,7 +496,9 @@ class AlertConsumer(object):
                     alert = self.alert_mongify(record)
                     # TODO: cross-match with all available catalogs?
 
-                    # todo: notify alert filters
+                    # alert filters:
+                    scores = alert_filter__ml(record, ml_models=self.ml_models)
+                    alert['classifications'] = scores
 
                     print(*time_stamps(), 'ingesting {:s} into db'.format(alert['_id']))
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
@@ -521,7 +523,9 @@ class AlertConsumer(object):
                     alert = self.alert_mongify(record)
                     # TODO: cross-match with all available catalogs!
 
-                    # todo: notify alert filters
+                    # alert filters:
+                    scores = alert_filter__ml(record, ml_models=self.ml_models)
+                    alert['classifications'] = scores
 
                     print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['_id']))
                     self.replace_db_entry(_collection=self.collection_alerts,
