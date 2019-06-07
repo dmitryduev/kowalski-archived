@@ -199,6 +199,8 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     for alert in cursor.limit(1):
         scores = alert_filter__ml(alert, ml_models)
         print(alert['candid'], scores)
+        db[collection_alerts].update_one({'_id': alert['_id']},
+                                         {'$set': {'classifications': scores}})
 
 
 if __name__ == '__main__':
