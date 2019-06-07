@@ -6,6 +6,14 @@ import datetime
 import pytz
 from astropy.time import Time
 import tqdm
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import normalize
+from bson.json_util import loads, dumps
+import numpy as np
+import pandas as pd
+import gzip
+import io
+from astropy.io import fits
 
 
 ''' load config and secrets '''
@@ -86,6 +94,43 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose
             print(_e)
 
 
+def make_triplet(alert, to_tpu: bool = False):
+    """
+        Feed in alert packet
+    """
+    cutout_dict = dict()
+
+    for cutout in ('science', 'template', 'difference'):
+        cutout_data = loads(dumps([alert[f'cutout{cutout.capitalize()}']['stampData']]))[0]
+
+        # unzip
+        with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
+            with fits.open(io.BytesIO(f.read())) as hdu:
+                data = hdu[0].data
+                # replace nans with zeros
+                cutout_dict[cutout] = np.nan_to_num(data)
+                # normalize
+                cutout_dict[cutout] = normalize(cutout_dict[cutout])
+
+        # pad to 63x63 if smaller
+        shape = cutout_dict[cutout].shape
+        if shape != (63, 63):
+            # print(f'Shape of {candid}/{cutout}: {shape}, padding to (63, 63)')
+            cutout_dict[cutout] = np.pad(cutout_dict[cutout], [(0, 63 - shape[0]), (0, 63 - shape[1])],
+                                         mode='constant', constant_values=1e-9)
+
+    triplet = np.zeros((63, 63, 3))
+    triplet[:, :, 0] = cutout_dict['science']
+    triplet[:, :, 1] = cutout_dict['template']
+    triplet[:, :, 2] = cutout_dict['difference']
+
+    if to_tpu:
+        # Edge TPUs require additional processing
+        triplet = np.rint(triplet * 128 + 128).astype(np.uint8).flatten()
+
+    return triplet
+
+
 def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
 
     jd = Time(datetime.datetime.strptime(obs_date, '%Y%m%d')).jd
@@ -105,8 +150,11 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     num_doc = db[collection_alerts].count_documents({'candidate.jd': {'$gt': jd, '$lt': jd+1}})
     print(num_doc)
 
-    # for doc in cursor:
+    cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
+                                        {'_id': 1, })
 
+    for doc in tqdm.tqdm(cursor, total=num_doc):
+        pass
 
 
 if __name__ == '__main__':
