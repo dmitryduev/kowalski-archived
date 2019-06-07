@@ -3,6 +3,7 @@
 {# custom css #}
 {% block css %}
     <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 {% endblock %}
 
 {% block nav_lab %}
@@ -25,7 +26,20 @@
             <div class="col-md-12 mt-2">
                 <p>Total alerts since February 9, 2018 (UTC): {{ "{:,d}".format(stats['total']) }}</p>
 
-                <p>Latest alert: {{ last_date }} (UTC)</p><br>
+                <p>Latest alert: {{ last_date }} (UTC)</p>
+
+                <hr>
+
+                <div id="reportrange" class="col-md-2 text-right"
+                     style="background: #fff; cursor: pointer;
+                            padding: 5px 10px; border: 1px solid #ccc;
+                            border-radius: .25rem;
+                            border-top-left-radius: 0;
+                            border-bottom-left-radius: 0;">
+                    <i class="far fa-calendar-alt"></i>&nbsp;
+                    <span></span> <i class="fas fa-caret-down"></i>
+                </div>
+                <br>
 
                 <p>Total alerts for {{ date }} (UTC): {{ "{:,d}".format(stats['total_date']) }}</p>
 
@@ -88,8 +102,40 @@
     <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
     <script>
+        $(function() {
+
+            $('#reportrange span').html(moment('{{ date }}').utc().startOf('day').format('MMMM D, YYYY'));
+
+            {#var start = moment().utc().subtract(1, 'days').startOf('day');#}
+            var start = moment().utc().startOf('day');
+            var end = moment().utc();
+
+            function cb(start, end, label) {
+                {#$('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));#}
+                $('#reportrange span').html(moment().utc().startOf('day').format('MMMM D, YYYY'));
+            }
+
+            $('#reportrange').daterangepicker({
+                singleDatePicker: true,
+                showDropdowns: true,
+                minDate: moment('20180101', 'YYYYMMDD'),
+                maxDate: end,
+                opens: "right"
+            }, cb);
+
+
+            $('#reportrange').on('apply.daterangepicker', function(ev, picker) {
+            var start = picker.startDate.format('YYYYMMDD');
+            {#var end = picker.endDate.format('YYYYMMDD');#}
+            {#window.location.href = "?start=" + start + "&end=" + end;#}
+            window.location.href = "?date=" + start;
+        });
+
+        });
+
         function numberWithCommas(x) {
             return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
