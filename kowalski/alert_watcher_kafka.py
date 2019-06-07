@@ -51,20 +51,6 @@ def time_stamps():
            datetime.datetime.utcnow().strftime('%Y%m%d_%H:%M:%S')
 
 
-''' load ML models '''
-ml_models = dict()
-for m in config['ml_models']:
-    try:
-        m_v = config["ml_models"][m]["version"]
-        ml_models[m] = {'model': load_model(f'/app/models/{m}_{m_v}.h5'),
-                        'version': m_v}
-    except Exception as e:
-        print(*time_stamps(), f'Error loading ML model {m} version {m_v}')
-        traceback.print_exc()
-        print(e)
-        continue
-
-
 @jit
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
@@ -328,6 +314,19 @@ class AlertConsumer(object):
                                                             ('candidate.programid', pymongo.ASCENDING)],
                                                            background=True)
 
+        # ML models:
+        self.ml_models = dict()
+        for m in config['ml_models']:
+            try:
+                m_v = config["ml_models"][m]["version"]
+                self.ml_models[m] = {'model': load_model(f'/app/models/{m}_{m_v}.h5'),
+                                     'version': m_v}
+            except Exception as e:
+                print(*time_stamps(), f'Error loading ML model {m}')
+                traceback.print_exc()
+                print(e)
+                continue
+
     def connect_to_db(self):
         """
             Connect to Robo-AO's MongoDB-powered database
@@ -472,8 +471,8 @@ class AlertConsumer(object):
                 # Apply filter to each alert
                 # alert_filter(record, stamp_dir)
                 tic = time.time()
-                # scores = alert_filter__ml(record)
-                scores = []
+                scores = alert_filter__ml(record, ml_models=self.ml_models)
+                # scores = []
                 toc = time.time()
                 print(scores, toc-tic)
 
@@ -650,7 +649,7 @@ def make_triplet(alert, to_tpu: bool = False):
     return triplet
 
 
-def alert_filter__ml(alert):
+def alert_filter__ml(alert, ml_models: dict = None):
     """Filter to apply to each alert.
     """
 
@@ -660,7 +659,8 @@ def alert_filter__ml(alert):
     triplet = make_triplet(alert)
     triplets = np.expand_dims(triplet, axis=0)
     braai = ml_models['braai']['model'].predict(x=triplets)[0]
-    scores['braai'] = braai
+    # braai = 1.0
+    scores['braai'] = float(braai)
     scores['braai_version'] = ml_models['braai']['version']
 
     return scores
