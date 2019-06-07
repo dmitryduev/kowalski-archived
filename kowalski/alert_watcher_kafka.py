@@ -313,6 +313,10 @@ class AlertConsumer(object):
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.ASCENDING),
                                                             ('candidate.programid', pymongo.ASCENDING)],
                                                            background=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
+                                                            ('classifications.braai', pymongo.DESCENDING),
+                                                            ('candid', pymongo.DESCENDING)],
+                                                           background=True)
 
         # ML models:
         self.ml_models = dict()
