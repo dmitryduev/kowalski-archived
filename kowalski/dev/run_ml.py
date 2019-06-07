@@ -14,6 +14,7 @@ import pandas as pd
 import gzip
 import io
 from astropy.io import fits
+from numba import jit
 
 
 ''' load config and secrets '''
@@ -94,6 +95,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose
             print(_e)
 
 
+@jit
 def make_triplet(alert, to_tpu: bool = False):
     """
         Feed in alert packet
