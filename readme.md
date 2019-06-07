@@ -92,6 +92,11 @@ docker exec -it kowalski_mongo_1 /bin/bash
 mongo -u mongoadmin -p mongoadminsecret --authenticationDatabase admin
 ```
 
+Enable monitoring:
+```
+> db.enableFreeMonitoring()
+```
+
 Build and launch the app container:
 ```bash
 docker build --rm -t kowalski:latest -f Dockerfile .

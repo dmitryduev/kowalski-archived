@@ -651,14 +651,14 @@ def make_triplet(alert, to_tpu: bool = False):
 
 def alert_filter__ml(alert):
     """Filter to apply to each alert.
-       See schemas: https://github.com/ZwickyTransientFacility/ztf-avro-alert
     """
 
     scores = dict()
 
     ''' braai '''
     triplet = make_triplet(alert)
-    braai = ml_models['braai']['model'].predict(x=[triplet])[0]
+    triplets = np.expand_dims(triplet, axis=0)
+    braai = ml_models['braai']['model'].predict(x=triplets)[0]
     scores['braai'] = braai
     scores['braai_version'] = ml_models['braai']['version']
 
