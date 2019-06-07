@@ -151,7 +151,7 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     print(num_doc)
 
     cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
-                                        {'_id': 1, })
+                                        {'candidate': 0, 'prv_candidates': 0, 'coordinates': 0})
 
     for doc in tqdm.tqdm(cursor, total=num_doc):
         pass
