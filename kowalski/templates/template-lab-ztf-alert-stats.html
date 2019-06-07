@@ -30,12 +30,10 @@
 
                 <hr>
 
-                <div id="reportrange" class="col-md-2 text-right"
+                <div id="reportrange" class="col-md-2 text-left"
                      style="background: #fff; cursor: pointer;
-                            padding: 5px 10px; border: 1px solid #ccc;
-                            border-radius: .25rem;
-                            border-top-left-radius: 0;
-                            border-bottom-left-radius: 0;">
+                            padding: 5px 10px; border: 0px solid #ccc;
+                            border-radius: .25rem;">
                     <i class="far fa-calendar-alt"></i>&nbsp;
                     <span></span> <i class="fas fa-caret-down"></i>
                 </div>
@@ -107,30 +105,33 @@
     <script>
         $(function() {
 
-            $('#reportrange span').html(moment('{{ date }}').utc().startOf('day').format('MMMM D, YYYY'));
+            {#$('#reportrange span').html(moment('{{ date }}').utc().startOf('day').format('MMMM D, YYYY'));#}
 
             {#var start = moment().utc().subtract(1, 'days').startOf('day');#}
             var start = moment('{{ date }}').utc().startOf('day');
-            var end = moment('{{ date }}').utc().startOf('day');
-            {#var end = moment().utc();#}
+            {#var end = moment('{{ date }}').utc().startOf('day');#}
+            var end = moment().utc();
 
             function cb(start, end, label) {
                 {#$('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));#}
                 {#$('#reportrange span').html(moment().utc().startOf('day').format('MMMM D, YYYY'));#}
-                $('#reportrange span').html(moment('{{ date }}').utc().startOf('day').format('MMMM D, YYYY'));
+                {#$('#reportrange span').html(moment('{{ date }}').utc().startOf('day').format('MMMM D, YYYY'));#}
+                $('#reportrange span').html(start.startOf('day').format('MMMM D, YYYY'));
             }
 
             $('#reportrange').daterangepicker({
                 singleDatePicker: true,
                 showDropdowns: true,
+                startDate: start,
+                endDate: end,
                 minDate: moment('20180101', 'YYYYMMDD'),
-                maxDate: moment().utc(),
+                maxDate: moment().add(1, 'days'),
                 opens: "right"
-            }, cb);
+            }, cb(moment('{{ date }}')));
 
 
             $('#reportrange').on('apply.daterangepicker', function(ev, picker) {
-                var start = picker.startDate.format('YYYYMMDD');
+                let start = picker.startDate.format('YYYYMMDD');
                 {#var end = picker.endDate.format('YYYYMMDD');#}
                 {#window.location.href = "?start=" + start + "&end=" + end;#}
                 window.location.href = "?date=" + start;
