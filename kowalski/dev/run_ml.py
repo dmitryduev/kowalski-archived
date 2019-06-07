@@ -196,7 +196,7 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
                                         {'candidate': 0, 'prv_candidates': 0, 'coordinates': 0})
 
     # for alert in tqdm.tqdm(cursor, total=num_doc):
-    for alert in cursor:
+    for alert in cursor.limit(1):
         scores = alert_filter__ml(alert, ml_models)
         print(alert['candid'], scores)
 
