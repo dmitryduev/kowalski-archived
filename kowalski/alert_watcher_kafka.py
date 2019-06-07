@@ -659,13 +659,16 @@ def alert_filter__ml(alert, ml_models: dict = None):
 
     scores = dict()
 
-    ''' braai '''
-    triplet = make_triplet(alert)
-    triplets = np.expand_dims(triplet, axis=0)
-    braai = ml_models['braai']['model'].predict(x=triplets)[0]
-    # braai = 1.0
-    scores['braai'] = float(braai)
-    scores['braai_version'] = ml_models['braai']['version']
+    try:
+        ''' braai '''
+        triplet = make_triplet(alert)
+        triplets = np.expand_dims(triplet, axis=0)
+        braai = ml_models['braai']['model'].predict(x=triplets)[0]
+        # braai = 1.0
+        scores['braai'] = float(braai)
+        scores['braai_version'] = ml_models['braai']['version']
+    except Exception as e:
+        print(*time_stamps(), str(e))
 
     return scores
 
