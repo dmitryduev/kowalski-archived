@@ -14,7 +14,6 @@ import pandas as pd
 import gzip
 import io
 from astropy.io import fits
-from numba import jit
 
 
 ''' load config and secrets '''
@@ -30,6 +29,15 @@ for k_ in secrets:
 
 def utc_now():
     return datetime.datetime.now(pytz.utc)
+
+
+def time_stamps():
+    """
+
+    :return: local time, UTC time
+    """
+    return datetime.datetime.now().strftime('%Y%m%d_%H:%M:%S'), \
+           datetime.datetime.utcnow().strftime('%Y%m%d_%H:%M:%S')
 
 
 def connect_to_db():
@@ -95,7 +103,6 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose
             print(_e)
 
 
-@jit
 def make_triplet(alert, to_tpu: bool = False):
     """
         Feed in alert packet
@@ -133,7 +140,40 @@ def make_triplet(alert, to_tpu: bool = False):
     return triplet
 
 
+def alert_filter__ml(alert, ml_models: dict = None):
+    """Filter to apply to each alert.
+    """
+
+    scores = dict()
+
+    try:
+        ''' braai '''
+        triplet = make_triplet(alert)
+        triplets = np.expand_dims(triplet, axis=0)
+        braai = ml_models['braai']['model'].predict(x=triplets)[0]
+        # braai = 1.0
+        scores['braai'] = float(braai)
+        scores['braai_version'] = ml_models['braai']['version']
+    except Exception as e:
+        print(*time_stamps(), str(e))
+
+    return scores
+
+
 def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
+
+    # ML models:
+    ml_models = dict()
+    for m in config['ml_models']:
+        try:
+            m_v = config["ml_models"][m]["version"]
+            ml_models[m] = {'model': load_model(f'/app/models/{m}_{m_v}.h5'),
+                            'version': m_v}
+        except Exception as e:
+            print(*time_stamps(), f'Error loading ML model {m}')
+            traceback.print_exc()
+            print(e)
+            continue
 
     jd = Time(datetime.datetime.strptime(obs_date, '%Y%m%d')).jd
 
@@ -155,8 +195,10 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
                                         {'candidate': 0, 'prv_candidates': 0, 'coordinates': 0})
 
-    for alert in tqdm.tqdm(cursor, total=num_doc):
-        triplet = make_triplet(alert)
+    # for alert in tqdm.tqdm(cursor, total=num_doc):
+    for alert in cursor:
+        scores = alert_filter__ml(alert, ml_models)
+        print(alert['candid'], scores)
 
 
 if __name__ == '__main__':
