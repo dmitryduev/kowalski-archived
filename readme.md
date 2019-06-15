@@ -1,4 +1,4 @@
-# Kowalski 1.0
+# Kowalski
 
 The legendary [ZTF](https://ztf.caltech.edu) time domain astronomy penguin: 
 `docker`-ized and powered by `aiohttp` and `mongodb` to deliver improved performance and robustness.
