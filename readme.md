@@ -9,7 +9,7 @@ The legendary [ZTF](https://ztf.caltech.edu) time domain astronomy penguin:
 
 ## ZTF Alert Lab
 
-![](kowalski/doc/fig-kowalski-ztf-lab-1.png) ![](kowalski/doc/fig-kowalski-ztf-lab-2.png)
+![](kowalski/doc/fig-kowalski-ztf-lab-1.png)![](kowalski/doc/fig-kowalski-ztf-lab-2.png)
 
 ## Python client `penquins`
 
