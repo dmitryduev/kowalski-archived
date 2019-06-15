@@ -5,11 +5,11 @@ The legendary [ZTF](https://ztf.caltech.edu) time domain astronomy penguin:
 
 ## Architecture of Kowalski
 
-![](kowalski/doc/fig:kowalski-v2.png)
+![](kowalski/doc/fig-kowalski-v2.png)
 
 ## ZTF Alert Lab
 
-![](kowalski/doc/fig:kowalski-ztf-lab-1.png) ![](kowalski/doc/fig:kowalski-ztf-lab-2.png)
+![](kowalski/doc/fig-kowalski-ztf-lab-1.png) ![](kowalski/doc/fig-kowalski-ztf-lab-2.png)
 
 ## Python client `penquins`
 
