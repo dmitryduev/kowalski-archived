@@ -13,6 +13,7 @@ import traceback
 import datetime
 import pytz
 from numba import jit
+import typing
 # from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 
@@ -196,6 +197,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             # print(f'{_file}: {field} {filt} {ccd} {quad}')
             print(f'{_file}: baseid {baseid}')
 
+            exp_baseid = int(1e16 + field*1e12 + rc*1e10 + filt*1e9)
+
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
             # exposures_colnames = exposures.columns.values
@@ -206,6 +209,10 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             for index, row in exposures.iterrows():
                 try:
                     doc = row.to_dict()
+
+                    # unique exposure id:
+                    doc['_id'] = exp_baseid + doc['expid']
+
                     doc['matchfile'] = ff_basename
                     doc['filter'] = filt
                     doc['field'] = field
@@ -342,8 +349,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                         if kk not in sourcedata_fields_to_keep:
                                             doc['data'][ddi].pop(kk)
 
-                        # convert types for pymongo:
                         for dd in doc['data']:
+                            # convert types for pymongo:
                             for k, v in dd.items():
                                 # types.add(type(v))
                                 if np.issubdtype(type(v), np.integer):
@@ -353,6 +360,9 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                 # convert numpy arrays into lists
                                 if type(v) == np.ndarray:
                                     dd[k] = dd[k].tolist()
+
+                            # generate unique exposure id's that match _id's in exposures collection
+                            dd['uexpid'] = exp_baseid + dd['expid']
 
                         # pprint(doc)
                         docs_sources.append(doc)
@@ -426,17 +436,12 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    # collections = {'exposures': 'ZTF_matchfiles_exposures_20181219',
-    #                'sources': 'ZTF_matchfiles_sources_20181219'}
+    # t_tag = '20181220'
+    # t_tag = '20190412'
+    t_tag = '20190614'
 
-    # collections = {'exposures': 'ZTF_exposures_20181220',
-    #                'sources': 'ZTF_sources_20181220'}
-
-    # collections = {'exposures': 'ZTF_exposures_20190412',
-    #                'sources': 'ZTF_sources_20190412'}
-
-    collections = {'exposures': 'ZTF_exposures_20190614',
-                   'sources': 'ZTF_sources_20190614'}
+    collections = {'exposures': f'ZTF_exposures_{t_tag}',
+                   'sources': f'ZTF_sources_{t_tag}'}
 
     # create indices:
     print('Creating indices')
@@ -467,9 +472,9 @@ if __name__ == '__main__':
     # files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
 
     # production
-    _location = '/_tmp/ztf_matchfiles_20190614/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:1]
+    _location = f'/_tmp/ztf_matchfiles_{t_tag}/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:2]
 
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
     #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
@@ -482,8 +487,8 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(30)
+    pool = ProcessPoolExecutor(1)
+    # pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
