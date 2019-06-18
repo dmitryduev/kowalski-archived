@@ -468,8 +468,9 @@ if __name__ == '__main__':
 
     # production
     _location = '/_tmp/ztf_matchfiles_20190614/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:1]
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:1]
+
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
     #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
     # print(files)
@@ -481,8 +482,8 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(1)
-    # pool = ProcessPoolExecutor(30)
+    # pool = ProcessPoolExecutor(1)
+    pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
