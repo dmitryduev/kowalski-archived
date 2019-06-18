@@ -481,15 +481,17 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(1)
+    # pool = ProcessPoolExecutor(1)
     # pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
-        pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
-                    _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
+        process_file(_file=ff, _collections=collections, _batch_size=batch_size,
+                     _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
+        # pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
+        #             _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
 
     # wait for everything to finish
-    pool.shutdown(wait=True)
+    # pool.shutdown(wait=True)
 
     print('All done')
