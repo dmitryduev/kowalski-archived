@@ -269,6 +269,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                             #                           'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
 
                             sources_fields_to_keep = ('meanmag',
+                                                      'percentiles'
                                                       'vonneumannratio',
                                                       'dec', 'matchid', 'nobs',
                                                       'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
@@ -293,6 +294,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                         doc['_id'] = baseid + doc['matchid']
 
                         doc['iqr'] = doc['percentiles'][8] - doc['percentiles'][3]
+                        doc.pop('percentiles')
 
                         # doc['matchfile'] = ff_basename
                         doc['filter'] = filt
