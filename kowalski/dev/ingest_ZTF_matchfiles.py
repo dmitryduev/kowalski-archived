@@ -197,7 +197,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             # print(f'{_file}: {field} {filt} {ccd} {quad}')
             print(f'{_file}: baseid {baseid}')
 
-            exp_baseid = int(1e15 + field*1e11 + rc*1e10 + filt*1e9)
+            exp_baseid = int(1e16 + field*1e12 + rc*1e10 + filt*1e9)
 
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
