@@ -254,18 +254,23 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                         # dump unwanted fields:
                         if not _keep_all:
                             # do not store all fields to save space
-                            sources_fields_to_keep = ('astrometricrms', 'chisq', 'con', 'lineartrend',
-                                                      'magrms', 'maxslope', 'meanmag', 'medianabsdev',
-                                                      'medianmag', 'minmag', 'maxmag',
-                                                      'nabovemeanbystd', 'nbelowmeanbystd',
-                                                      'nconsecabovemeanbystd', 'nconsecbelowmeanbystd',
-                                                      'nconsecfrommeanbystd',
-                                                      'nmedianbufferrange',
-                                                      'npairposslope', 'percentiles', 'skewness',
-                                                      'smallkurtosis', 'stetsonj', 'stetsonk',
-                                                      'vonneumannratio', 'weightedmagrms',
-                                                      'weightedmeanmag',
-                                                      'dec', 'matchid', 'nobs', 'ngoodobs',
+                            # sources_fields_to_keep = ('astrometricrms', 'chisq', 'con', 'lineartrend',
+                            #                           'magrms', 'maxslope', 'meanmag', 'medianabsdev',
+                            #                           'medianmag', 'minmag', 'maxmag',
+                            #                           'nabovemeanbystd', 'nbelowmeanbystd',
+                            #                           'nconsecabovemeanbystd', 'nconsecbelowmeanbystd',
+                            #                           'nconsecfrommeanbystd',
+                            #                           'nmedianbufferrange',
+                            #                           'npairposslope', 'percentiles', 'skewness',
+                            #                           'smallkurtosis', 'stetsonj', 'stetsonk',
+                            #                           'vonneumannratio', 'weightedmagrms',
+                            #                           'weightedmeanmag',
+                            #                           'dec', 'matchid', 'nobs', 'ngoodobs',
+                            #                           'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
+
+                            sources_fields_to_keep = ('meanmag',
+                                                      'vonneumannratio',
+                                                      'dec', 'matchid', 'nobs',
                                                       'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
 
                             doc_keys = list(doc.keys())
@@ -425,8 +430,11 @@ if __name__ == '__main__':
     # collections = {'exposures': 'ZTF_exposures_20181220',
     #                'sources': 'ZTF_sources_20181220'}
 
-    collections = {'exposures': 'ZTF_exposures_20190412',
-                   'sources': 'ZTF_sources_20190412'}
+    # collections = {'exposures': 'ZTF_exposures_20190412',
+    #                'sources': 'ZTF_sources_20190412'}
+
+    collections = {'exposures': 'ZTF_exposures_20190614',
+                   'sources': 'ZTF_sources_20190614'}
 
     # create indices:
     print('Creating indices')
@@ -438,9 +446,9 @@ if __name__ == '__main__':
         # db[collections['sources']].create_index([('medianmag', pymongo.ASCENDING)], background=True)
         # db[collections['sources']].create_index([('ngoodobs', pymongo.ASCENDING)], background=True)
         # db[collections['sources']].create_index([('nobs', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('refchi', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('refmag', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('refmagerr', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('refchi', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('refmag', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('refmagerr', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('field', pymongo.ASCENDING),
                                                  ('ccd', pymongo.ASCENDING),
                                                  ('quad', pymongo.ASCENDING)], background=True)
@@ -458,8 +466,8 @@ if __name__ == '__main__':
 
     # production
     _location = '/_tmp/ztf_matchfiles_20190412/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:100]
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:1]
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
     #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
     # print(files)
@@ -471,8 +479,8 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(30)
+    pool = ProcessPoolExecutor(1)
+    # pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
