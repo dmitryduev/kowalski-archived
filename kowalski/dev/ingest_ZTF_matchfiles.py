@@ -197,7 +197,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             # print(f'{_file}: {field} {filt} {ccd} {quad}')
             print(f'{_file}: baseid {baseid}')
 
-            exp_baseid = int(1e16 + field*1e12 + rc*1e10 + filt*1e9)
+            exp_baseid = int(1e15 + field*1e11 + rc*1e10 + filt*1e9)
 
             # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
@@ -449,13 +449,6 @@ if __name__ == '__main__':
         db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                  ('_id', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('chisq', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('medianmag', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('ngoodobs', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('nobs', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('refchi', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('refmag', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('refmagerr', pymongo.ASCENDING)], background=True)
         db[collections['sources']].create_index([('field', pymongo.ASCENDING),
                                                  ('ccd', pymongo.ASCENDING),
                                                  ('quad', pymongo.ASCENDING)], background=True)
@@ -473,8 +466,8 @@ if __name__ == '__main__':
 
     # production
     _location = f'/_tmp/ztf_matchfiles_{t_tag}/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:2]
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:2]
 
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
     #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
@@ -487,8 +480,8 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(30)
+    pool = ProcessPoolExecutor(1)
+    # pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
