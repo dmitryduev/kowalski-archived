@@ -454,7 +454,7 @@ if __name__ == '__main__':
         db[collections['sources']].create_index([('field', pymongo.ASCENDING),
                                                  ('ccd', pymongo.ASCENDING),
                                                  ('quad', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
+        # db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
         # db[collections['sources']].create_index([('data.expid', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
