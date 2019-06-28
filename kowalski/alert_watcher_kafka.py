@@ -635,8 +635,8 @@ def make_triplet(alert, to_tpu: bool = False):
                 data = hdu[0].data
                 # replace nans with zeros
                 cutout_dict[cutout] = np.nan_to_num(data)
-                # normalize
-                cutout_dict[cutout] = normalize(cutout_dict[cutout])
+                # L2-normalize
+                cutout_dict[cutout] /= np.linalg.norm(cutout_dict[cutout])
 
         # pad to 63x63 if smaller
         shape = cutout_dict[cutout].shape
