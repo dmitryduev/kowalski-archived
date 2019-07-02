@@ -824,6 +824,9 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
 
     query = task_reduced
 
+    max_time_ms = int(query['kwargs']['max_time_ms']) if 'max_time_ms' in query['kwargs'] else None
+    assert max_time_ms > 0, 'bad max_time_ms, must be int>=1'
+
     try:
 
         # cone search:
@@ -835,11 +838,20 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
                 for obj in query['query'][catalog]:
                     # project?
                     if len(query['query'][catalog][obj][1]) > 0:
-                        _select = db[catalog].find(query['query'][catalog][obj][0],
-                                                   query['query'][catalog][obj][1])
+                        if max_time_ms is None:
+                            _select = db[catalog].find(query['query'][catalog][obj][0],
+                                                       query['query'][catalog][obj][1])
+                        else:
+                            _select = db[catalog].find(query['query'][catalog][obj][0],
+                                                       query['query'][catalog][obj][1],
+                                                       max_time_ms=max_time_ms)
                     # return the whole documents by default
                     else:
-                        _select = db[catalog].find(query['query'][catalog][obj][0])
+                        if max_time_ms is None:
+                            _select = db[catalog].find(query['query'][catalog][obj][0])
+                        else:
+                            _select = db[catalog].find(query['query'][catalog][obj][0],
+                                                       max_time_ms=max_time_ms)
                     # unfortunately, mongoDB does not allow to have dots in field names,
                     # thus replace with underscores
                     query_result[catalog][obj.replace('.', '_')] = await _select.to_list(length=None)
@@ -953,7 +965,7 @@ async def query(request):
     try:
         # parse query
         known_query_types = ('cone_search', 'general_search')
-        # todo: add separate query types for the most in-demand cases:
+        # todo: add separate "convenience" query types for the most in-demand cases:
         # known_query_types = ('cone_search', 'general_search',
         #                      'find', 'find_one', 'aggregate')
 
