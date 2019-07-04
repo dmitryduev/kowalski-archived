@@ -681,6 +681,49 @@ def parse_query(task, save: bool=False):
         else:
             raise Exception('Atata!')
 
+    elif task['query_type'] == 'find':
+        # specify task type:
+        task_reduced['query_type'] = 'find'
+
+        go_on = True
+
+        if task['user'] != config['server']['admin_username']:
+            prohibited_collections = ('users', 'stats', 'queries')
+            if str(task['query']['catalog']) in prohibited_collections:
+                go_on = False
+
+        if go_on:
+            task_reduced['query']['catalog'] = task['query']['catalog']
+
+            # construct filter
+            _filter = task['query']['filter']
+            if isinstance(_filter, str):
+                # passed string? evaluate:
+                catalog_filter = literal_eval(_filter.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_filter = _filter
+            else:
+                raise ValueError('Unsupported filter specification')
+
+            task_reduced['query']['filter'] = catalog_filter
+
+            # construct projection
+            _projection = task['query']['projection']
+            if isinstance(_projection, str):
+                # passed string? evaluate:
+                catalog_projection = literal_eval(_projection.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_projection = _projection
+            else:
+                raise ValueError('Unsupported projection specification')
+
+            task_reduced['query']['projection'] = catalog_projection
+
+        else:
+            raise Exception('Atata!')
+
     elif task['query_type'] == 'cone_search':
         # specify task type:
         task_reduced['query_type'] = 'cone_search'
@@ -742,8 +785,8 @@ def parse_query(task, save: bool=False):
             objects = literal_eval(radec)
             # print(type(objects), isinstance(objects, dict), isinstance(objects, list))
 
-            # this could either be list [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
-            if isinstance(objects, list):
+            # this could either be list/tuple [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
+            if isinstance(objects, list) or isinstance(objects, tuple):
                 object_coordinates = objects
                 object_names = [str(obj_crd) for obj_crd in object_coordinates]
             elif isinstance(objects, dict):
@@ -824,8 +867,13 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
 
     query = task_reduced
 
-    max_time_ms = int(query['kwargs']['max_time_ms']) if 'max_time_ms' in query['kwargs'] else None
-    assert max_time_ms > 0, 'bad max_time_ms, must be int>=1'
+    result['user'] = query['user']
+    result['kwargs'] = query['kwargs'] if 'kwargs' in query else {}
+
+    # by default, long-running queries will be killed after config['misc']['max_time_ms'] ms
+    max_time_ms = int(query['kwargs']['max_time_ms']) if 'max_time_ms' in query['kwargs'] \
+        else int(config['misc']['max_time_ms'])
+    assert max_time_ms >= 1, 'bad max_time_ms, must be int>=1'
 
     try:
 
@@ -838,23 +886,66 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
                 for obj in query['query'][catalog]:
                     # project?
                     if len(query['query'][catalog][obj][1]) > 0:
-                        if max_time_ms is None:
-                            _select = db[catalog].find(query['query'][catalog][obj][0],
-                                                       query['query'][catalog][obj][1])
-                        else:
-                            _select = db[catalog].find(query['query'][catalog][obj][0],
-                                                       query['query'][catalog][obj][1],
-                                                       max_time_ms=max_time_ms)
+                        _select = db[catalog].find(query['query'][catalog][obj][0],
+                                                   query['query'][catalog][obj][1],
+                                                   max_time_ms=max_time_ms)
                     # return the whole documents by default
                     else:
-                        if max_time_ms is None:
-                            _select = db[catalog].find(query['query'][catalog][obj][0])
-                        else:
-                            _select = db[catalog].find(query['query'][catalog][obj][0],
-                                                       max_time_ms=max_time_ms)
+                        _select = db[catalog].find(query['query'][catalog][obj][0],
+                                                   max_time_ms=max_time_ms)
                     # unfortunately, mongoDB does not allow to have dots in field names,
                     # thus replace with underscores
                     query_result[catalog][obj.replace('.', '_')] = await _select.to_list(length=None)
+
+        # convenience general search subtypes:
+        elif query['query_type'] == 'find':
+            # print(query)
+
+            # skip & limit:
+            skip = int(query['kwargs']['skip']) if 'skip' in query['kwargs'] else False
+            # assert skip >= 0, 'bad skip, must be int>=0'
+            limit = int(query['kwargs']['limit']) if 'limit' in query['kwargs'] else False
+            # assert limit >= 0, 'bad limit, must be int>=0'
+
+            # project?
+            if len(query['query']['projection']) > 0:
+
+                if (not skip) and (not limit):
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 query['query']['projection'],
+                                                                 max_time_ms=max_time_ms)
+                elif skip:
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 query['query']['projection'],
+                                                                 max_time_ms=max_time_ms).skip(skip)
+                elif limit:
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 query['query']['projection'],
+                                                                 max_time_ms=max_time_ms).limit(limit)
+                else:
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 query['query']['projection'],
+                                                                 max_time_ms=max_time_ms).skip(skip).limit(limit)
+            # return the whole documents by default
+            else:
+                if (not skip) and (not limit):
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 max_time_ms=max_time_ms)
+                elif skip:
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 max_time_ms=max_time_ms).skip(skip)
+                elif limit:
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 max_time_ms=max_time_ms).limit(limit)
+                else:
+                    _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                                 max_time_ms=max_time_ms).skip(skip).limit(limit)
+
+            if isinstance(_select, int) or isinstance(_select, float) or isinstance(_select, tuple) or \
+                    isinstance(_select, list) or isinstance(_select, dict) or (_select is None):
+                query_result['query_result'] = _select
+            else:
+                query_result['query_result'] = await _select.to_list(length=None)
 
         elif query['query_type'] == 'general_search':
             # just evaluate. I know that's dangerous, but I'm checking things in broker.py
@@ -876,9 +967,8 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             else:
                 query_result['query_result'] = await _select.to_list(length=None)
 
-        result['user'] = query['user']
+        # success!
         result['status'] = 'done'
-        result['kwargs'] = query['kwargs'] if 'kwargs' in query else {}
 
         if not save:
             # dump result back
@@ -930,7 +1020,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             task_result_file = os.path.join(user_tmp_path, f'{task_hash}.result.json')
 
             # save location in db:
-            result['user'] = query['user']
+            # result['user'] = query['user']
             result['status'] = 'failed'
 
             query_result = dict()
@@ -946,6 +1036,12 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
                                                   'last_modified': utc_now(),
                                                   'result': None}}
                                         )
+
+        else:
+            result['status'] = 'failed'
+            result['msg'] = _err
+
+            return task_hash, result
 
         raise Exception('Query failed')
 
@@ -964,10 +1060,12 @@ async def query(request):
 
     try:
         # parse query
-        known_query_types = ('cone_search', 'general_search')
+        # known_query_types = ('cone_search', 'general_search')
         # todo: add separate "convenience" query types for the most in-demand cases:
         # known_query_types = ('cone_search', 'general_search',
-        #                      'find', 'find_one', 'aggregate')
+        #                      'find', 'find_one', 'aggregate', 'index_information', 'count_documents')
+        known_query_types = ('cone_search', 'general_search',
+                             'find')
 
         assert _query['query_type'] in known_query_types, \
             f'query_type {_query["query_type"]} not in {str(known_query_types)}'
