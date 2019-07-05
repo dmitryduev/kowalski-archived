@@ -1,5 +1,7 @@
 {% extends "template.html" %}
 
+{% block title %} - cone search{% endblock %}
+
 {% block css %}
     <style>
         .form-group {
@@ -237,7 +239,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                 query['kwargs'] = {};
             }
             else {
-                query['kwargs'] = jQuery.parseJSON(kwargs);
+                query['kwargs'] = JSON5.parse(kwargs);
             }
 
             // serialize catalogs:

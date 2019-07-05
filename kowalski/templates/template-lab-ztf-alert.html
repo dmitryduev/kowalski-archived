@@ -1,5 +1,7 @@
 {% extends "template.html" %}
 
+{% block title %} - ZTF Alert Lab - {{ alert['_id'] }}{% endblock %}
+
 {# custom css #}
 {% block css %}
     <link rel="stylesheet" href="{{-script_root-}}/static/css/styles/default.css">

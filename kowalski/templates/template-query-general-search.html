@@ -1,5 +1,7 @@
 {% extends "template.html" %}
 
+{% block title %} - general search{% endblock %}
+
 {% block css %}
     <style>
         .form-group {
@@ -54,6 +56,98 @@
         <input class="btn btn-outline-primary" id="get_query" type="submit" value="Get query">
         <input class="btn btn-primary" id="submit_query" type="submit" value="Submit">
 
+        <hr><br>
+
+        <h4>Convenience general query subtypes</h4><br>
+
+        <div id="accordion" role="tablist">
+            <div class="card">
+                <div class="card-header" role="tab" id="headingFindTab">
+                    <h5 class="mb-0">
+                        <a data-toggle="collapse" href="#findTab" aria-expanded="true"
+                           aria-controls="findTab">
+                            Find
+                        </a>
+                    </h5>
+                </div>
+                <div id="findTab" class="collapse show" role="tabpanel" aria-labelledby="headingFindTab">
+                    <div class="card-body">
+                        <form id="find_form" class="form">
+
+                            <div class="form-group row">
+                                <label for="find_catalog" class="col-md-2 control-label">
+                                    Catalog
+                                </label>
+
+                                <div class="col-md-10">
+                                    <select class="form-control form-control-sm" id="find_catalog"
+                                            name="find_catalog">
+                                        {% for catalog in catalogs %}
+                                        <option>{{ catalog }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="find_filter" class="col-md-2 control-label">
+                                    Filter
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="find_filter"
+                                           name="find_filter" placeholder="">
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="find_projection" class="col-md-2 control-label">
+                                    Projection
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="find_projection"
+                                           name="find_projection" placeholder="">
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="find_kwargs" class="col-md-2 control-label">
+                                    kwargs
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="find_kwargs"
+                                           name="find_kwargs" placeholder='e.g.: {"skip": 1, "limit": 1, "max_time_ms": 100}'>
+                                </div>
+
+                            </div>
+
+                        </form>
+
+                        <br>
+                        <div class="form-group row">
+                            <div class="col-md-12">
+                                <input class="btn btn-outline-primary" id="get_query_find" type="submit" value="Get query">
+                                <input class="btn btn-primary" id="submit_query_find" type="submit" value="Submit">
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
 {% endblock %}
@@ -68,21 +162,64 @@
                 Math.random().toString(36).substr(2, 4);
         }
         // construct query in JSON format
-        function construct_query() {
+        function construct_query(query_type) {
+
             var query = {};
-            // other queries will be added in the future
-            query['query_type'] = 'general_search';
-            // serialize object query
-            query['query'] = $("#query").val();
-            {#// season with some salt:#}
-            {#query['kwargs'] = {};#}
-            {#query['kwargs']['_id'] = random_string();#}
+
+            if (query_type === 'general_search') {
+                query['query_type'] = 'general_search';
+                // serialize object query
+                query['query'] = $("#query").val();
+                {#// season with some salt:#}
+                {#query['kwargs'] = {};#}
+                {#query['kwargs']['_id'] = random_string();#}
+            }
+            else if (query_type === 'find') {
+                query['query_type'] = 'find';
+                // serialize object query
+                query['query'] = {};
+
+                query['query']['catalog'] = $("#find_catalog").val();
+                {#query['query']['filter'] = $("#find_filter").val();#}
+                {#query['query']['projection'] = $("#find_projection").val();#}
+
+                let filter = $("#find_filter").val();
+                let projection = $("#find_projection").val();
+
+                if (filter.length === 0) {
+                    query['query']['filter'] = {};
+                }
+                else {
+                    query['query']['filter'] = JSON5.parse(filter);
+                }
+
+                if (projection.length === 0) {
+                    query['query']['projection'] = {};
+                }
+                else {
+                    query['query']['projection'] = JSON5.parse(projection);
+                }
+
+                // kwargs:
+                query['kwargs'] = {};
+                let kwargs = $("#find_kwargs").val();
+
+                if (kwargs.length === 0) {
+                    query['kwargs'] = {};
+                }
+                else {
+                    query['kwargs'] = JSON5.parse(kwargs);
+                }
+            }
+
             return query;
+
         }
+        // General search
         // get query in JSON format
         $(document).ready(function() {
             $('#get_query').click(function () {
-                var query = construct_query();
+                var query = construct_query('general_search');
                 bootbox.alert(JSON.stringify(query, null, 4));
             });
         });
@@ -140,6 +277,68 @@
             });
 
         });
+
+        // Find
+        // get query in JSON format
+        $(document).ready(function() {
+            $('#get_query_find').click(function () {
+                var query = construct_query('find');
+                bootbox.alert(JSON.stringify(query, null, 4));
+            });
+        });
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query_find').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fa fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fa fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            var query = construct_query('find');
+
+                            // season query with some salt:
+                            query['kwargs']['_id'] = random_string();
+                            // do not wait for the result
+                            query['kwargs']['enqueue_only'] = true;
+                            {#console.log(JSON.stringify(query));#}
+
+                            $.ajax({url: '{{-script_root-}}/web-query',
+                                method: 'PUT',
+                                data: JSON.stringify(query),
+                                processData: false,
+                                contentType: 'application/json',
+                                success: function(data) {
+                                    if (data['message'] === 'success') {
+                                        {#location.reload(true);#}
+                                        showFlashingMessage('Info:', 'Running query.', 'success');
+                                    }
+                                    else {
+                                        $('#addUserModal').modal('hide');
+                                        showFlashingMessage('Info:', 'Failed to run query: ' + data['message'], 'danger');
+                                    }
+                                },
+                                error: function(data) {
+                                    $('#addUserModal').modal('hide');
+                                    showFlashingMessage('Info:', 'Failed to run query.', 'danger');
+                                }
+                            });
+                            bootbox.hideAll();
+                            return false;
+                        }
+                    }
+                });
+            });
+
+        })
     </script>
 
     {# show flashing messages #}

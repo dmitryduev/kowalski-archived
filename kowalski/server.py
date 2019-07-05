@@ -1266,7 +1266,8 @@ async def web_query_put(request):
 
     try:
         # parse query
-        known_query_types = ('cone_search', 'general_search')
+        known_query_types = ('cone_search', 'general_search',
+                             'find')
 
         assert _query['query_type'] in known_query_types, \
             f'query_type {_query["query_type"]} not in {str(known_query_types)}'
@@ -2104,8 +2105,18 @@ async def query_general_search_handler(request):
     # get session:
     session = await get_session(request)
 
+    # get available catalog names
+    catalogs = await request.app['mongo'].list_collection_names()
+    # exclude system collections and collections without a 2dsphere index
+    catalogs_system = (config['database']['collection_users'],
+                       config['database']['collection_queries'],
+                       config['database']['collection_stats'])
+
+    catalogs = [c for c in sorted(catalogs)[::-1] if c not in catalogs_system]
+
     context = {'logo': config['server']['logo'],
-               'user': session['user_id']}
+               'user': session['user_id'],
+               'catalogs': catalogs}
     response = aiohttp_jinja2.render_template('template-query-general-search.html',
                                               request,
                                               context)

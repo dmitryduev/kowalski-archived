@@ -22,7 +22,7 @@ with `pip` into your environment:
 pip install git+https://github.com/dmitryduev/kowalski.git
 ```
 
-`penuquins` is very lightweight and only depends on `pymongo` and `requests`.
+`penquins` is very lightweight and only depends on `pymongo` and `requests`.
 
 ---
 
