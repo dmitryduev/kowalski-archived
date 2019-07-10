@@ -240,7 +240,7 @@
                         // console.log('This was logged in the callback: ' + result);
                         // confirmed? emit request to server:
                         if (result) {
-                            var query = construct_query();
+                            var query = construct_query('general_search');
 
                             // season query with some salt:
                             query['kwargs'] = {};
