@@ -812,6 +812,12 @@ def parse_query(task, save: bool=False):
                 task_reduced['query'][catalog][object_names[oi]] = ({**object_position_query, **catalog_query},
                                                                     {**catalog_projection})
 
+    elif task['query_type'] == 'info':
+
+        # specify task type:
+        task_reduced['query_type'] = 'info'
+        task_reduced['query'] = task['query']
+
     if save:
         # print(task_reduced)
         # task_hashable = dumps(task)
@@ -970,6 +976,41 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
             else:
                 query_result['query_result'] = await _select.to_list(length=None)
 
+        elif query['query_type'] == 'info':
+            # todo: collection/catalog info
+
+            if query['query']['command'] == 'catalog_names':
+
+                # get available catalog names
+                catalogs = await db.list_collection_names()
+                # exclude system collections and collections without a 2dsphere index
+                catalogs_system = (config['database']['collection_users'],
+                                   config['database']['collection_queries'],
+                                   config['database']['collection_stats'])
+
+                query_result['query_result'] = [c for c in sorted(catalogs)[::-1] if c not in catalogs_system]
+
+            elif query['query']['command'] == 'catalog_info':
+
+                catalog = query['query']['catalog']
+
+                stats = await db.command('collstats', catalog)
+
+                query_result['query_result'] = stats
+
+            elif query['query']['command'] == 'index_info':
+
+                catalog = query['query']['catalog']
+
+                stats = await db[catalog].index_information()
+
+                query_result['query_result'] = stats
+
+            elif query['query']['command'] == 'db_info':
+
+                stats = await db.command('dbstats')
+                query_result['query_result'] = stats
+
         # success!
         result['status'] = 'done'
 
@@ -1068,7 +1109,8 @@ async def query(request):
         # known_query_types = ('cone_search', 'general_search',
         #                      'find', 'find_one', 'aggregate', 'index_information', 'count_documents')
         known_query_types = ('cone_search', 'general_search',
-                             'find')
+                             'find',
+                             'info')
 
         assert _query['query_type'] in known_query_types, \
             f'query_type {_query["query_type"]} not in {str(known_query_types)}'
@@ -1270,7 +1312,8 @@ async def web_query_put(request):
     try:
         # parse query
         known_query_types = ('cone_search', 'general_search',
-                             'find')
+                             'find',
+                             'info')
 
         assert _query['query_type'] in known_query_types, \
             f'query_type {_query["query_type"]} not in {str(known_query_types)}'
