@@ -709,15 +709,18 @@ def parse_query(task, save: bool=False):
             task_reduced['query']['filter'] = catalog_filter
 
             # construct projection
-            _projection = task['query']['projection']
-            if isinstance(_projection, str):
-                # passed string? evaluate:
-                catalog_projection = literal_eval(_projection.strip())
-            elif isinstance(_filter, dict):
-                # passed dict?
-                catalog_projection = _projection
+            if 'projection' in task['query']:
+                _projection = task['query']['projection']
+                if isinstance(_projection, str):
+                    # passed string? evaluate:
+                    catalog_projection = literal_eval(_projection.strip())
+                elif isinstance(_filter, dict):
+                    # passed dict?
+                    catalog_projection = _projection
+                else:
+                    raise ValueError('Unsupported projection specification')
             else:
-                raise ValueError('Unsupported projection specification')
+                catalog_projection = dict()
 
             task_reduced['query']['projection'] = catalog_projection
 
