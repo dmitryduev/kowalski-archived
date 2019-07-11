@@ -133,8 +133,8 @@ def alert_filter__xmatch(db, alert, collection_alerts='ZTF_alerts'):
             object_position_query = dict()
             object_position_query['coordinates.radec_geojson'] = {
                 '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
-            s = db[collection_alerts].find({**object_position_query, **catalog_filter},
-                                           {**catalog_projection})
+            s = db[catalog].find({**object_position_query, **catalog_filter},
+                                 {**catalog_projection})
             xmatches[catalog] = list(s)
 
     except Exception as e:
