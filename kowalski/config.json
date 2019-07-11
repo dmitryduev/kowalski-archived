@@ -14,6 +14,7 @@
     "path_data": "/data/",
     "path_alerts": "/_tmp/ztf_alerts/",
     "path_queries": "/data/queries/",
+    "path_tess": "/data/tess",
     "path_tmp": "/_tmp/"
   },
 
