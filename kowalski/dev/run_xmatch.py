@@ -135,7 +135,7 @@ def alert_filter__xmatch(db, alert, collection_alerts='ZTF_alerts'):
                 '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
             s = db[collection_alerts].find({**object_position_query, **catalog_filter},
                                            {**catalog_projection})
-            xmatches[catalog] = s
+            xmatches[catalog] = list(s)
 
     except Exception as e:
         print(*time_stamps(), str(e))
