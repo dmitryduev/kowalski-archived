@@ -43,6 +43,25 @@
     }
   },
 
+  "xmatch": {
+    "cone_search_radius": 5,
+    "cone_search_unit": "arcsec",
+    "catalogs": {
+      "Gaia_DR2": {
+        "filter": {},
+        "projection": {
+          "_id": 1,
+          "coordinates.radec_str": 1,
+          "parallax": 1,
+          "parallax_error": 1,
+          "phot_g_mean_mag": 1,
+          "phot_bp_mean_mag": 1,
+          "phot_rp_mean_mag": 1
+        }
+      }
+    }
+  },
+
   "misc": {
     "supported_penquins_versions": ["1.0.0", "1.0.1", "1.0.2", "1.1.0", "1.2.0"],
     "query_expiration_interval": 5,
