@@ -169,7 +169,7 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Apply ML models on a night worth of ZTF alerts')
+    parser = argparse.ArgumentParser(description='Cross-match a night worth of ZTF alerts')
     parser.add_argument('--obsdate', help='observing date', default=datetime.datetime.utcnow().strftime('%Y%m%d'))
 
     args = parser.parse_args()
