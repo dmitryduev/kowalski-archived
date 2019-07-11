@@ -94,12 +94,14 @@ def dump_tess():
     print(time_stamps(), 'Successfully disconnected')
 
 
-schedule.every(10).seconds.do(dump_tess)
-schedule.every().day.at("14:30").do(dump_tess)
+# schedule.every(10).seconds.do(dump_tess)
+# schedule.every().day.at("14:30").do(dump_tess)
 
 
 if __name__ == '__main__':
 
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    dump_tess()
+
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(1)
