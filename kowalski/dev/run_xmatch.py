@@ -157,11 +157,14 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     query = {'candidate.jd': {'$gt': jd, '$lt': jd+1},
              'candidate.programid': 1}
 
-    num_doc = db[collection_alerts].count_documents(query)
+    # index name to use:
+    hint = 'candidate.jd_1_candidate.programid_1'
+
+    num_doc = db[collection_alerts].count_documents(query, hint=hint)
     print(num_doc)
 
     cursor = db[collection_alerts].find(query,
-                                        {'candidate.ra': 1, 'candidate.dec': 1}).limit(10)
+                                        {'candidate.ra': 1, 'candidate.dec': 1}).hint(hint).limit(10)
 
     # for alert in cursor.limit(1):
     for alert in tqdm.tqdm(cursor, total=num_doc):
