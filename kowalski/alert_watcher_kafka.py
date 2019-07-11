@@ -473,16 +473,18 @@ class AlertConsumer(object):
                 # print(*time_stamps(), self.topic, record['objectId'], record['candid'], self.num_partitions)
                 print(*time_stamps(), self.topic, record['objectId'], record['candid'])
 
-                # Apply filter to each alert
+                # Apply filter to each alert [test]
                 # alert_filter(record, stamp_dir)
+                # ml:
                 # tic = time.time()
                 # scores = alert_filter__ml(record, ml_models=self.ml_models)
                 # toc = time.time()
                 # print(scores, toc-tic)
-                tic = time.time()
-                xmatches = alert_filter__xmatch(self.db['db'], record)
-                toc = time.time()
-                print(f'xmatch for {record["candid"]} took {toc - tic:.2f} s')
+                # xmatch:
+                # tic = time.time()
+                # xmatches = alert_filter__xmatch(self.db['db'], record)
+                # toc = time.time()
+                # print(f'xmatch for {record["candid"]} took {toc - tic:.2f} s')
 
                 # get avro packet path:
                 alert_dir = '_'.join(record['candidate']['pdiffimfilename'].split('_')[:-1]) + '_alerts'
@@ -510,13 +512,13 @@ class AlertConsumer(object):
                     alert['classifications'] = scores
 
                     # cross-match with external catalogs:
-                    if record['candidate']['programpi'].strip() == 'TESS':
-                        # print(alert['candid'], alert['candidate']['programpi'])
-                        tic = time.time()
-                        xmatches = alert_filter__xmatch(self.db['db'], alert)
-                        alert['cross_matches'] = xmatches
-                        toc = time.time()
-                        print(f'xmatch for {alert["candid"]} took {toc-tic:.2f} s')
+                    # print(alert['candid'], alert['candidate']['programpi'])
+                    # if record['candidate']['programpi'].strip() == 'TESS':
+                    # tic = time.time()
+                    xmatches = alert_filter__xmatch(self.db['db'], alert)
+                    alert['cross_matches'] = xmatches
+                    # toc = time.time()
+                    # print(f'xmatch for {alert["candid"]} took {toc-tic:.2f} s')
 
                     print(*time_stamps(), 'ingesting {:s} into db'.format(alert['_id']))
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
@@ -547,13 +549,8 @@ class AlertConsumer(object):
                     alert['classifications'] = scores
 
                     # cross-match with external catalogs:
-                    if record['candidate']['programpi'].strip() == 'TESS':
-                        # print(alert['candid'], alert['candidate']['programpi'])
-                        tic = time.time()
-                        xmatches = alert_filter__xmatch(self.db['db'], alert)
-                        alert['cross_matches'] = xmatches
-                        toc = time.time()
-                        print(f'xmatch for {alert["candid"]} took {toc - tic:.2f} s')
+                    xmatches = alert_filter__xmatch(self.db['db'], alert)
+                    alert['cross_matches'] = xmatches
 
                     print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['_id']))
                     self.replace_db_entry(_collection=self.collection_alerts,
