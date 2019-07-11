@@ -491,18 +491,27 @@ class AlertConsumer(object):
                 # print(path_avro)
 
                 # save if file does not exist
-                if not os.path.exists(path_avro):
+                if (record['candidate']['programpi'] == 'TESS') or (not os.path.exists(path_avro)):
 
                     # ingest decoded avro packet into db
                     # math: 2M alerts in 8 h results in ~70 inserts/s.
                     # with document-level locking with wiredtiger is easy to handle: tested in production!
                     # ...
                     alert = self.alert_mongify(record)
-                    # TODO: cross-match with all available catalogs?
 
                     # alert filters:
+
+                    # ML models:
                     scores = alert_filter__ml(record, ml_models=self.ml_models)
                     alert['classifications'] = scores
+
+                    # cross-match with external catalogs:
+                    print(alert['candid'], alert['candidate']['programpi'])
+                    tic = time.time()
+                    xmatches = alert_filter__xmatch(self.db['db'], alert)
+                    alert['cross_matches'] = xmatches
+                    toc = time.time()
+                    print(f'took: {toc-tic:.2f} s', xmatches)
 
                     print(*time_stamps(), 'ingesting {:s} into db'.format(alert['_id']))
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
@@ -525,11 +534,16 @@ class AlertConsumer(object):
 
                     # re-ingest into db
                     alert = self.alert_mongify(record)
-                    # TODO: cross-match with all available catalogs!
 
                     # alert filters:
+
+                    # ML models:
                     scores = alert_filter__ml(record, ml_models=self.ml_models)
                     alert['classifications'] = scores
+
+                    # cross-match with external catalogs:
+                    xmatches = alert_filter__xmatch(self.db['db'], alert)
+                    alert['cross_matches'] = xmatches
 
                     print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['_id']))
                     self.replace_db_entry(_collection=self.collection_alerts,
@@ -675,6 +689,51 @@ def alert_filter__ml(alert, ml_models: dict = None):
         print(*time_stamps(), str(e))
 
     return scores
+
+
+# cone search radius:
+cone_search_radius = float(config['xmatch']['cone_search_radius'])
+# convert to rad:
+if config['xmatch']['cone_search_unit'] == 'arcsec':
+    cone_search_radius *= np.pi / 180.0 / 3600.
+elif config['xmatch']['cone_search_unit'] == 'arcmin':
+    cone_search_radius *= np.pi / 180.0 / 60.
+elif config['xmatch']['cone_search_unit'] == 'deg':
+    cone_search_radius *= np.pi / 180.0
+elif config['xmatch']['cone_search_unit'] == 'rad':
+    cone_search_radius *= 1
+else:
+    raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
+
+
+def alert_filter__xmatch(db, alert):
+    """Filter to apply to each alert.
+    """
+
+    xmatches = dict()
+
+    try:
+        ra_geojson = float(alert['candidate']['ra'])
+        # geojson-friendly ra:
+        ra_geojson -= 180.0
+        dec_geojson = float(alert['candidate']['dec'])
+
+        ''' catalogs '''
+        for catalog in config['xmatch']['catalogs']:
+            catalog_filter = config['xmatch']['catalogs'][catalog]['filter']
+            catalog_projection = config['xmatch']['catalogs'][catalog]['projection']
+
+            object_position_query = dict()
+            object_position_query['coordinates.radec_geojson'] = {
+                '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
+            s = db[catalog].find({**object_position_query, **catalog_filter},
+                                 {**catalog_projection})
+            xmatches[catalog] = list(s)
+
+    except Exception as e:
+        print(*time_stamps(), str(e))
+
+    return xmatches
 
 
 def listener(topic, bootstrap_servers='', offset_reset='earliest',
