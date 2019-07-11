@@ -158,12 +158,12 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     print(num_doc)
 
     cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
-                                        {'candidate.ra': 1, 'candidate.dec': 1})
+                                        {'candidate.ra': 1, 'candidate.dec': 1}).limit(1)
 
     # for alert in cursor.limit(1):
     for alert in tqdm.tqdm(cursor, total=num_doc):
         xmatches = alert_filter__xmatch(db, alert)
-        # print(alert['candid'], xmatches)
+        print(alert['candid'], xmatches)
         # db[collection_alerts].update_one({'_id': alert['_id']},
         #                                  {'$set': {'xmatch': xmatches}})
 
