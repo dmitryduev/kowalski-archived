@@ -154,11 +154,13 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     client, db = connect_to_db()
     print('Successfully connected')
 
-    num_doc = db[collection_alerts].count_documents({'candidate.jd': {'$gt': jd, '$lt': jd+1}})
+    query = {'candidate.jd': {'$gt': jd, '$lt': jd+1},
+             'candidate.programid': 1}
+
+    num_doc = db[collection_alerts].count_documents(query)
     print(num_doc)
 
-    cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1},
-                                         'candidate.programid': 1},
+    cursor = db[collection_alerts].find(query,
                                         {'candidate.ra': 1, 'candidate.dec': 1}).limit(10)
 
     # for alert in cursor.limit(1):
