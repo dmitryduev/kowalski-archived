@@ -70,7 +70,7 @@ def dump_tess():
     if not os.path.exists(path_date):
         os.makedirs(path_date)
 
-    jd = Time(datestr).jd
+    jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
 
     collection_alerts = 'ZTF_alerts'
 
