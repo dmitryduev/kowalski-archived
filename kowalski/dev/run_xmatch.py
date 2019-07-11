@@ -113,7 +113,7 @@ else:
     raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
 
 
-def alert_filter__xmatch(db, alert, collection_alerts='ZTF_alerts'):
+def alert_filter__xmatch(db, alert):
     """Filter to apply to each alert.
     """
 
@@ -157,7 +157,8 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     num_doc = db[collection_alerts].count_documents({'candidate.jd': {'$gt': jd, '$lt': jd+1}})
     print(num_doc)
 
-    cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1}},
+    cursor = db[collection_alerts].find({'candidate.jd': {'$gt': jd, '$lt': jd+1},
+                                         'candidate.programid': 1},
                                         {'candidate.ra': 1, 'candidate.dec': 1}).limit(10)
 
     # for alert in cursor.limit(1):

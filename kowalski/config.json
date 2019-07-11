@@ -47,6 +47,17 @@
     "cone_search_radius": 5,
     "cone_search_unit": "arcsec",
     "catalogs": {
+      "2MASS_PSC": {
+        "filter": {},
+        "projection": {
+          "_id": 1,
+          "coordinates.radec_str": 1,
+          "j_m": 1,
+          "h_m": 1,
+          "k_m": 1
+        }
+      },
+
       "Gaia_DR2": {
         "filter": {},
         "projection": {
