@@ -482,7 +482,6 @@ class AlertConsumer(object):
                 tic = time.time()
                 xmatches = alert_filter__xmatch(self.db['db'], record)
                 toc = time.time()
-                print(xmatches)
                 print(f'xmatch for {record["candid"]} took {toc - tic:.2f} s')
 
                 # get avro packet path:
