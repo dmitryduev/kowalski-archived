@@ -91,7 +91,7 @@ def dump_tess():
     for alert in tqdm.tqdm(cursor, total=num_doc):
         # print(alert['candid'])
         with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-            json.dump(alert, f)
+            f.write(dumps(alert))
 
     print(time_stamps(), 'Disconnecting from DB')
     client.close()
