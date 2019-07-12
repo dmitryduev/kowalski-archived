@@ -8,6 +8,7 @@ from astropy.time import Time
 import pymongo
 import tqdm
 from bson.json_util import dumps
+import subprocess
 
 
 ''' load config and secrets '''
@@ -90,8 +91,19 @@ def dump_tess():
     # for alert in cursor.limit(1):
     for alert in tqdm.tqdm(cursor, total=num_doc):
         # print(alert['candid'])
-        with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-            f.write(dumps(alert))
+        try:
+            with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
+                f.write(dumps(alert))
+        except Exception as e:
+            print(time_stamps(), str(e))
+
+    # compress
+    print(time_stamps(), 'Compressing')
+    subprocess.run(['/bin/tar', '-zcvf', os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz'),
+                    '-C', config['path']['path_tess'], datestr])
+    print(time_stamps(), 'Compressed')
+
+    # todo: cp to GC
 
     print(time_stamps(), 'Disconnecting from DB')
     client.close()
