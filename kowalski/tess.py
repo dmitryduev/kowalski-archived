@@ -64,6 +64,7 @@ def dump_tess():
     print(time_stamps(), 'Successfully connected')
 
     datestr = datetime.datetime.utcnow().strftime('%Y%m%d')
+    datestr = '20190711'
 
     path_date = os.path.join(config['path']['path_tess'], datestr)
 
@@ -71,7 +72,7 @@ def dump_tess():
     if not os.path.exists(path_date):
         os.makedirs(path_date)
 
-    jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd - 1
+    jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
 
     collection_alerts = 'ZTF_alerts'
 
@@ -89,7 +90,7 @@ def dump_tess():
     # for alert in cursor.limit(1):
     for alert in tqdm.tqdm(cursor, total=num_doc):
         # print(alert['candid'])
-        with open(os.path.join(path_date, f"alert['candid'].json"), 'w') as f:
+        with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
             json.dump(dumps(alert), f)
 
     print(time_stamps(), 'Disconnecting from DB')
