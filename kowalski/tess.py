@@ -7,6 +7,7 @@ import pytz
 from astropy.time import Time
 import pymongo
 import tqdm
+from bson.json_util import dumps
 
 
 ''' load config and secrets '''
@@ -70,7 +71,7 @@ def dump_tess():
     if not os.path.exists(path_date):
         os.makedirs(path_date)
 
-    jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
+    jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd - 1
 
     collection_alerts = 'ZTF_alerts'
 
@@ -87,7 +88,9 @@ def dump_tess():
 
     # for alert in cursor.limit(1):
     for alert in tqdm.tqdm(cursor, total=num_doc):
-        print(alert['candid'])
+        # print(alert['candid'])
+        with open(os.path.join(path_date, f"alert['candid'].json"), 'w') as f:
+            json.dump(dumps(alert), f)
 
     print(time_stamps(), 'Disconnecting from DB')
     client.close()
