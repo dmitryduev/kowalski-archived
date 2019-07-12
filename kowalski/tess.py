@@ -65,7 +65,7 @@ def dump_tess():
     print(time_stamps(), 'Successfully connected')
 
     datestr = datetime.datetime.utcnow().strftime('%Y%m%d')
-    datestr = '20190711'
+    # datestr = '20190711'
 
     path_date = os.path.join(config['path']['path_tess'], datestr)
 
