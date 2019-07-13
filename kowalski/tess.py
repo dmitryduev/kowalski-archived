@@ -77,33 +77,42 @@ def dump_tess():
 
     collection_alerts = 'ZTF_alerts'
 
+    # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
+    #          'candidate.programid': 1}
     query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
+             'candidate.programpi': 'TESS',
              'candidate.programid': 1}
 
     # index name to use:
-    hint = 'candidate.jd_1_candidate.programid_1'
+    # hint = 'candidate.jd_1_candidate.programid_1'
+    hint = 'jd_1__programpi_1__programid_1'
 
     num_doc = db[collection_alerts].count_documents(query, hint=hint)
-    print(num_doc)
+    print(f'Alerts in TESS fields to compress: {num_doc}')
 
-    cursor = db[collection_alerts].find(query).hint(hint).limit(3)
+    if len(num_doc) > 0:
 
-    # for alert in cursor.limit(1):
-    for alert in tqdm.tqdm(cursor, total=num_doc):
-        # print(alert['candid'])
-        try:
-            with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-                f.write(dumps(alert))
-        except Exception as e:
-            print(time_stamps(), str(e))
+        cursor = db[collection_alerts].find(query).hint(hint).limit(3)
 
-    # compress
-    print(time_stamps(), 'Compressing')
-    subprocess.run(['/bin/tar', '-zcvf', os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz'),
-                    '-C', config['path']['path_tess'], datestr])
-    print(time_stamps(), 'Compressed')
+        # for alert in cursor.limit(1):
+        for alert in tqdm.tqdm(cursor, total=num_doc):
+            # print(alert['candid'])
+            try:
+                with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
+                    f.write(dumps(alert))
+            except Exception as e:
+                print(time_stamps(), str(e))
 
-    # todo: cp to GC
+        # compress
+        print(time_stamps(), 'Compressing')
+        subprocess.run(['/bin/tar', '-zcvf', os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz'),
+                        '-C', config['path']['path_tess'], datestr])
+        print(time_stamps(), 'Compressed')
+
+        # todo: cp to GC
+
+    else:
+        print(time_stamps(), 'Nothing to do')
 
     print(time_stamps(), 'Disconnecting from DB')
     client.close()
@@ -111,13 +120,13 @@ def dump_tess():
 
 
 # schedule.every(10).seconds.do(dump_tess)
-# schedule.every().day.at("14:30").do(dump_tess)
+schedule.every().day.at("14:30").do(dump_tess)
 
 
 if __name__ == '__main__':
 
-    dump_tess()
+    # dump_tess()
 
-    # while True:
-    #     schedule.run_pending()
-    #     time.sleep(1)
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
