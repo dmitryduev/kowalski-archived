@@ -154,11 +154,15 @@ def main(obs_date=datetime.datetime.utcnow().strftime('%Y%m%d')):
     client, db = connect_to_db()
     print('Successfully connected')
 
-    query = {'candidate.jd': {'$gt': jd, '$lt': jd+1},
+    # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
+    #          'candidate.programid': 1}
+    query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
+             'candidate.programpi': 'TESS',
              'candidate.programid': 1}
 
     # index name to use:
-    hint = 'candidate.jd_1_candidate.programid_1'
+    # hint = 'candidate.jd_1_candidate.programid_1'
+    hint = 'jd_1__programpi_1__programid_1'
 
     num_doc = db[collection_alerts].count_documents(query, hint=hint)
     print(num_doc)
