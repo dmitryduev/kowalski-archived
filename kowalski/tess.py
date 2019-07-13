@@ -92,7 +92,7 @@ def dump_tess():
 
     if len(num_doc) > 0:
 
-        cursor = db[collection_alerts].find(query).hint(hint).limit(3)
+        cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
 
         # for alert in cursor.limit(1):
         for alert in tqdm.tqdm(cursor, total=num_doc):
