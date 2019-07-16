@@ -119,7 +119,7 @@ def dump_tess():
             bucket_name = 'ztf-tess'
             print(time_stamps(), f'Uploading to gs://{bucket_name} bucket on Google Cloud')
             subprocess.run(['/usr/local/bin/gsutil', 'cp', path_tarball_date, f'gs://{bucket_name}/'])
-            subprocess.run(['gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
+            subprocess.run(['/usr/local/bin/gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
             print(time_stamps(), 'Done')
 
         else:
