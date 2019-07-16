@@ -36,6 +36,8 @@ RUN pip install -r /app/requirements.txt
 
 # copy over the secrets:
 COPY secrets.json /app/
+# GCP
+COPY .boto /root/
 
 # copy over the code
 ADD kowalski/ /app/

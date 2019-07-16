@@ -106,18 +106,20 @@ def dump_tess():
 
             # compress
             print(time_stamps(), 'Compressing')
-            subprocess.run(['/bin/tar', '-zcvf', os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz'),
-                            '-C', config['path']['path_tess'], datestr])
+            path_tarball_date = os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz')
+            subprocess.run(['/bin/tar', '-zcvf', path_tarball_date, '-C', config['path']['path_tess'], datestr])
             print(time_stamps(), 'Finished compressing')
 
-            # todo: remove folder
-            print(time_stamps(), f"Removing folder: {os.path.join(config['path']['path_tess'], datestr)}")
-            subprocess.run(['rm', '-rf', os.path.join(config['path']['path_tess'], datestr)])
+            # remove folder
+            print(time_stamps(), f"Removing folder: {path_date}")
+            subprocess.run(['rm', '-rf', path_date])
             print(time_stamps(), 'Done')
 
-            # todo: cp to GC with gsutil
-            print(time_stamps(), 'Uploading to bucket on Google Cloud')
-            # todo
+            # cp to ZTF's Google Cloud Storage with gsutil
+            bucket_name = 'ztf-tess'
+            print(time_stamps(), f'Uploading to gs://{bucket_name} bucket on Google Cloud')
+            subprocess.run(['/usr/local/bin/gsutil', 'cp', path_tarball_date, f'gs://{bucket_name}/'])
+            subprocess.run(['gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
             print(time_stamps(), 'Done')
 
         else:
