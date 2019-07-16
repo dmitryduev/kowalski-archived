@@ -59,64 +59,76 @@ def connect_to_db():
 
 def dump_tess():
 
-    # connect to MongoDB:
-    print(time_stamps(), 'Connecting to DB')
-    client, db = connect_to_db()
-    print(time_stamps(), 'Successfully connected')
+    try:
+        # connect to MongoDB:
+        print(time_stamps(), 'Connecting to DB')
+        client, db = connect_to_db()
+        print(time_stamps(), 'Successfully connected')
 
-    datestr = datetime.datetime.utcnow().strftime('%Y%m%d')
-    # datestr = '20190711'
+        datestr = datetime.datetime.utcnow().strftime('%Y%m%d')
+        # datestr = '20190711'
 
-    path_date = os.path.join(config['path']['path_tess'], datestr)
+        path_date = os.path.join(config['path']['path_tess'], datestr)
 
-    # mkdir if necessary
-    if not os.path.exists(path_date):
-        os.makedirs(path_date)
+        # mkdir if necessary
+        if not os.path.exists(path_date):
+            os.makedirs(path_date)
 
-    jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
+        jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
 
-    collection_alerts = 'ZTF_alerts'
+        collection_alerts = 'ZTF_alerts'
 
-    # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
-    #          'candidate.programid': 1}
-    query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
-             'candidate.programpi': 'TESS',
-             'candidate.programid': 1}
+        # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
+        #          'candidate.programid': 1}
+        query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
+                 'candidate.programpi': 'TESS',
+                 'candidate.programid': 1}
 
-    # index name to use:
-    # hint = 'candidate.jd_1_candidate.programid_1'
-    hint = 'jd_1__programpi_1__programid_1'
+        # index name to use:
+        # hint = 'candidate.jd_1_candidate.programid_1'
+        hint = 'jd_1__programpi_1__programid_1'
 
-    num_doc = db[collection_alerts].count_documents(query, hint=hint)
-    print(f'Alerts in TESS fields to compress: {num_doc}')
+        num_doc = db[collection_alerts].count_documents(query, hint=hint)
+        print(f'Alerts in TESS fields to compress: {num_doc}')
 
-    if len(num_doc) > 0:
+        if len(num_doc) > 0:
 
-        cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
+            cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
 
-        # for alert in cursor.limit(1):
-        for alert in tqdm.tqdm(cursor, total=num_doc):
-            # print(alert['candid'])
-            try:
-                with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-                    f.write(dumps(alert))
-            except Exception as e:
-                print(time_stamps(), str(e))
+            # for alert in cursor.limit(1):
+            for alert in tqdm.tqdm(cursor, total=num_doc):
+                # print(alert['candid'])
+                try:
+                    with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
+                        f.write(dumps(alert))
+                except Exception as e:
+                    print(time_stamps(), str(e))
 
-        # compress
-        print(time_stamps(), 'Compressing')
-        subprocess.run(['/bin/tar', '-zcvf', os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz'),
-                        '-C', config['path']['path_tess'], datestr])
-        print(time_stamps(), 'Compressed')
+            # compress
+            print(time_stamps(), 'Compressing')
+            subprocess.run(['/bin/tar', '-zcvf', os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz'),
+                            '-C', config['path']['path_tess'], datestr])
+            print(time_stamps(), 'Finished compressing')
 
-        # todo: cp to GC
+            # todo: remove folder
+            print(time_stamps(), f"Removing folder: {os.path.join(config['path']['path_tess'], datestr)}")
+            subprocess.run(['rm', '-rf', os.path.join(config['path']['path_tess'], datestr)])
+            print(time_stamps(), 'Done')
 
-    else:
-        print(time_stamps(), 'Nothing to do')
+            # todo: cp to GC with gsutil
+            print(time_stamps(), 'Uploading to bucket on Google Cloud')
+            # todo
+            print(time_stamps(), 'Done')
 
-    print(time_stamps(), 'Disconnecting from DB')
-    client.close()
-    print(time_stamps(), 'Successfully disconnected')
+        else:
+            print(time_stamps(), 'Nothing to do')
+
+        print(time_stamps(), 'Disconnecting from DB')
+        client.close()
+        print(time_stamps(), 'Successfully disconnected')
+
+    except Exception as e:
+        print(time_stamps(), str(e))
 
 
 # schedule.every(10).seconds.do(dump_tess)
