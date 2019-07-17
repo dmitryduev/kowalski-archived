@@ -91,7 +91,7 @@ def dump_tess():
         num_doc = db[collection_alerts].count_documents(query, hint=hint)
         print(f'Alerts in TESS fields to compress: {num_doc}')
 
-        if len(num_doc) > 0:
+        if num_doc > 0:
 
             cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
 
