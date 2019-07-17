@@ -139,7 +139,7 @@ schedule.every().day.at("14:30").do(dump_tess)
 
 if __name__ == '__main__':
 
-    # dump_tess()
+    dump_tess()
 
     while True:
         schedule.run_pending()
