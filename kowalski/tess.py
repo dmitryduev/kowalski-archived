@@ -141,7 +141,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     obs_date = args.obsdate
 
-    if obs_date is not None:
+    if obs_date is None:
 
         # schedule.every(10).seconds.do(dump_tess)
         schedule.every().day.at("14:30").do(dump_tess)
