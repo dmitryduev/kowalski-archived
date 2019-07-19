@@ -107,7 +107,7 @@ def dump_tess(obsdate=None):
             # compress
             print(time_stamps(), 'Compressing')
             path_tarball_date = os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz')
-            subprocess.run(['/bin/tar', '-zcvf', path_tarball_date, '-C', config['path']['path_tess'], datestr])
+            subprocess.run(['/bin/tar', '-zcf', path_tarball_date, '-C', config['path']['path_tess'], datestr])
             print(time_stamps(), 'Finished compressing')
 
             # remove folder
