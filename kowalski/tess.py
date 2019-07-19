@@ -9,6 +9,7 @@ import pymongo
 import tqdm
 from bson.json_util import dumps
 import subprocess
+import argparse
 
 
 ''' load config and secrets '''
@@ -57,7 +58,7 @@ def connect_to_db():
     return _client, _db
 
 
-def dump_tess():
+def dump_tess(obsdate=None):
 
     try:
         # connect to MongoDB:
@@ -65,8 +66,7 @@ def dump_tess():
         client, db = connect_to_db()
         print(time_stamps(), 'Successfully connected')
 
-        datestr = datetime.datetime.utcnow().strftime('%Y%m%d')
-        # datestr = '20190711'
+        datestr = datetime.datetime.utcnow().strftime('%Y%m%d') if obsdate is None else obsdate
 
         path_date = os.path.join(config['path']['path_tess'], datestr)
 
@@ -133,14 +133,23 @@ def dump_tess():
         print(time_stamps(), str(e))
 
 
-# schedule.every(10).seconds.do(dump_tess)
-schedule.every().day.at("14:30").do(dump_tess)
-
-
 if __name__ == '__main__':
 
-    dump_tess()
+    parser = argparse.ArgumentParser(description='Dump ZTF alerts in TESS northern sectors to Google Cloud')
+    parser.add_argument('--obsdate', help='observations date YYYYMMDD')
 
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    args = parser.parse_args()
+    obs_date = args.obsdate
+
+    if obs_date is not None:
+
+        # schedule.every(10).seconds.do(dump_tess)
+        schedule.every().day.at("14:30").do(dump_tess)
+
+        while True:
+            schedule.run_pending()
+            time.sleep(60)
+
+    else:
+        # run once for obs_date and exit
+        dump_tess(obs_date)
