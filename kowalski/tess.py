@@ -144,7 +144,7 @@ if __name__ == '__main__':
     if obs_date is None:
 
         # schedule.every(10).seconds.do(dump_tess)
-        schedule.every().day.at("14:30").do(dump_tess)
+        schedule.every().day.at("15:30").do(dump_tess)
 
         while True:
             schedule.run_pending()
