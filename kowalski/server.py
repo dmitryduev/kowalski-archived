@@ -1529,55 +1529,64 @@ def assemble_lc(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_g
 
         dflc['sign'] = 2 * (dflc['isdiffpos'] == 't') - 1
 
-        # from ztf_pipelines_deliverables, reference image zps are fixed
+        # Eric Bellm 20190722: Convert to DC magnitudes (see p.102 of the Explanatory Supplement)
+        u = 10 ** (-0.4 * dflc['magnr']) + dflc['sign'] * 10 ** (-0.4 * dflc['magpsf'])
+        dflc['dc_mag'] = -2.5 * np.log10(u)
+        dflc['dc_sigmag'] = np.sqrt(
+            (10 ** (-0.4 * dflc['magnr']) * dflc['sigmagnr']) ** 2. +
+            (10 ** (-0.4 * dflc['magpsf']) * dflc['sigmapsf']) ** 2.) / u
+        dflc['dc_mag_ulim'] = -2.5 * np.log10(10 ** (-0.4 * dflc['magnr']) + 10 ** (-0.4 * dflc['diffmaglim']))
+        dflc['dc_mag_llim'] = -2.5 * np.log10(10 ** (-0.4 * dflc['magnr']) - 10 ** (-0.4 * dflc['diffmaglim']))
 
-        ref_zps = {1: 26.325, 2: 26.275, 3: 25.660}
-
-        dflc['magzpref'] = dflc['fid'].apply(lambda x: ref_zps[x])
-
-        # 'magzpsci' was not there in older alerts
-        if 'magzpsci' in dflc.columns:
-            w = dflc.magzpsci.isnull()
-            dflc.loc[w, 'magzpsci'] = dflc.loc[w, 'magzpref']
-        else:
-            dflc['magzpsci'] = dflc['magzpref']
-
-        # fixme?: see email from Frank Masci from Feb 7, 2019
-        dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magnr']))
-        # dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpref'] - dflc['magnr']))
-
-        dflc['ref_sigflux'] = dflc['sigmagnr'] / 1.0857 * dflc['ref_flux']
-
-        dflc['difference_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magpsf']))
-        dflc['difference_sigflux'] = dflc['sigmapsf'] / 1.0857 * dflc['difference_flux']
-
-        dflc['dc_flux'] = dflc['ref_flux'] + dflc['sign'] * dflc['difference_flux']
-        # errors are correlated, so these are conservative choices
-        w = dflc['difference_sigflux'] > dflc['ref_sigflux']
-        dflc.loc[w, 'dc_sigflux'] = np.sqrt(dflc.loc[w, 'difference_sigflux'] ** 2 - dflc.loc[w, 'ref_sigflux'] ** 2)
-        dflc.loc[~w, 'dc_sigflux'] = np.sqrt(dflc.loc[~w, 'difference_sigflux'] ** 2 + dflc.loc[~w, 'ref_sigflux'] ** 2)
-
-        w_dc_flux_good = dflc['dc_flux'] > 0
-        dflc.loc[w_dc_flux_good, 'dc_mag'] = dflc.loc[w_dc_flux_good, 'magzpsci'] - \
-                                             2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
-        dflc.loc[w_dc_flux_good, 'dc_sigmag'] = dflc.loc[w_dc_flux_good, 'dc_sigflux'] / \
-                                                dflc.loc[w_dc_flux_good, 'dc_flux'] * 1.0857
-        # print(dflc[['dc_mag', 'difference_flux', 'dc_flux', 'ref_flux', 'sign']])
-
-        # if we have a nondetection that means that there's no flux +/- 5 sigma from the ref flux
-        # (unless it's a bad subtraction)
-        dflc['difference_fluxlim'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['diffmaglim']))
-        dflc['dc_flux_ulim'] = dflc['ref_flux'] + dflc['difference_fluxlim']
-        dflc['dc_flux_llim'] = dflc['ref_flux'] - dflc['difference_fluxlim']
-        w_dc_flux_ulim_good = dflc['dc_flux_ulim'] > 0
-        w_dc_flux_llim_good = dflc['dc_flux_llim'] > 0
-        dflc.loc[w_dc_flux_ulim_good, 'dc_mag_ulim'] = dflc.loc[w_dc_flux_ulim_good, 'magzpsci'] - \
-                                                       2.5 * np.log10(dflc.loc[w_dc_flux_ulim_good, 'dc_flux_ulim'])
-        dflc.loc[w_dc_flux_llim_good, 'dc_mag_llim'] = dflc.loc[w_dc_flux_llim_good, 'magzpsci'] - \
-                                                       2.5 * np.log10(dflc.loc[w_dc_flux_llim_good, 'dc_flux_llim'])
-        # print(dflc['dc_mag_ulim'])
-
-        # print(dflc[['magzpref', 'magzpsci', 'ref_flux', 'ref_sigflux', 'difference_flux', 'difference_sigflux']])
+        # # from ztf_pipelines_deliverables, reference image zps are fixed
+        #
+        # ref_zps = {1: 26.325, 2: 26.275, 3: 25.660}
+        #
+        # dflc['magzpref'] = dflc['fid'].apply(lambda x: ref_zps[x])
+        #
+        # # 'magzpsci' was not there in older alerts
+        # if 'magzpsci' in dflc.columns:
+        #     w = dflc.magzpsci.isnull()
+        #     dflc.loc[w, 'magzpsci'] = dflc.loc[w, 'magzpref']
+        # else:
+        #     dflc['magzpsci'] = dflc['magzpref']
+        #
+        # # fixme?: see email from Frank Masci from Feb 7, 2019
+        # dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magnr']))
+        # # dflc['ref_flux'] = 10 ** (0.4 * (dflc['magzpref'] - dflc['magnr']))
+        #
+        # dflc['ref_sigflux'] = dflc['sigmagnr'] / 1.0857 * dflc['ref_flux']
+        #
+        # dflc['difference_flux'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['magpsf']))
+        # dflc['difference_sigflux'] = dflc['sigmapsf'] / 1.0857 * dflc['difference_flux']
+        #
+        # dflc['dc_flux'] = dflc['ref_flux'] + dflc['sign'] * dflc['difference_flux']
+        # # errors are correlated, so these are conservative choices
+        # w = dflc['difference_sigflux'] > dflc['ref_sigflux']
+        # dflc.loc[w, 'dc_sigflux'] = np.sqrt(dflc.loc[w, 'difference_sigflux'] ** 2 - dflc.loc[w, 'ref_sigflux'] ** 2)
+        # dflc.loc[~w, 'dc_sigflux'] = np.sqrt(dflc.loc[~w, 'difference_sigflux'] ** 2 + dflc.loc[~w, 'ref_sigflux'] ** 2)
+        #
+        # w_dc_flux_good = dflc['dc_flux'] > 0
+        # dflc.loc[w_dc_flux_good, 'dc_mag'] = dflc.loc[w_dc_flux_good, 'magzpsci'] - \
+        #                                      2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
+        # dflc.loc[w_dc_flux_good, 'dc_sigmag'] = dflc.loc[w_dc_flux_good, 'dc_sigflux'] / \
+        #                                         dflc.loc[w_dc_flux_good, 'dc_flux'] * 1.0857
+        # # print(dflc[['dc_mag', 'difference_flux', 'dc_flux', 'ref_flux', 'sign']])
+        #
+        # # if we have a nondetection that means that there's no flux +/- 5 sigma from the ref flux
+        # # (unless it's a bad subtraction)
+        # dflc['difference_fluxlim'] = 10 ** (0.4 * (dflc['magzpsci'] - dflc['diffmaglim']))
+        # dflc['dc_flux_ulim'] = dflc['ref_flux'] + dflc['difference_fluxlim']
+        # dflc['dc_flux_llim'] = dflc['ref_flux'] - dflc['difference_fluxlim']
+        # w_dc_flux_ulim_good = dflc['dc_flux_ulim'] > 0
+        # w_dc_flux_llim_good = dflc['dc_flux_llim'] > 0
+        # dflc.loc[w_dc_flux_ulim_good, 'dc_mag_ulim'] = dflc.loc[w_dc_flux_ulim_good, 'magzpsci'] - \
+        #                                                2.5 * np.log10(dflc.loc[w_dc_flux_ulim_good, 'dc_flux_ulim'])
+        # dflc.loc[w_dc_flux_llim_good, 'dc_mag_llim'] = dflc.loc[w_dc_flux_llim_good, 'magzpsci'] - \
+        #                                                2.5 * np.log10(dflc.loc[w_dc_flux_llim_good, 'dc_flux_llim'])
+        # # print(dflc['dc_mag_ulim'])
+        #
+        # # print(dflc[['magzpref', 'magzpsci', 'ref_flux', 'ref_sigflux', 'difference_flux', 'difference_sigflux']])
 
         # if some of the above produces NaNs for some reason, try fixing it sloppy way:
         for fid in (1, 2, 3):
