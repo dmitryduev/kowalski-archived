@@ -1530,13 +1530,25 @@ def assemble_lc(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_g
         dflc['sign'] = 2 * (dflc['isdiffpos'] == 't') - 1
 
         # Eric Bellm 20190722: Convert to DC magnitudes (see p.102 of the Explanatory Supplement)
-        u = 10 ** (-0.4 * dflc['magnr']) + dflc['sign'] * 10 ** (-0.4 * dflc['magpsf'])
-        dflc['dc_mag'] = -2.5 * np.log10(u)
-        dflc['dc_sigmag'] = np.sqrt(
+        dflc['dc_flux'] = 10 ** (-0.4 * dflc['magnr']) + dflc['sign'] * 10 ** (-0.4 * dflc['magpsf'])
+        w_dc_flux_good = dflc['dc_flux'] > 0
+        dflc.loc[w_dc_flux_good, 'dc_mag'] = -2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
+        dflc.loc[w_dc_flux_good, 'dc_sigmag'] = np.sqrt(
             (10 ** (-0.4 * dflc['magnr']) * dflc['sigmagnr']) ** 2. +
-            (10 ** (-0.4 * dflc['magpsf']) * dflc['sigmapsf']) ** 2.) / u
-        dflc['dc_mag_ulim'] = -2.5 * np.log10(10 ** (-0.4 * dflc['magnr']) + 10 ** (-0.4 * dflc['diffmaglim']))
-        dflc['dc_mag_llim'] = -2.5 * np.log10(10 ** (-0.4 * dflc['magnr']) - 10 ** (-0.4 * dflc['diffmaglim']))
+            (10 ** (-0.4 * dflc['magpsf']) * dflc['sigmapsf']) ** 2.) / dflc.loc[w_dc_flux_good, 'dc_flux']
+
+        dflc['dc_flux_ulim'] = 10 ** (-0.4 * dflc['magnr']) + 10 ** (-0.4 * dflc['diffmaglim'])
+        dflc['dc_flux_llim'] = 10 ** (-0.4 * dflc['magnr']) - 10 ** (-0.4 * dflc['diffmaglim'])
+
+        w_dc_flux_ulim_good = dflc['dc_flux_ulim'] > 0
+        w_dc_flux_llim_good = dflc['dc_flux_llim'] > 0
+
+        dflc.loc[w_dc_flux_ulim_good, 'dc_mag_ulim'] = -2.5 * np.log10(
+            10 ** (-0.4 * dflc.loc[w_dc_flux_ulim_good, 'magnr']) +
+            10 ** (-0.4 * dflc.loc[w_dc_flux_ulim_good, 'diffmaglim']))
+        dflc.loc[w_dc_flux_llim_good, 'dc_mag_llim'] = -2.5 * np.log10(
+            10 ** (-0.4 * dflc.loc[w_dc_flux_llim_good, 'magnr']) -
+            10 ** (-0.4 * dflc.loc[w_dc_flux_llim_good, 'diffmaglim']))
 
         # # from ztf_pipelines_deliverables, reference image zps are fixed
         #
