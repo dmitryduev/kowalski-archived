@@ -22,9 +22,7 @@ services:
     build: .
     volumes:
       - data:/data
-      - /data/ztf/tmp/:/_tmp
-      # fixme:
-      #- /supernova-data2/Matchfiles/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/:/matchfiles
+      - /data2/ztf/tmp/:/_tmp
     expose:
       - "4000"
     links:
