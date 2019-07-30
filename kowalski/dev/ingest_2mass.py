@@ -214,7 +214,7 @@ def process_psc(_file, _collection, _batch_size=2048, verbose=False):
                             print(e)
 
                     doc['coordinates'] = {}
-                    doc['coordinates']['epoch'] = doc['date']
+                    # doc['coordinates']['epoch'] = doc['date']
                     _ra = doc['ra']
                     _dec = doc['decl']
                     _radec = [_ra, _dec]
@@ -229,7 +229,7 @@ def process_psc(_file, _collection, _batch_size=2048, verbose=False):
                     doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                            'coordinates': _radec_geojson}
                     # radians:
-                    doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                    # doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
 
                     # print(doc['coordinates'])
 
@@ -318,7 +318,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(4)
+    pool = ProcessPoolExecutor(12)
 
     # for ff in files[::-1]:
     for ff in sorted(csvs):
@@ -507,7 +507,7 @@ if __name__ == '__main__':
                                 print(e)
 
                         doc['coordinates'] = {}
-                        doc['coordinates']['epoch'] = doc['date']
+                        # doc['coordinates']['epoch'] = doc['date']
                         _ra = doc['ra']
                         _dec = doc['decl']
                         _radec = [_ra, _dec]
@@ -522,8 +522,8 @@ if __name__ == '__main__':
                         doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                                'coordinates': _radec_geojson}
                         # radians and degrees:
-                        doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                        doc['coordinates']['radec_deg'] = [_ra, _dec]
+                        # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                        # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                         # print(doc['coordinates'])
 
