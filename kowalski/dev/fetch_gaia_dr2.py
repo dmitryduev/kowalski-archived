@@ -59,10 +59,10 @@ if __name__ == '__main__':
     print(len(urls))
     assert len(urls) == 61234, 'fetching url list failed'
 
-    path = '/data/ztf/tmp/gaia_dr2'
+    path = '/_tmp/gaia_dr2'
 
     # init threaded operations
-    pool = ThreadPoolExecutor(100)
+    pool = ThreadPoolExecutor(50)
     # pool = ProcessPoolExecutor(24)
 
     for url in urls:
