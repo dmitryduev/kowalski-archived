@@ -22,6 +22,7 @@
     "host": "kowalski_mongo_1",
     "port": 27017,
     "db": "kowalski",
+    "db_sys": "sys",
     "collection_users": "users",
     "collection_queries": "queries",
     "collection_stats": "stats"
