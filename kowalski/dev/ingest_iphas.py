@@ -229,8 +229,8 @@ def process_file(_fits_file, _collection, _batch_size=2048, verbose=False):
                 doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                        'coordinates': _radec_geojson}
                 # radians and degrees:
-                doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                doc['coordinates']['radec_deg'] = [_ra, _dec]
+                # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                 # print(doc['coordinates'])
 
@@ -300,7 +300,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(4)
+    pool = ProcessPoolExecutor(12)
 
     for fits_file in fits_files[::-1]:
         pool.submit(process_file, _fits_file=fits_file, _collection=collection, _batch_size=batch_size, verbose=True)
