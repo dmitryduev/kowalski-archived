@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 def fetch_url(_url,
               _gaia_url='http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/',
-              _path='/data/ztf/tmp/gaia_dr2'):
+              _path='/_tmp/gaia_dr2'):
     if not os.path.exists(os.path.join(_path, _url)):
 
         # print(f'fetching {_url}')
@@ -60,6 +60,8 @@ if __name__ == '__main__':
     assert len(urls) == 61234, 'fetching url list failed'
 
     path = '/_tmp/gaia_dr2'
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     # init threaded operations
     pool = ThreadPoolExecutor(50)
