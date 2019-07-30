@@ -290,7 +290,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     # print('\n')
 
                     doc['coordinates'] = {}
-                    doc['coordinates']['epoch'] = doc['ref_epoch']
+                    # doc['coordinates']['epoch'] = doc['ref_epoch']
                     _ra = doc['ra']
                     _dec = doc['dec']
                     _radec = [_ra, _dec]
@@ -305,8 +305,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                            'coordinates': _radec_geojson}
                     # radians and degrees:
-                    doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                    doc['coordinates']['radec_deg'] = [_ra, _dec]
+                    # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                    # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                     # print(doc['coordinates'])
 
@@ -364,11 +364,25 @@ if __name__ == '__main__':
 
     collection = 'Gaia_DR2'
 
-    # create 2d index:
-    print('Creating 2d index')
+    # create indexes:
+    print('Creating indexes')
     if not dry_run:
         db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
                                      ('_id', pymongo.ASCENDING)], background=True)
+        db[collection].create_index([('ra', 1),
+                                     ('dec', 1),
+                                     ('parallax', 1)], background=True)
+        db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                     ('phot_g_mean_mag', 1),
+                                     ('pmra', 1),
+                                     ('pmdec', 1),
+                                     ('ra', 1),
+                                     ('ra_error', 1),
+                                     ('dec', 1),
+                                     ('dec_error', 1),
+                                     ('ra_dec_corr', 1),
+                                     ('phot_g_mean_flux_over_error', 1),
+                                     ('_id', 1)], background=True)
 
     # number of records to insert
     batch_size = 4096
@@ -381,7 +395,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
-    pool = ProcessPoolExecutor(20)
+    pool = ProcessPoolExecutor(24)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
