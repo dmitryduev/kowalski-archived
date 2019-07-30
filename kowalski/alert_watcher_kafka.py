@@ -302,20 +302,32 @@ class AlertConsumer(object):
 
         # indexes
         self.db['db'][self.collection_alerts].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                                            ('_id', pymongo.ASCENDING)], background=True)
+                                                            ('candid', pymongo.DESCENDING)], background=True)
+        self.db['db'][self.collection_alerts].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                                            ('objectId', pymongo.DESCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.ASCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('candid', pymongo.ASCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.field', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.fwhm', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.magpsf', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.rb', pymongo.ASCENDING)], background=True)
+        self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.DESCENDING),
+                                                            ('candidate.pid', pymongo.ASCENDING)], background=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.pdiffimfilename', pymongo.ASCENDING)],
+                                                           background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.ASCENDING),
                                                             ('candidate.programid', pymongo.ASCENDING)],
                                                            background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
                                                             ('classifications.braai', pymongo.DESCENDING),
                                                             ('candid', pymongo.DESCENDING)],
+                                                           background=True)
+        self.db['db'][self.collection_alerts].create_index([[['candidate.jd', 1],
+                                                             ['candidate.field', 1],
+                                                             ['candidate.rb', 1],
+                                                             ['candidate.drb', 1],
+                                                             ['classifications.braai', 1],
+                                                             ['candidate.ndethist', 1],
+                                                             ['candidate.magpsf', 1],
+                                                             ['candidate.isdiffpos', 1],
+                                                             ['objectId', 1]]],
                                                            background=True)
 
         # ML models:

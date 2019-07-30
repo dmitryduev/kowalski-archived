@@ -30,6 +30,7 @@ import gzip
 from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 from PIL import Image
+import uvloop
 
 from utils import *
 
@@ -2399,6 +2400,8 @@ class TestAPIs(object):
         result = await resp.json()
         assert result['message'] == 'success'
 
+
+uvloop.install()
 
 if __name__ == '__main__':
 
