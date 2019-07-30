@@ -159,7 +159,13 @@ if __name__ == '__main__':
     print('Successfully connected')
 
     # _collection = 'RFC_2017c'
-    _collection = 'RFC_2018d'
+    # _collection = 'RFC_2018d'
+    _collection = 'RFC_2019a'
+
+    # create 2d index:
+    print('Creating 2d index')
+    db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                  ('_id', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 2048
@@ -167,7 +173,8 @@ if __name__ == '__main__':
     documents = []
 
     # f_in = '/_tmp/rfc_2017c_cat.txt'
-    f_in = '/_tmp/rfc_2018d_cat.txt'
+    # f_in = '/_tmp/rfc_2018d_cat.txt'
+    f_in = '/_tmp/rfc_2019a_cat.txt'
 
     field_names = ['category', 'IVS_name', 'J2000_name', 'ra', 'dec', 'ra_error_mas',
                    'dec_error_mas', 'corr', 'n_obs',
@@ -223,8 +230,8 @@ if __name__ == '__main__':
                 doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                        'coordinates': _radec_geojson}
                 # radians and degrees:
-                doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                doc['coordinates']['radec_deg'] = [_ra, _dec]
+                # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                 # print(doc['coordinates'])
                 documents.append(doc)
@@ -246,10 +253,5 @@ if __name__ == '__main__':
         if len(documents) > 0:
             print(f'inserting batch #{batch_num}')
             insert_multiple_db_entries(db, _collection=_collection, _db_entries=documents)
-
-        # create 2d index:
-        print('Creating 2d index')
-        db[_collection].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                      ('_id', pymongo.ASCENDING)], background=True)
 
         print('All done')
