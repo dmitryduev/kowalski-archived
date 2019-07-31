@@ -56,7 +56,8 @@ def fetch_url(_url):
 
     p = os.path.join(_path, _url)
     if not os.path.exists(p):
-        subprocess.run(['wget', '-q', '-O', p, os.path.join(_gaia_url, _url)])
+        subprocess.run(['wget', '-q', '--timeout=5', '--waitretry=2',
+                        '--tries=10', '-O', p, os.path.join(_gaia_url, _url)])
 
 
 if __name__ == '__main__':
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
 
-    with mp.Pool(processes=2) as p:
+    with mp.Pool(processes=10) as p:
         list(tqdm(p.imap(fetch_url, urls), total=61234))
 
     # # init threaded operations
