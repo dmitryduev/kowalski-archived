@@ -76,7 +76,7 @@ if __name__ == '__main__':
         os.makedirs(path)
 
     with mp.Pool(processes=4) as p:
-        list(tqdm(p.map(fetch_url, urls), total=61234))
+        list(tqdm(p.imap(fetch_url, urls), total=61234))
 
     # # init threaded operations
     # pool = ThreadPoolExecutor(50)
