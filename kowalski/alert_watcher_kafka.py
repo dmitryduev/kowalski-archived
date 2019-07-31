@@ -313,7 +313,8 @@ class AlertConsumer(object):
         self.db['db'][self.collection_alerts].create_index([('candidate.pdiffimfilename', pymongo.ASCENDING)],
                                                            background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.ASCENDING),
-                                                            ('candidate.programid', pymongo.ASCENDING)],
+                                                            ('candidate.programid', pymongo.ASCENDING),
+                                                            ('candidate.programpi', pymongo.ASCENDING)],
                                                            background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
                                                             ('classifications.braai', pymongo.DESCENDING),
