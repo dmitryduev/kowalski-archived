@@ -562,7 +562,7 @@ class AlertConsumer(object):
                 else:
                     # candid in db
                     tmp = self.db['db'][self.collection_alerts].find({'candid': candid}, {'_id': 0, 'coordinate': 1})
-                    if len(tmp) == 0:
+                    if len(list(tmp)) == 0:
                         # saved from prv_candidates of another alert, update entry
 
                         # ingest decoded avro packet into db
