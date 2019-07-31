@@ -75,7 +75,7 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
 
-    with mp.Pool(processes=4) as p:
+    with mp.Pool(processes=12) as p:
         list(tqdm(p.imap(fetch_url, urls), total=61234))
 
     # # init threaded operations
