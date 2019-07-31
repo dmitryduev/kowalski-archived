@@ -6,10 +6,13 @@ import string
 import pathlib
 import gzip
 import shutil
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+# from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import multiprocessing as mp
+from tqdm import tqdm
+import subprocess
 
 
-def fetch_url(_url,
+def check_url(_url,
               _gaia_url='http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/',
               _path='/_tmp/gaia_dr2'):
     if not os.path.exists(os.path.join(_path, _url)):
@@ -47,11 +50,19 @@ def fetch_url(_url,
             pass
 
 
+def fetch_url(_url,
+              _gaia_url='http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/',
+              _path='/_tmp/gaia_dr2'):
+    p = os.path.join(_path, _url)
+    if not os.path.exists(p):
+        subprocess.run(['wget', '-O', p, os.path.join(_gaia_url, _url)])
+
+
 if __name__ == '__main__':
 
     gaia_url = 'http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/csv/'
 
-    response = urllib.request.urlopen(gaia_url, timeout=600)
+    response = urllib.request.urlopen(gaia_url, timeout=300)
     html = response.read().decode('utf8')
     # print(html)
     urls = [url for url in re.findall(r'href=[\'"]?([^\'" >]+)', html) if '.csv.gz' in url]
@@ -63,15 +74,18 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
 
-    # init threaded operations
-    pool = ThreadPoolExecutor(50)
-    # pool = ProcessPoolExecutor(24)
+    with mp.Pool(processes=4) as p:
+        tqdm(p.imap(fetch_url, urls), total=61234)
 
-    for url in urls:
-        pool.submit(fetch_url, _url=url, _gaia_url=gaia_url, _path=path)
-
-    # wait for everything to finish
-    pool.shutdown(wait=True)
+    # # init threaded operations
+    # pool = ThreadPoolExecutor(50)
+    # # pool = ProcessPoolExecutor(24)
+    #
+    # for url in urls:
+    #     pool.submit(fetch_url, _url=url, _gaia_url=gaia_url, _path=path)
+    #
+    # # wait for everything to finish
+    # pool.shutdown(wait=True)
 
     # for ui, url in enumerate(urls):
     #     print(ui)
