@@ -22,7 +22,6 @@ from numba import jit
 import numpy as np
 
 from tensorflow.keras.models import load_model
-from tensorflow.keras.utils import normalize
 import gzip
 import io
 from astropy.io import fits
@@ -506,7 +505,7 @@ class AlertConsumer(object):
 
                         self.insert_db_entry(_collection=self.collection_alert_cross_matches, _db_entry=alert_xmatches)
 
-                    print(*time_stamps(), 'ingesting {:s} into db'.format(alert['_id']))
+                    print(*time_stamps(), 'ingesting {:s} into db'.format(alert['candid']))
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
 
                     # dump packet as json to disk if in a public TESS sector
@@ -592,7 +591,7 @@ class AlertConsumer(object):
                             self.insert_db_entry(_collection=self.collection_alert_cross_matches,
                                                  _db_entry=alert_xmatches)
 
-                        print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['_id']))
+                        print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['candid']))
                         self.replace_db_entry(_collection=self.collection_alerts,
                                               _filter={'candid': alert['candid']}, _db_entry=alert)
 
