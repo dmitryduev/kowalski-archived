@@ -60,6 +60,10 @@ def fetch_url(_url):
                         '--tries=10', '-O', p, os.path.join(_gaia_url, _url)])
 
 
+def gunzip(f):
+    subprocess.run(['gunzip', f])
+
+
 if __name__ == '__main__':
 
     gaia_url = 'http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/csv/'
@@ -76,8 +80,13 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
 
+    # download
     with mp.Pool(processes=10) as p:
         list(tqdm(p.imap(fetch_url, urls), total=61234))
+
+    # unzip
+    with mp.Pool(processes=10) as p:
+        list(tqdm(p.imap(gunzip, pathlib.Path(path).glob('*.gz')), total=61234))
 
     # # init threaded operations
     # pool = ThreadPoolExecutor(50)
