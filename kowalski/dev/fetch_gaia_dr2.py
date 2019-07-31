@@ -51,7 +51,7 @@ def check_url(_url,
 
 
 def fetch_url(_url):
-    _gaia_url = 'http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/csv',
+    _gaia_url = 'http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/csv'
     _path = '/_tmp/gaia_dr2'
 
     p = os.path.join(_path, _url)
