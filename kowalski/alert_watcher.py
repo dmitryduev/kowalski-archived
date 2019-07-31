@@ -505,7 +505,7 @@ class AlertConsumer(object):
 
                         self.insert_db_entry(_collection=self.collection_alert_cross_matches, _db_entry=alert_xmatches)
 
-                    print(*time_stamps(), 'ingesting {:s} into db'.format(alert['candid']))
+                    print(*time_stamps(), f'ingesting {alert["candid"]} into db')
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
 
                     # dump packet as json to disk if in a public TESS sector
@@ -591,7 +591,7 @@ class AlertConsumer(object):
                             self.insert_db_entry(_collection=self.collection_alert_cross_matches,
                                                  _db_entry=alert_xmatches)
 
-                        print(*time_stamps(), 're-ingesting {:s} into db'.format(alert['candid']))
+                        print(*time_stamps(), f're-ingesting {alert["candid"]} into db')
                         self.replace_db_entry(_collection=self.collection_alerts,
                                               _filter={'candid': alert['candid']}, _db_entry=alert)
 
