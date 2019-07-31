@@ -50,9 +50,10 @@ def check_url(_url,
             pass
 
 
-def fetch_url(_url,
-              _gaia_url='http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/csv',
-              _path='/_tmp/gaia_dr2'):
+def fetch_url(_url):
+    _gaia_url = 'http://cdn.gea.esac.esa.int/Gaia/gdr2/gaia_source/csv',
+    _path = '/_tmp/gaia_dr2'
+
     p = os.path.join(_path, _url)
     if not os.path.exists(p):
         subprocess.run(['wget', '-q', '-O', p, os.path.join(_gaia_url, _url)])
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         os.makedirs(path)
 
     with mp.Pool(processes=4) as p:
-        tqdm(p.imap(fetch_url, urls), total=61234)
+        list(tqdm(p.map(fetch_url, urls), total=61234))
 
     # # init threaded operations
     # pool = ThreadPoolExecutor(50)
