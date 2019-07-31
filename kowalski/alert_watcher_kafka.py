@@ -328,6 +328,7 @@ class AlertConsumer(object):
                                                             ('candidate.magpsf', 1),
                                                             ('candidate.isdiffpos', 1),
                                                             ('objectId', 1)],
+                                                           name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
                                                            background=True)
 
         # ML models:
