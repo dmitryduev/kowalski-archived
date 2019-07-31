@@ -520,7 +520,7 @@ class AlertConsumer(object):
                         if not os.path.exists(path_alert_dir):
                             os.makedirs(path_alert_dir)
 
-                        print(*time_stamps(), 'saving {:s} to disk'.format(alert['candid']))
+                        print(*time_stamps(), f'saving {alert["candid"]} to disk')
                         try:
                             with open(os.path.join(path_alert_dir, f"{alert['candid']}.json"), 'w') as f:
                                 f.write(dumps(alert))
@@ -607,7 +607,7 @@ class AlertConsumer(object):
                             if not os.path.exists(path_alert_dir):
                                 os.makedirs(path_alert_dir)
 
-                            print(*time_stamps(), 'saving {:s} to disk'.format(alert['candid']))
+                            print(*time_stamps(), f'saving {alert["candid"]} to disk')
                             try:
                                 with open(os.path.join(path_alert_dir, f"{alert['candid']}.json"), 'w') as f:
                                     f.write(dumps(alert))
