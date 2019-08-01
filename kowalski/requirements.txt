@@ -27,6 +27,7 @@ pyjwt>=1.6.4
 pymongo>=3.7.2
 pytest-aiohttp>=0.3.0
 pytz>=2017.3
+requests>=2.18.4
 schedule>=0.6.0
 tables>=3.4.4
 tensorflow==2.0.0-beta0

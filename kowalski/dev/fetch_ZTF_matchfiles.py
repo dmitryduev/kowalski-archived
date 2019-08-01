@@ -57,16 +57,21 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
 
-    response = requests.get(base_url, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
-    html = response.text
+    urls = []
 
-    # link_list = []
-    soup = BeautifulSoup(html, 'html.parser')
-    links = soup.findAll('a')
+    for rc in range(1):
+        bu = os.path.join(base_url, f'rc{rc:02d}')
 
-    for link in links:
-        txt = link.getText()
-        print(txt)
+        response = requests.get(base_url, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
+        html = response.text
+
+        # link_list = []
+        soup = BeautifulSoup(html, 'html.parser')
+        links = soup.findAll('a')
+
+        for link in links:
+            txt = link.getText()
+            print(txt)
 
     # download
     # with mp.Pool(processes=10) as p:

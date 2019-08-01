@@ -40,6 +40,10 @@
       "cmd": "/kafka_2.11-2.2.0/bin/kafka-topics.sh"
     },
 
+  "ztf_depot": {
+
+  },
+
   "ml_models": {
     "braai": {
       "version":  "d6_m9"
