@@ -23,7 +23,7 @@ def fetch_url(url):
     if not os.path.exists(p):
         subprocess.run(['wget',
                         f"--http-user={secrets['ztf_depot']['user']}", f"--http-passwd={secrets['ztf_depot']['pwd']}",
-                        '-q', '--timeout=120', '--waitretry=2',
+                        '-q', '--timeout=300', '--waitretry=2',
                         '--tries=10', '-O', p, url])
 
 
