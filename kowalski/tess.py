@@ -11,6 +11,7 @@ from bson.json_util import dumps
 import subprocess
 import argparse
 import multiprocessing as mp
+import numpy as np
 
 
 ''' load config and secrets '''
@@ -59,6 +60,27 @@ def connect_to_db():
     return _client, _db
 
 
+def yield_batch(seq, num_batches: int = 20):
+    batch_size = int(np.ceil(len(seq) / num_batches))
+
+    for nb in range(num_batches):
+        yield seq[nb*batch_size: (nb+1)*batch_size]
+
+
+def fetch_chunk(args):
+    chunk, obsdate = args
+    # client, db = connect_to_db()
+    # collection_alerts = 'ZTF_alerts'
+    #
+    # for candid in chunk:
+    #     try:
+    #         alert = db[collection_alerts].find_one({'candid': candid})
+    #         with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
+    #             f.write(dumps(alert))
+    #     except Exception as e:
+    #         print(time_stamps(), str(e))
+
+
 def dump_tess_parallel(obsdate=None):
 
     try:
@@ -97,8 +119,14 @@ def dump_tess_parallel(obsdate=None):
             cursor = db[collection_alerts].find(query, {'_id': 0, 'candid': 1}).hint(hint)  # .limit(3)
 
             candids = []
+            print("Fetching alert candid's:")
             for alert in tqdm.tqdm(cursor, total=num_doc):
                 candids.append(alert['candid'])
+
+            n_chunks = 64
+
+            with mp.Pool(processes=4) as p:
+                list(tqdm.tqdm(p.imap(fetch_chunk, (yield_batch(candids, n_chunks), obsdate)), total=n_chunks))
 
             # cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
             #
