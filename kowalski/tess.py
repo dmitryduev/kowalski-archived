@@ -60,9 +60,14 @@ def connect_to_db():
     return _client, _db
 
 
-def yield_batch(seq, obsdate, num_batches: int = 20):
-    batch_size = int(np.ceil(len(seq) / num_batches))
+# def yield_batch(seq, obsdate, num_batches: int = 20):
+#     batch_size = int(np.ceil(len(seq) / num_batches))
+#     for nb in range(num_batches):
+#         yield seq[nb*batch_size: (nb+1)*batch_size], obsdate
 
+
+def yield_batch(seq, obsdate, batch_size: int = 100):
+    num_batches = int(np.ceil(len(seq) / batch_size))
     for nb in range(num_batches):
         yield seq[nb*batch_size: (nb+1)*batch_size], obsdate
 
@@ -127,10 +132,11 @@ def dump_tess_parallel(obsdate=None):
             for alert in tqdm.tqdm(cursor, total=num_doc):
                 candids.append(alert['candid'])
 
-            n_chunks = 64
+            chunk_size = 1000
+            n_chunks = int(np.ceil(num_doc / chunk_size))
 
             with mp.Pool(processes=4) as p:
-                list(tqdm.tqdm(p.imap(fetch_chunk, yield_batch(candids, obsdate, n_chunks)), total=n_chunks))
+                list(tqdm.tqdm(p.imap(fetch_chunk, yield_batch(candids, obsdate, chunk_size)), total=n_chunks))
 
             # cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
             #
