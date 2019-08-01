@@ -19,6 +19,7 @@
   },
 
   "database": {
+    "max_pool_size": 1000,
     "host": "kowalski_mongo_1",
     "port": 27017,
     "db": "kowalski",
