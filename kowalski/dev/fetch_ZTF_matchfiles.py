@@ -12,6 +12,7 @@ import multiprocessing as mp
 from tqdm import tqdm
 import subprocess
 import json
+from tqdm import tqdm
 
 
 ''' load config and secrets '''
@@ -85,7 +86,11 @@ if __name__ == '__main__':
                 for link_fr in links_fr:
                     txt_fr = link_fr.getText()
                     if txt_fr.endswith('.pytable'):
-                        print('\t', txt_fr)
+                        # print('\t', txt_fr)
+                        urls.append(os.path.join(bu_fr, txt_fr))
+
+
+    print(urls)
 
     # download
     # with mp.Pool(processes=10) as p:
