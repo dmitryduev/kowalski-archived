@@ -69,6 +69,7 @@ def yield_batch(seq, obsdate, num_batches: int = 20):
 
 def fetch_chunk(args):
     chunk, obsdate = args
+    print(chunk[0], obsdate)
     # client, db = connect_to_db()
     # collection_alerts = 'ZTF_alerts'
     #
