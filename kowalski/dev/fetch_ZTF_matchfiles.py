@@ -71,7 +71,21 @@ if __name__ == '__main__':
 
         for link in links:
             txt = link.getText()
-            print(txt)
+            if 'fr' in txt:
+                print(txt)
+
+                bu_fr = os.path.join(bu, txt)
+
+                response_fr = requests.get(bu_fr, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
+                html_fr = response_fr.text
+
+                soup_fr = BeautifulSoup(html_fr, 'html.parser')
+                links_fr = soup_fr.findAll('a')
+
+                for link_fr in links_fr:
+                    txt_fr = link_fr.getText()
+                    if txt_fr.endswith('.pytable'):
+                        print('\t', txt_fr)
 
     # download
     # with mp.Pool(processes=10) as p:
