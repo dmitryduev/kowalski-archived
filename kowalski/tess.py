@@ -81,12 +81,11 @@ def dump_tess(obsdate=None):
         # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
         #          'candidate.programid': 1}
         query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
-                 'candidate.programpi': 'TESS',
-                 'candidate.programid': 1}
+                 'candidate.programid': 1,
+                 'candidate.programpi': 'TESS'}
 
         # index name to use:
-        # hint = 'candidate.jd_1_candidate.programid_1'
-        hint = 'jd_1__programpi_1__programid_1'
+        hint = 'candidate.jd_1_candidate.programid_1_candidate.programpi_1'
 
         num_doc = db[collection_alerts].count_documents(query, hint=hint)
         print(f'Alerts in TESS fields to compress: {num_doc}')

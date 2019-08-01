@@ -25,6 +25,7 @@ from tensorflow.keras.models import load_model
 import gzip
 import io
 from astropy.io import fits
+from copy import deepcopy
 
 
 ''' load config and secrets '''
@@ -442,8 +443,10 @@ class AlertConsumer(object):
         # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
         # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
-        prv_candidates = doc['prv_candidates']
+        prv_candidates = deepcopy(doc['prv_candidates'])
         doc.pop('prv_candidates', None)
+        if prv_candidates is None:
+            prv_candidates = []
 
         return doc, prv_candidates
 
@@ -563,8 +566,9 @@ class AlertConsumer(object):
 
                 else:
                     # candid in db
-                    tmp = self.db['db'][self.collection_alerts].find({'candid': candid}, {'_id': 0, 'coordinate': 1})
-                    if len(list(tmp)) == 0:
+                    tmp = list(self.db['db'][self.collection_alerts].find({'candid': candid},
+                                                                          {'_id': 0, 'coordinates': 1}))
+                    if (len(tmp) > 0) and ('coordinates' in tmp[0]):
                         # saved from prv_candidates of another alert, update entry
 
                         # ingest decoded avro packet into db
