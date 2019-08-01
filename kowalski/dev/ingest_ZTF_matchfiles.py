@@ -440,7 +440,8 @@ if __name__ == '__main__':
 
     # t_tag = '20181220'
     # t_tag = '20190412'
-    t_tag = '20190614'
+    # t_tag = '20190614'
+    t_tag = '20190718'
 
     collections = {'exposures': f'ZTF_exposures_{t_tag}',
                    'sources': f'ZTF_sources_{t_tag}'}
