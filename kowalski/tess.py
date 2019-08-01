@@ -67,19 +67,22 @@ def yield_batch(seq, obsdate, num_batches: int = 20):
         yield seq[nb*batch_size: (nb+1)*batch_size], obsdate
 
 
-def fetch_chunk(args):
-    chunk, obsdate = args
-    print(chunk[0], obsdate)
-    # client, db = connect_to_db()
-    # collection_alerts = 'ZTF_alerts'
-    #
-    # for candid in chunk:
-    #     try:
-    #         alert = db[collection_alerts].find_one({'candid': candid})
-    #         with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-    #             f.write(dumps(alert))
-    #     except Exception as e:
-    #         print(time_stamps(), str(e))
+def fetch_chunk(ar):
+    chunk, obsdate = ar
+
+    datestr = datetime.datetime.utcnow().strftime('%Y%m%d') if obsdate is None else obsdate
+    path_date = os.path.join(config['path']['path_tess'], datestr)
+
+    client, db = connect_to_db()
+    collection_alerts = 'ZTF_alerts'
+
+    for candid in chunk:
+        try:
+            alert = db[collection_alerts].find_one({'candid': candid})
+            with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
+                f.write(dumps(alert))
+        except Exception as e:
+            print(time_stamps(), str(e))
 
 
 def dump_tess_parallel(obsdate=None):
