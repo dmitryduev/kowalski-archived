@@ -89,6 +89,8 @@ def fetch_chunk(ar):
         except Exception as e:
             print(time_stamps(), str(e))
 
+    client.close()
+
 
 def dump_tess_parallel(obsdate=None):
 
@@ -132,40 +134,29 @@ def dump_tess_parallel(obsdate=None):
             for alert in tqdm.tqdm(cursor, total=num_doc):
                 candids.append(alert['candid'])
 
-            chunk_size = 1000
+            chunk_size = 2000
             n_chunks = int(np.ceil(num_doc / chunk_size))
 
-            with mp.Pool(processes=4) as p:
+            with mp.Pool(processes=np.min((8, n_chunks))) as p:
                 list(tqdm.tqdm(p.imap(fetch_chunk, yield_batch(candids, obsdate, chunk_size)), total=n_chunks))
 
-            # cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
-            #
-            # # for alert in cursor.limit(1):
-            # for alert in tqdm.tqdm(cursor, total=num_doc):
-            #     # print(alert['candid'])
-            #     try:
-            #         with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-            #             f.write(dumps(alert))
-            #     except Exception as e:
-            #         print(time_stamps(), str(e))
+            # compress
+            print(time_stamps(), 'Compressing')
+            path_tarball_date = os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz')
+            subprocess.run(['/bin/tar', '-zcf', path_tarball_date, '-C', config['path']['path_tess'], datestr])
+            print(time_stamps(), 'Finished compressing')
 
-            # # compress
-            # print(time_stamps(), 'Compressing')
-            # path_tarball_date = os.path.join(config['path']['path_tess'], f'{datestr}.tar.gz')
-            # subprocess.run(['/bin/tar', '-zcf', path_tarball_date, '-C', config['path']['path_tess'], datestr])
-            # print(time_stamps(), 'Finished compressing')
-            #
-            # # remove folder
-            # print(time_stamps(), f"Removing folder: {path_date}")
-            # subprocess.run(['rm', '-rf', path_date])
-            # print(time_stamps(), 'Done')
-            #
-            # # cp to ZTF's Google Cloud Storage with gsutil
-            # bucket_name = 'ztf-tess'
-            # print(time_stamps(), f'Uploading to gs://{bucket_name} bucket on Google Cloud')
-            # subprocess.run(['/usr/local/bin/gsutil', 'cp', path_tarball_date, f'gs://{bucket_name}/'])
-            # subprocess.run(['/usr/local/bin/gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
-            # print(time_stamps(), 'Done')
+            # remove folder
+            print(time_stamps(), f"Removing folder: {path_date}")
+            subprocess.run(['rm', '-rf', path_date])
+            print(time_stamps(), 'Done')
+
+            # cp to ZTF's Google Cloud Storage with gsutil
+            bucket_name = 'ztf-tess'
+            print(time_stamps(), f'Uploading to gs://{bucket_name} bucket on Google Cloud')
+            subprocess.run(['/usr/local/bin/gsutil', 'cp', path_tarball_date, f'gs://{bucket_name}/'])
+            subprocess.run(['/usr/local/bin/gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
+            print(time_stamps(), 'Done')
 
         else:
             print(time_stamps(), 'Nothing to do')
