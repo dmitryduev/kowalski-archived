@@ -441,7 +441,7 @@ class AlertConsumer(object):
 
         # GeoJSON for 2D indexing
         doc['coordinates'] = {}
-        doc['coordinates']['epoch'] = doc['candidate']['jd']
+        # doc['coordinates']['epoch'] = doc['candidate']['jd']
         _ra = doc['candidate']['ra']
         _dec = doc['candidate']['dec']
         _radec = [_ra, _dec]
@@ -456,8 +456,8 @@ class AlertConsumer(object):
         doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                'coordinates': _radec_geojson}
         # radians and degrees:
-        doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-        doc['coordinates']['radec_deg'] = [_ra, _dec]
+        # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+        # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
         return doc
 
