@@ -23,8 +23,8 @@ def fetch_url(url):
     if not os.path.exists(p):
         subprocess.run(['wget',
                         f"--http-user={secrets['ztf_depot']['user']}", f"--http-passwd={secrets['ztf_depot']['pwd']}",
-                        '-q', '--timeout=300', '--waitretry=2',
-                        '--tries=10', '-O', p, url])
+                        '-q', '--timeout=600', '--waitretry=10',
+                        '--tries=5', '-O', p, url])
 
 
 def gunzip(f):
@@ -81,5 +81,5 @@ if __name__ == '__main__':
     print(f'Downloading {n_matchfiles} matchfiles:')
 
     # download
-    with mp.Pool(processes=3) as p:
+    with mp.Pool(processes=4) as p:
         list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
