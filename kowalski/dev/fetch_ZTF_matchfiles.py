@@ -81,5 +81,5 @@ if __name__ == '__main__':
     print(f'Downloading {n_matchfiles} matchfiles:')
 
     # download
-    with mp.Pool(processes=4) as p:
+    with mp.Pool(processes=3) as p:
         list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
