@@ -2261,8 +2261,8 @@ async def app_factory():
 
     # Database connection
     client = AsyncIOMotorClient(f"mongodb://{config['database']['user']}:{config['database']['pwd']}@" +
-                                f"{config['database']['host']}:{config['database']['port']}/{config['database']['db']}",
-                                max_pool_size=config['database']['max_pool_size'])
+                                f"{config['database']['host']}:{config['database']['port']}/{config['database']['db']}")
+    # max_pool_size=config['database']['max_pool_size']
     mongo = client[config['database']['db']]
 
     # add site admin if necessary
