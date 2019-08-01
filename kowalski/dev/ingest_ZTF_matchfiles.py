@@ -470,7 +470,8 @@ if __name__ == '__main__':
     # files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
 
     # production
-    _location = f'/_tmp/ztf_matchfiles_{t_tag}/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
+    # _location = f'/_tmp/ztf_matchfiles_{t_tag}/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
+    _location = f'/_tmp/ztf_matchfiles_{t_tag}/'
     files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
     # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:2]
 
