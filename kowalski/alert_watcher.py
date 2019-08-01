@@ -526,6 +526,8 @@ class AlertConsumer(object):
                                 f.write(dumps(alert))
                         except Exception as e:
                             print(time_stamps(), str(e))
+                            _err = traceback.format_exc()
+                            print(*time_stamps(), str(_err))
 
                     # iterate over prv_candidates
 
@@ -613,6 +615,8 @@ class AlertConsumer(object):
                                     f.write(dumps(alert))
                             except Exception as e:
                                 print(time_stamps(), str(e))
+                                _err = traceback.format_exc()
+                                print(*time_stamps(), str(_err))
 
                         # iterate over prv_candidates
                         for prv_candidate in prv_candidates:
@@ -896,6 +900,8 @@ def listener(topic, bootstrap_servers='', offset_reset='earliest',
             sys.exit()
         except Exception as e:
             print(*time_stamps(), str(e))
+            _err = traceback.format_exc()
+            print(*time_stamps(), str(_err))
             sys.exit()
 
 
@@ -960,6 +966,8 @@ def main(_obs_date=None):
 
         except Exception as e:
             print(*time_stamps(), str(e))
+            _err = traceback.format_exc()
+            print(*time_stamps(), str(_err))
 
         if _obs_date is None:
             time.sleep(300)
