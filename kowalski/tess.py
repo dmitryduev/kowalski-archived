@@ -60,11 +60,11 @@ def connect_to_db():
     return _client, _db
 
 
-def yield_batch(seq, num_batches: int = 20):
+def yield_batch(seq, obsdate, num_batches: int = 20):
     batch_size = int(np.ceil(len(seq) / num_batches))
 
     for nb in range(num_batches):
-        yield seq[nb*batch_size: (nb+1)*batch_size]
+        yield seq[nb*batch_size: (nb+1)*batch_size], obsdate
 
 
 def fetch_chunk(args):
@@ -126,7 +126,7 @@ def dump_tess_parallel(obsdate=None):
             n_chunks = 64
 
             with mp.Pool(processes=4) as p:
-                list(tqdm.tqdm(p.imap(fetch_chunk, (yield_batch(candids, n_chunks), obsdate)), total=n_chunks))
+                list(tqdm.tqdm(p.imap(fetch_chunk, yield_batch(candids, obsdate, n_chunks)), total=n_chunks))
 
             # cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
             #
