@@ -62,7 +62,7 @@ if __name__ == '__main__':
     for rc in range(1):
         bu = os.path.join(base_url, f'rc{rc:02d}')
 
-        response = requests.get(base_url, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
+        response = requests.get(bu, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
         html = response.text
 
         # link_list = []
