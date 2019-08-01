@@ -471,9 +471,10 @@ if __name__ == '__main__':
 
     # production
     # _location = f'/_tmp/ztf_matchfiles_{t_tag}/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
-    _location = f'/_tmp/ztf_matchfiles_{t_tag}/'
-    files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
+    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
     # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:2]
+    _location = f'/_tmp/ztf_matchfiles_{t_tag}/'
+    files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
 
     # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
     #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
