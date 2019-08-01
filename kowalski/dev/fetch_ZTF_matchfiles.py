@@ -21,7 +21,9 @@ for k_ in secrets:
 def fetch_url(url):
     p = os.path.join(path, os.path.basename(url))
     if not os.path.exists(p):
-        subprocess.run(['wget', '-q', '--timeout=120', '--waitretry=2',
+        subprocess.run(['wget',
+                        f"--http-user={secrets['ztf_depot']['user']}", f"--http-passwd={secrets['ztf_depot']['pwd']}",
+                        '-q', '--timeout=120', '--waitretry=2',
                         '--tries=10', '-O', p, url])
 
 
