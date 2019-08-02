@@ -979,6 +979,11 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
 
         # cone search:
         if query['query_type'] == 'cone_search':
+
+            known_kwargs = ('skip', 'hint', 'limit')
+            kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
+            kwargs['comment'] = str(query['user'])
+
             # iterate over catalogs as they represent
             for catalog in query['query']:
                 query_result[catalog] = dict()
@@ -988,58 +993,32 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
                     if len(query['query'][catalog][obj][1]) > 0:
                         _select = db[catalog].find(query['query'][catalog][obj][0],
                                                    query['query'][catalog][obj][1],
-                                                   max_time_ms=max_time_ms)
+                                                   max_time_ms=max_time_ms, **kwargs)
                     # return the whole documents by default
                     else:
                         _select = db[catalog].find(query['query'][catalog][obj][0],
-                                                   max_time_ms=max_time_ms)
-                    # unfortunately, mongoDB does not allow to have dots in field names,
-                    # thus replace with underscores
+                                                   max_time_ms=max_time_ms, **kwargs)
+                    # mongodb does not allow having dots in field names -> replace with underscores
                     query_result[catalog][obj.replace('.', '_')] = await _select.to_list(length=None)
 
         # convenience general search subtypes:
         elif query['query_type'] == 'find':
             # print(query)
 
-            # skip & limit:
-            skip = int(query['kwargs']['skip']) if 'skip' in query['kwargs'] else False
-            # assert skip >= 0, 'bad skip, must be int>=0'
-            limit = int(query['kwargs']['limit']) if 'limit' in query['kwargs'] else False
-            # assert limit >= 0, 'bad limit, must be int>=0'
+            known_kwargs = ('skip', 'hint', 'limit')
+            kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
+            kwargs['comment'] = str(query['user'])
 
             # project?
             if len(query['query']['projection']) > 0:
 
-                if (not skip) and (not limit):
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 query['query']['projection'],
-                                                                 max_time_ms=max_time_ms)
-                elif skip:
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 query['query']['projection'],
-                                                                 max_time_ms=max_time_ms).skip(skip)
-                elif limit:
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 query['query']['projection'],
-                                                                 max_time_ms=max_time_ms).limit(limit)
-                else:
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 query['query']['projection'],
-                                                                 max_time_ms=max_time_ms).skip(skip).limit(limit)
+                _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                             query['query']['projection'],
+                                                             max_time_ms=max_time_ms, **kwargs)
             # return the whole documents by default
             else:
-                if (not skip) and (not limit):
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 max_time_ms=max_time_ms)
-                elif skip:
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 max_time_ms=max_time_ms).skip(skip)
-                elif limit:
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 max_time_ms=max_time_ms).limit(limit)
-                else:
-                    _select = db[query['query']['catalog']].find(query['query']['filter'],
-                                                                 max_time_ms=max_time_ms).skip(skip).limit(limit)
+                _select = db[query['query']['catalog']].find(query['query']['filter'],
+                                                             max_time_ms=max_time_ms, **kwargs)
 
             if isinstance(_select, int) or isinstance(_select, float) or isinstance(_select, tuple) or \
                     isinstance(_select, list) or isinstance(_select, dict) or (_select is None):
@@ -1050,6 +1029,10 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
         elif query['query_type'] == 'find_one':
             # print(query)
 
+            known_kwargs = ('skip', 'hint', 'limit')
+            kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
+            kwargs['comment'] = str(query['user'])
+
             _select = db[query['query']['catalog']].find_one(query['query']['filter'],
                                                              max_time_ms=max_time_ms)
 
@@ -1057,6 +1040,10 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
 
         elif query['query_type'] == 'count_documents':
             # print(query)
+
+            known_kwargs = ('skip', 'hint', 'limit')
+            kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
+            kwargs['comment'] = str(query['user'])
 
             _select = db[query['query']['catalog']].count_documents(query['query']['filter'],
                                                                     maxTimeMS=max_time_ms)
@@ -1066,6 +1053,10 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
         elif query['query_type'] == 'aggregate':
             # print(query)
 
+            known_kwargs = ('allowDiskUse', 'maxTimeMS', 'batchSize')
+            kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
+            kwargs['comment'] = str(query['user'])
+
             _select = db[query['query']['catalog']].aggregate(query['query']['pipeline'],
                                                               allowDiskUse=True,
                                                               maxTimeMS=max_time_ms)
@@ -1073,7 +1064,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
             query_result['query_result'] = await _select.to_list(length=None)
 
         elif query['query_type'] == 'general_search':
-            # just evaluate. I know that's dangerous, but I'm checking things in broker.py
+            # just evaluate. I know that's dangerous, but...
             qq = bytes(query['query'], 'utf-8').decode('unicode_escape')
 
             _select = eval(qq)
@@ -1093,7 +1084,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
                 query_result['query_result'] = await _select.to_list(length=None)
 
         elif query['query_type'] == 'info':
-            # todo: collection/catalog info
+            # collection/catalog info
 
             if query['query']['command'] == 'catalog_names':
 
