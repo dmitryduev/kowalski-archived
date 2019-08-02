@@ -115,7 +115,8 @@ def dump_tess_parallel(obsdate=None):
         # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
         #          'candidate.programid': 1}
         query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
-                 'candidate.programid': 1,
+                 # 'candidate.programid': 1,
+                 'candidate.programid': {'$in': [1, 3]},
                  'candidate.programpi': 'TESS'}
 
         # index name to use:
@@ -192,7 +193,8 @@ def dump_tess(obsdate=None):
         # query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
         #          'candidate.programid': 1}
         query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
-                 'candidate.programid': 1,
+                 # 'candidate.programid': 1,
+                 'candidate.programid': {'$in': [1, 3]},
                  'candidate.programpi': 'TESS'}
 
         # index name to use:
