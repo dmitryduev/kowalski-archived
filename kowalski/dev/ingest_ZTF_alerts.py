@@ -10,6 +10,10 @@ import datetime
 import pytz
 from numba import jit
 import fastavro as avro
+from tensorflow.keras.models import load_model
+import gzip
+import io
+from astropy.io import fits
 # from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 
@@ -151,6 +155,109 @@ def find_files(root_dir):
                 yield os.path.join(dir_name, f_name)
 
 
+def make_triplet(alert, to_tpu: bool = False):
+    """
+        Feed in alert packet
+    """
+    cutout_dict = dict()
+
+    for cutout in ('science', 'template', 'difference'):
+        # cutout_data = loads(dumps([alert[f'cutout{cutout.capitalize()}']['stampData']]))[0]
+        cutout_data = alert[f'cutout{cutout.capitalize()}']['stampData']
+
+        # unzip
+        with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
+            with fits.open(io.BytesIO(f.read())) as hdu:
+                data = hdu[0].data
+                # replace nans with zeros
+                cutout_dict[cutout] = np.nan_to_num(data)
+                # L2-normalize
+                cutout_dict[cutout] /= np.linalg.norm(cutout_dict[cutout])
+
+        # pad to 63x63 if smaller
+        shape = cutout_dict[cutout].shape
+        if shape != (63, 63):
+            # print(f'Shape of {candid}/{cutout}: {shape}, padding to (63, 63)')
+            cutout_dict[cutout] = np.pad(cutout_dict[cutout], [(0, 63 - shape[0]), (0, 63 - shape[1])],
+                                         mode='constant', constant_values=1e-9)
+
+    triplet = np.zeros((63, 63, 3))
+    triplet[:, :, 0] = cutout_dict['science']
+    triplet[:, :, 1] = cutout_dict['template']
+    triplet[:, :, 2] = cutout_dict['difference']
+
+    if to_tpu:
+        # Edge TPUs require additional processing
+        triplet = np.rint(triplet * 128 + 128).astype(np.uint8).flatten()
+
+    return triplet
+
+
+def alert_filter__ml(alert, ml_models: dict = None):
+    """Filter to apply to each alert.
+    """
+
+    scores = dict()
+
+    try:
+        ''' braai '''
+        triplet = make_triplet(alert)
+        triplets = np.expand_dims(triplet, axis=0)
+        braai = ml_models['braai']['model'].predict(x=triplets)[0]
+        # braai = 1.0
+        scores['braai'] = float(braai)
+        scores['braai_version'] = ml_models['braai']['version']
+    except Exception as e:
+        print(str(e))
+
+    return scores
+
+
+# cone search radius:
+cone_search_radius = float(config['xmatch']['cone_search_radius'])
+# convert to rad:
+if config['xmatch']['cone_search_unit'] == 'arcsec':
+    cone_search_radius *= np.pi / 180.0 / 3600.
+elif config['xmatch']['cone_search_unit'] == 'arcmin':
+    cone_search_radius *= np.pi / 180.0 / 60.
+elif config['xmatch']['cone_search_unit'] == 'deg':
+    cone_search_radius *= np.pi / 180.0
+elif config['xmatch']['cone_search_unit'] == 'rad':
+    cone_search_radius *= 1
+else:
+    raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
+
+
+def alert_filter__xmatch(db, alert):
+    """Filter to apply to each alert.
+    """
+
+    xmatches = dict()
+
+    try:
+        ra_geojson = float(alert['candidate']['ra'])
+        # geojson-friendly ra:
+        ra_geojson -= 180.0
+        dec_geojson = float(alert['candidate']['dec'])
+
+        ''' catalogs '''
+        for catalog in config['xmatch']['catalogs']:
+            catalog_filter = config['xmatch']['catalogs'][catalog]['filter']
+            catalog_projection = config['xmatch']['catalogs'][catalog]['projection']
+
+            object_position_query = dict()
+            object_position_query['coordinates.radec_geojson'] = {
+                '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
+            s = db[catalog].find({**object_position_query, **catalog_filter},
+                                 {**catalog_projection})
+            xmatches[catalog] = list(s)
+
+    except Exception as e:
+        print(str(e))
+
+    return xmatches
+
+
 def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=False):
 
     # connect to MongoDB:
@@ -159,6 +266,20 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
     _client, _db = connect_to_db()
     if verbose:
         print(f'{_date} :: Successfully connected')
+
+    # ML models:
+    print(f'{_date} :: Loading ML models')
+    ml_models = dict()
+    for m in config['ml_models']:
+        try:
+            m_v = config["ml_models"][m]["version"]
+            ml_models[m] = {'model': load_model(f'/app/models/{m}_{m_v}.h5'),
+                            'version': m_v}
+        except Exception as e:
+            print(f'Error loading ML model {m}')
+            traceback.print_exc()
+            print(e)
+            continue
 
     print(f'{_date} :: processing {_date}')
     documents = []
@@ -186,7 +307,7 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
 
                         # GeoJSON for 2D indexing
                         doc['coordinates'] = {}
-                        doc['coordinates']['epoch'] = doc['candidate']['jd']
+                        # doc['coordinates']['epoch'] = doc['candidate']['jd']
                         _ra = doc['candidate']['ra']
                         _dec = doc['candidate']['dec']
                         _radec = [_ra, _dec]
@@ -201,10 +322,23 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
                         doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                                'coordinates': _radec_geojson}
                         # radians and degrees:
-                        doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                        doc['coordinates']['radec_deg'] = [_ra, _dec]
+                        # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                        # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
                         # print(doc['coordinates'])
+
+                        # alert filters:
+
+                        # ML models:
+                        scores = alert_filter__ml(alert, ml_models=ml_models)
+                        alert['classifications'] = scores
+
+                        # cross-match with external catalogs:
+                        # print(alert['candid'], alert['candidate']['programpi'])
+                        # if record['candidate']['programpi'].strip() == 'TESS':
+                        # tic = time.time()
+                        xmatches = alert_filter__xmatch(_db, alert)
+                        alert['cross_matches'] = xmatches
 
                         documents.append(doc)
 
@@ -282,16 +416,34 @@ if __name__ == '__main__':
 
     # indexes
     db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                 ('_id', pymongo.ASCENDING)], background=True)
+                                 ('candid', pymongo.DESCENDING)], background=True)
+    db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                 ('objectId', pymongo.DESCENDING)], background=True)
     db[collection].create_index([('objectId', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candid', pymongo.ASCENDING)], background=True)
     db[collection].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
-    db[collection].create_index([('candidate.nid', pymongo.ASCENDING)], background=True)
-    db[collection].create_index([('candidate.field', pymongo.ASCENDING)], background=True)
-    db[collection].create_index([('candidate.fwhm', pymongo.ASCENDING)], background=True)
-    db[collection].create_index([('candidate.magpsf', pymongo.ASCENDING)], background=True)
-    db[collection].create_index([('candidate.rb', pymongo.ASCENDING)], background=True)
-    db[collection].create_index([('candidate.jd', pymongo.ASCENDING), ('candidate.programid', pymongo.ASCENDING)],
+    db[collection].create_index([('objectId', pymongo.DESCENDING),
+                                 ('candidate.pid', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('candidate.pdiffimfilename', pymongo.ASCENDING)],
+                                background=True)
+    db[collection].create_index([('candidate.jd', pymongo.ASCENDING),
+                                 ('candidate.programid', pymongo.ASCENDING),
+                                 ('candidate.programpi', pymongo.ASCENDING)],
+                                background=True)
+    db[collection].create_index([('candidate.jd', pymongo.DESCENDING),
+                                 ('classifications.braai', pymongo.DESCENDING),
+                                 ('candid', pymongo.DESCENDING)],
+                                background=True)
+    db[collection].create_index([('candidate.jd', 1),
+                                 ('candidate.field', 1),
+                                 ('candidate.rb', 1),
+                                 ('candidate.drb', 1),
+                                 ('classifications.braai', 1),
+                                 ('candidate.ndethist', 1),
+                                 ('candidate.magpsf', 1),
+                                 ('candidate.isdiffpos', 1),
+                                 ('objectId', 1)],
+                                name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
                                 background=True)
 
     # init threaded operations
