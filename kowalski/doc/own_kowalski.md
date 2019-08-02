@@ -1,4 +1,8 @@
-## Build your own Kowalski: production service  
+## Build your own Kowalski: production service
+
+<div class="alert alert-danger" role="alert">
+  <b>2019/08/02</b>: slightly outdated 
+</div>  
 
 ### Set-up instructions
 
