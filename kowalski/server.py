@@ -807,7 +807,7 @@ def parse_query(task, save: bool=False):
             if isinstance(_pipeline, str):
                 # passed string? evaluate:
                 catalog_pipeline = literal_eval(_pipeline.strip())
-            elif isinstance(_pipeline, dict):
+            elif isinstance(_pipeline, list) or isinstance(_pipeline, tuple):
                 # passed dict?
                 catalog_pipeline = _pipeline
             else:
@@ -1070,7 +1070,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
                                                               allowDiskUse=True,
                                                               maxTimeMS=max_time_ms)
 
-            query_result['query_result'] = await _select
+            query_result['query_result'] = await _select.to_list(length=None)
 
         elif query['query_type'] == 'general_search':
             # just evaluate. I know that's dangerous, but I'm checking things in broker.py
