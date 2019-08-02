@@ -3,9 +3,6 @@ This tutorial presents a collection of query examples.
 The DB access API supports two types of queries: `cone search` and `general search`.
 We are using a `MongoDB` `NoQSL` database on the backend.
 The query syntax might look unusual if you are experienced in `SQL`, but feels quite natural if you are using `python`. 
-If you have a query in mind, but only know how to express it in English or in `SQL`, 
-email that to Dima <a href="mailto:duev@caltech.edu">`duev@caltech.edu`</a>, you will get help 
-for converting that into something understandable by the API.
 
 
 #### Cone search
