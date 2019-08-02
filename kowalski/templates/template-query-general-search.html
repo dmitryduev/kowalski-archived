@@ -25,13 +25,13 @@
             <div class="card">
                 <div class="card-header" role="tab" id="headingCoordinatesTab">
                     <h5 class="mb-0">
-                        <a data-toggle="collapse collapsed" href="#coordinatesTab" aria-expanded="true"
+                        <a data-toggle="collapse" href="#coordinatesTab" aria-expanded="true"
                            aria-controls="coordinatesTab">
                             General search
                         </a>
                     </h5>
                 </div>
-                <div id="coordinatesTab" class="collapse show" role="tabpanel" aria-labelledby="headingCoordinatesTab">
+                <div id="coordinatesTab" class="collapse" role="tabpanel" aria-labelledby="headingCoordinatesTab">
                     <div class="card-body">
                         <form id="objects_form" class="form">
 
@@ -148,6 +148,234 @@
 
         </div>
 
+        <hr>
+
+        <div id="accordion" role="tablist">
+            <div class="card">
+                <div class="card-header" role="tab" id="headingFindOneTab">
+                    <h5 class="mb-0">
+                        <a data-toggle="collapse" href="#findOneTab" aria-expanded="true"
+                           aria-controls="findOneTab">
+                            Find one
+                        </a>
+                    </h5>
+                </div>
+                <div id="findOneTab" class="collapse show" role="tabpanel" aria-labelledby="headingFindOneTab">
+                    <div class="card-body">
+                        <form id="find_one_form" class="form">
+
+                            <div class="form-group row">
+                                <label for="find_one_catalog" class="col-md-2 control-label">
+                                    Catalog
+                                </label>
+
+                                <div class="col-md-10">
+                                    <select class="form-control form-control-sm" id="find_one_catalog"
+                                            name="find_one_catalog">
+                                        {% for catalog in catalogs %}
+                                        <option>{{ catalog }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="find_one_filter" class="col-md-2 control-label">
+                                    Filter
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="find_one_filter"
+                                           name="find_one_filter" placeholder="">
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="find_one_kwargs" class="col-md-2 control-label">
+                                    kwargs
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="find_one_kwargs"
+                                           name="find_one_kwargs" placeholder='e.g.: {"max_time_ms": 100}'>
+                                </div>
+
+                            </div>
+
+                        </form>
+
+                        <br>
+                        <div class="form-group row">
+                            <div class="col-md-12">
+                                <input class="btn btn-outline-primary" id="get_query_find_one" type="submit" value="Get query">
+                                <input class="btn btn-primary" id="submit_query_find_one" type="submit" value="Submit">
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div id="accordion" role="tablist">
+            <div class="card">
+                <div class="card-header" role="tab" id="headingCountTab">
+                    <h5 class="mb-0">
+                        <a data-toggle="collapse" href="#countTab" aria-expanded="true"
+                           aria-controls="countTab">
+                            Count documents
+                        </a>
+                    </h5>
+                </div>
+                <div id="countTab" class="collapse show" role="tabpanel" aria-labelledby="headingCountTab">
+                    <div class="card-body">
+                        <form id="count_form" class="form">
+
+                            <div class="form-group row">
+                                <label for="count_catalog" class="col-md-2 control-label">
+                                    Catalog
+                                </label>
+
+                                <div class="col-md-10">
+                                    <select class="form-control form-control-sm" id="count_catalog"
+                                            name="count_catalog">
+                                        {% for catalog in catalogs %}
+                                        <option>{{ catalog }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="count_filter" class="col-md-2 control-label">
+                                    Filter
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="count_filter"
+                                           name="count_filter" placeholder="">
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="count_kwargs" class="col-md-2 control-label">
+                                    kwargs
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="count_kwargs"
+                                           name="count_kwargs" placeholder='e.g.: {"max_time_ms": 100}'>
+                                </div>
+
+                            </div>
+
+                        </form>
+
+                        <br>
+                        <div class="form-group row">
+                            <div class="col-md-12">
+                                <input class="btn btn-outline-primary" id="get_query_count" type="submit" value="Get query">
+                                <input class="btn btn-primary" id="submit_query_count" type="submit" value="Submit">
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div id="accordion" role="tablist">
+            <div class="card">
+                <div class="card-header" role="tab" id="headingAggregateTab">
+                    <h5 class="mb-0">
+                        <a data-toggle="collapse" href="#aggregateTab" aria-expanded="true"
+                           aria-controls="aggregateTab">
+                            Aggregate
+                        </a>
+                    </h5>
+                </div>
+                <div id="aggregateTab" class="collapse show" role="tabpanel" aria-labelledby="headingAggregateTab">
+                    <div class="card-body">
+                        <form id="aggregate_form" class="form">
+
+                            <div class="form-group row">
+                                <label for="aggregate_catalog" class="col-md-2 control-label">
+                                    Catalog
+                                </label>
+
+                                <div class="col-md-10">
+                                    <select class="form-control form-control-sm" id="aggregate_catalog"
+                                            name="aggregate_catalog">
+                                        {% for catalog in catalogs %}
+                                        <option>{{ catalog }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="ra" class="col-md-2 col-form-label">Pipeline</label>
+                                <div class="col-md-10">
+                                    <textarea class="form-control form-control-sm"
+                                              id="aggregate_pipeline" name="aggregate_pipeline"
+                                              placeholder="Aggregation pipeline, e.g. [{'$match': ...}, {'$sample': ...}]"
+                                              rows="5"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="aggregate_kwargs" class="col-md-2 control-label">
+                                    kwargs
+                                </label>
+
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="aggregate_kwargs"
+                                           name="aggregate_kwargs" placeholder='e.g.: {"max_time_ms": 100}'>
+                                </div>
+
+                            </div>
+
+                        </form>
+
+                        <br>
+                        <div class="form-group row">
+                            <div class="col-md-12">
+                                <input class="btn btn-outline-primary" id="get_query_aggregate" type="submit" value="Get query">
+                                <input class="btn btn-primary" id="submit_query_aggregate" type="submit" value="Submit">
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
 {% endblock %}
@@ -203,6 +431,92 @@
                 // kwargs:
                 query['kwargs'] = {};
                 let kwargs = $("#find_kwargs").val();
+
+                if (kwargs.length === 0) {
+                    query['kwargs'] = {};
+                }
+                else {
+                    query['kwargs'] = JSON5.parse(kwargs);
+                }
+            }
+
+            else if (query_type === 'find_one') {
+                query['query_type'] = 'find_one';
+                // serialize object query
+                query['query'] = {};
+
+                query['query']['catalog'] = $("#find_one_catalog").val();
+                {#query['query']['filter'] = $("#find_filter").val();#}
+                {#query['query']['projection'] = $("#find_projection").val();#}
+
+                let filter = $("#find_one_filter").val();
+
+                if (filter.length === 0) {
+                    query['query']['filter'] = {};
+                }
+                else {
+                    query['query']['filter'] = JSON5.parse(filter);
+                }
+
+                // kwargs:
+                query['kwargs'] = {};
+                let kwargs = $("#find_kwargs").val();
+
+                if (kwargs.length === 0) {
+                    query['kwargs'] = {};
+                }
+                else {
+                    query['kwargs'] = JSON5.parse(kwargs);
+                }
+            }
+
+            else if (query_type === 'count_documents') {
+                query['query_type'] = 'count_documents';
+                // serialize object query
+                query['query'] = {};
+
+                query['query']['catalog'] = $("#count_catalog").val();
+
+                let filter = $("#count_filter").val();
+
+                if (filter.length === 0) {
+                    query['query']['filter'] = {};
+                }
+                else {
+                    query['query']['filter'] = JSON5.parse(filter);
+                }
+
+                // kwargs:
+                query['kwargs'] = {};
+                let kwargs = $("#count_kwargs").val();
+
+                if (kwargs.length === 0) {
+                    query['kwargs'] = {};
+                }
+                else {
+                    query['kwargs'] = JSON5.parse(kwargs);
+                }
+            }
+
+            else if (query_type === 'aggregate') {
+                query['query_type'] = 'aggregate';
+                // serialize object query
+                query['query'] = {};
+
+                query['query']['catalog'] = $("#aggregate_catalog").val();
+
+                let pipeline = $("#aggregate_pipeline").val();
+
+                if (pipeline.length === 0) {
+                    query['query']['pipeline'] = {};
+                }
+                else {
+                    query['query']['pipeline'] = JSON5.parse(pipeline);
+                }
+
+                // kwargs:
+                query['kwargs'] = {};
+                let kwargs = $("#aggregate_kwargs").val();
 
                 if (kwargs.length === 0) {
                     query['kwargs'] = {};
@@ -338,7 +652,193 @@
                 });
             });
 
-        })
+        });
+
+        // Find one
+        // get query in JSON format
+        $(document).ready(function() {
+            $('#get_query_find_one').click(function () {
+                var query = construct_query('find_one');
+                bootbox.alert(JSON.stringify(query, null, 4));
+            });
+        });
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query_find_one').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fa fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fa fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            var query = construct_query('find_one');
+
+                            // season query with some salt:
+                            query['kwargs']['_id'] = random_string();
+                            // do not wait for the result
+                            query['kwargs']['enqueue_only'] = true;
+                            {#console.log(JSON.stringify(query));#}
+
+                            $.ajax({url: '{{-script_root-}}/web-query',
+                                method: 'PUT',
+                                data: JSON.stringify(query),
+                                processData: false,
+                                contentType: 'application/json',
+                                success: function(data) {
+                                    if (data['message'] === 'success') {
+                                        {#location.reload(true);#}
+                                        showFlashingMessage('Info:', 'Running query.', 'success');
+                                    }
+                                    else {
+                                        $('#addUserModal').modal('hide');
+                                        showFlashingMessage('Info:', 'Failed to run query: ' + data['message'], 'danger');
+                                    }
+                                },
+                                error: function(data) {
+                                    $('#addUserModal').modal('hide');
+                                    showFlashingMessage('Info:', 'Failed to run query.', 'danger');
+                                }
+                            });
+                            bootbox.hideAll();
+                            return false;
+                        }
+                    }
+                });
+            });
+
+        });
+
+        // Count
+        // get query in JSON format
+        $(document).ready(function() {
+            $('#get_query_count').click(function () {
+                var query = construct_query('count_documents');
+                bootbox.alert(JSON.stringify(query, null, 4));
+            });
+        });
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query_count').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fa fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fa fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            var query = construct_query('count_documents');
+
+                            // season query with some salt:
+                            query['kwargs']['_id'] = random_string();
+                            // do not wait for the result
+                            query['kwargs']['enqueue_only'] = true;
+                            {#console.log(JSON.stringify(query));#}
+
+                            $.ajax({url: '{{-script_root-}}/web-query',
+                                method: 'PUT',
+                                data: JSON.stringify(query),
+                                processData: false,
+                                contentType: 'application/json',
+                                success: function(data) {
+                                    if (data['message'] === 'success') {
+                                        {#location.reload(true);#}
+                                        showFlashingMessage('Info:', 'Running query.', 'success');
+                                    }
+                                    else {
+                                        $('#addUserModal').modal('hide');
+                                        showFlashingMessage('Info:', 'Failed to run query: ' + data['message'], 'danger');
+                                    }
+                                },
+                                error: function(data) {
+                                    $('#addUserModal').modal('hide');
+                                    showFlashingMessage('Info:', 'Failed to run query.', 'danger');
+                                }
+                            });
+                            bootbox.hideAll();
+                            return false;
+                        }
+                    }
+                });
+            });
+
+        });
+
+        // Aggregate
+        // get query in JSON format
+        $(document).ready(function() {
+            $('#get_query_aggregate').click(function () {
+                var query = construct_query('aggregate');
+                bootbox.alert(JSON.stringify(query, null, 4));
+            });
+        });
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query_aggregate').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fa fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fa fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            var query = construct_query('aggregate');
+
+                            // season query with some salt:
+                            query['kwargs']['_id'] = random_string();
+                            // do not wait for the result
+                            query['kwargs']['enqueue_only'] = true;
+                            {#console.log(JSON.stringify(query));#}
+
+                            $.ajax({url: '{{-script_root-}}/web-query',
+                                method: 'PUT',
+                                data: JSON.stringify(query),
+                                processData: false,
+                                contentType: 'application/json',
+                                success: function(data) {
+                                    if (data['message'] === 'success') {
+                                        {#location.reload(true);#}
+                                        showFlashingMessage('Info:', 'Running query.', 'success');
+                                    }
+                                    else {
+                                        $('#addUserModal').modal('hide');
+                                        showFlashingMessage('Info:', 'Failed to run query: ' + data['message'], 'danger');
+                                    }
+                                },
+                                error: function(data) {
+                                    $('#addUserModal').modal('hide');
+                                    showFlashingMessage('Info:', 'Failed to run query.', 'danger');
+                                }
+                            });
+                            bootbox.hideAll();
+                            return false;
+                        }
+                    }
+                });
+            });
+
+        });
     </script>
 
     {# show flashing messages #}
