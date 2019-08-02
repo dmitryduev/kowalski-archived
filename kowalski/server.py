@@ -728,6 +728,96 @@ def parse_query(task, save: bool=False):
         else:
             raise Exception('Atata!')
 
+    elif task['query_type'] == 'find_one':
+        # specify task type:
+        task_reduced['query_type'] = 'find_one'
+
+        go_on = True
+
+        if task['user'] != config['server']['admin_username']:
+            prohibited_collections = ('users', 'stats', 'queries')
+            if str(task['query']['catalog']) in prohibited_collections:
+                go_on = False
+
+        if go_on:
+            task_reduced['query']['catalog'] = task['query']['catalog']
+
+            # construct filter
+            _filter = task['query']['filter']
+            if isinstance(_filter, str):
+                # passed string? evaluate:
+                catalog_filter = literal_eval(_filter.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_filter = _filter
+            else:
+                raise ValueError('Unsupported filter specification')
+
+            task_reduced['query']['filter'] = catalog_filter
+
+        else:
+            raise Exception('Atata!')
+
+    elif task['query_type'] == 'count_documents':
+        # specify task type:
+        task_reduced['query_type'] = 'count_documents'
+
+        go_on = True
+
+        if task['user'] != config['server']['admin_username']:
+            prohibited_collections = ('users', 'stats', 'queries')
+            if str(task['query']['catalog']) in prohibited_collections:
+                go_on = False
+
+        if go_on:
+            task_reduced['query']['catalog'] = task['query']['catalog']
+
+            # construct filter
+            _filter = task['query']['filter']
+            if isinstance(_filter, str):
+                # passed string? evaluate:
+                catalog_filter = literal_eval(_filter.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_filter = _filter
+            else:
+                raise ValueError('Unsupported filter specification')
+
+            task_reduced['query']['filter'] = catalog_filter
+
+        else:
+            raise Exception('Atata!')
+
+    elif task['query_type'] == 'aggregate':
+        # specify task type:
+        task_reduced['query_type'] = 'aggregate'
+
+        go_on = True
+
+        if task['user'] != config['server']['admin_username']:
+            prohibited_collections = ('users', 'stats', 'queries')
+            if str(task['query']['catalog']) in prohibited_collections:
+                go_on = False
+
+        if go_on:
+            task_reduced['query']['catalog'] = task['query']['catalog']
+
+            # construct pipeline
+            _pipeline = task['query']['pipeline']
+            if isinstance(_pipeline, str):
+                # passed string? evaluate:
+                catalog_pipeline = literal_eval(_pipeline.strip())
+            elif isinstance(_pipeline, dict):
+                # passed dict?
+                catalog_pipeline = _pipeline
+            else:
+                raise ValueError('Unsupported pipeline specification')
+
+            task_reduced['query']['pipeline'] = catalog_pipeline
+
+        else:
+            raise Exception('Atata!')
+
     elif task['query_type'] == 'cone_search':
         # specify task type:
         task_reduced['query_type'] = 'cone_search'
@@ -864,7 +954,7 @@ def parse_query(task, save: bool=False):
         return '', task_reduced, {}
 
 
-async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=False):
+async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = False):
 
     db = mongo
 
@@ -956,6 +1046,31 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool=Fal
                 query_result['query_result'] = _select
             else:
                 query_result['query_result'] = await _select.to_list(length=None)
+
+        elif query['query_type'] == 'find_one':
+            # print(query)
+
+            _select = db[query['query']['catalog']].find_one(query['query']['filter'],
+                                                             max_time_ms=max_time_ms)
+
+            query_result['query_result'] = await _select
+
+        elif query['query_type'] == 'count_documents':
+            # print(query)
+
+            _select = db[query['query']['catalog']].count_documents(query['query']['filter'],
+                                                                    maxTimeMS=max_time_ms)
+
+            query_result['query_result'] = await _select
+
+        elif query['query_type'] == 'aggregate':
+            # print(query)
+
+            _select = db[query['query']['catalog']].aggregate(query['query']['pipeline'],
+                                                              allowDiskUse=True,
+                                                              maxTimeMS=max_time_ms)
+
+            query_result['query_result'] = await _select
 
         elif query['query_type'] == 'general_search':
             # just evaluate. I know that's dangerous, but I'm checking things in broker.py
@@ -1106,11 +1221,9 @@ async def query(request):
     try:
         # parse query
         # known_query_types = ('cone_search', 'general_search')
-        # todo: add separate "convenience" query types for the most in-demand cases:
-        # known_query_types = ('cone_search', 'general_search',
-        #                      'find', 'find_one', 'aggregate', 'index_information', 'count_documents')
+        # add separate "convenience" query types for the most in-demand cases:
         known_query_types = ('cone_search', 'general_search',
-                             'find',
+                             'find', 'find_one', 'aggregate', 'count_documents',
                              'info')
 
         assert _query['query_type'] in known_query_types, \
@@ -1313,7 +1426,7 @@ async def web_query_put(request):
     try:
         # parse query
         known_query_types = ('cone_search', 'general_search',
-                             'find',
+                             'find', 'find_one', 'aggregate', 'count_documents',
                              'info')
 
         assert _query['query_type'] in known_query_types, \
