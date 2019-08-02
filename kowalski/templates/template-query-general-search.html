@@ -58,7 +58,7 @@
 
         <hr><br>
 
-        <h4>Convenience general query subtypes</h4><br>
+        <h4>Convenience general search sub-types</h4><br>
 
         <div id="accordion" role="tablist">
             <div class="card">
@@ -70,7 +70,7 @@
                         </a>
                     </h5>
                 </div>
-                <div id="findTab" class="collapse show" role="tabpanel" aria-labelledby="headingFindTab">
+                <div id="findTab" class="collapse" role="tabpanel" aria-labelledby="headingFindTab">
                     <div class="card-body">
                         <form id="find_form" class="form">
 
@@ -160,7 +160,7 @@
                         </a>
                     </h5>
                 </div>
-                <div id="findOneTab" class="collapse show" role="tabpanel" aria-labelledby="headingFindOneTab">
+                <div id="findOneTab" class="collapse" role="tabpanel" aria-labelledby="headingFindOneTab">
                     <div class="card-body">
                         <form id="find_one_form" class="form">
 
@@ -237,7 +237,7 @@
                         </a>
                     </h5>
                 </div>
-                <div id="countTab" class="collapse show" role="tabpanel" aria-labelledby="headingCountTab">
+                <div id="countTab" class="collapse" role="tabpanel" aria-labelledby="headingCountTab">
                     <div class="card-body">
                         <form id="count_form" class="form">
 
@@ -314,7 +314,7 @@
                         </a>
                     </h5>
                 </div>
-                <div id="aggregateTab" class="collapse show" role="tabpanel" aria-labelledby="headingAggregateTab">
+                <div id="aggregateTab" class="collapse" role="tabpanel" aria-labelledby="headingAggregateTab">
                     <div class="card-body">
                         <form id="aggregate_form" class="form">
 
@@ -460,7 +460,7 @@
 
                 // kwargs:
                 query['kwargs'] = {};
-                let kwargs = $("#find_kwargs").val();
+                let kwargs = $("#find_one_kwargs").val();
 
                 if (kwargs.length === 0) {
                     query['kwargs'] = {};
