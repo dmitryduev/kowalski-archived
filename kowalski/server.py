@@ -835,6 +835,39 @@ def parse_query(task, save: bool=False):
         else:
             raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
 
+        if isinstance(task['object_coordinates']['radec'], str):
+            radec = task['object_coordinates']['radec'].strip()
+
+            # comb radecs for single sources as per Tom's request:
+            if radec[0] not in ('[', '(', '{'):
+                ra, dec = radec.split()
+                if ('s' in radec) or (':' in radec):
+                    radec = f"[('{ra}', '{dec}')]"
+                else:
+                    radec = f"[({ra}, {dec})]"
+
+            # print(task['object_coordinates']['radec'])
+            objects = literal_eval(radec)
+            # print(type(objects), isinstance(objects, dict), isinstance(objects, list))
+        elif isinstance(task['object_coordinates']['radec'], list) or \
+                isinstance(task['object_coordinates']['radec'], tuple) or \
+                isinstance(task['object_coordinates']['radec'], dict):
+            objects = task['object_coordinates']['radec']
+        else:
+            raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
+
+        # this could either be list/tuple [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
+        if isinstance(objects, list) or isinstance(objects, tuple):
+            object_coordinates = objects
+            object_names = [str(obj_crd) for obj_crd in object_coordinates]
+        elif isinstance(objects, dict):
+            object_names, object_coordinates = zip(*objects.items())
+            object_names = list(map(str, object_names))
+        else:
+            raise ValueError('Unsupported object coordinates specs')
+
+        # print(object_names, object_coordinates)
+
         for catalog in task['catalogs']:
             # TODO: check that not trying to query what's not allowed!
             task_reduced['query'][catalog] = dict()
@@ -851,9 +884,6 @@ def parse_query(task, save: bool=False):
                 raise ValueError('Unsupported filter specification')
 
             # construct projection
-            # catalog_projection = dict()
-            # FIXME: always return standardized coordinates?
-            # catalog_projection = {'coordinates.epoch': 1, 'coordinates.radec_str': 1, 'coordinates.radec': 1}
             _projection = task['catalogs'][catalog]['projection']
             if isinstance(_projection, str):
                 # passed string? evaluate:
@@ -866,30 +896,12 @@ def parse_query(task, save: bool=False):
 
             # parse coordinate list
 
-            # comb radecs for single sources as per Tom's request:
-            radec = task['object_coordinates']['radec'].strip()
-            if radec[0] not in ('[', '(', '{'):
-                ra, dec = radec.split()
-                if ('s' in radec) or (':' in radec):
-                    radec = f"[('{ra}', '{dec}')]"
-                else:
-                    radec = f"[({ra}, {dec})]"
-
-            # print(task['object_coordinates']['radec'])
-            objects = literal_eval(radec)
-            # print(type(objects), isinstance(objects, dict), isinstance(objects, list))
-
-            # this could either be list/tuple [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
-            if isinstance(objects, list) or isinstance(objects, tuple):
-                object_coordinates = objects
-                object_names = [str(obj_crd) for obj_crd in object_coordinates]
-            elif isinstance(objects, dict):
-                object_names, object_coordinates = zip(*objects.items())
-                object_names = list(map(str, object_names))
-            else:
-                raise ValueError('Unsupported type of object coordinates')
-
-            # print(object_names, object_coordinates)
+            if isinstance(_projection, str):
+                # passed string? evaluate:
+                catalog_projection = literal_eval(_projection.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                catalog_projection = _projection
 
             for oi, obj_crd in enumerate(object_coordinates):
                 # convert ra/dec into GeoJSON-friendly format
