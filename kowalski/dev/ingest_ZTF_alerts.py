@@ -412,7 +412,7 @@ if __name__ == '__main__':
     batch_size = 1024
 
     # collection name
-    collection = 'ZTF_alerts2'
+    collection = 'ZTF_alerts'
 
     # indexes
     db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
