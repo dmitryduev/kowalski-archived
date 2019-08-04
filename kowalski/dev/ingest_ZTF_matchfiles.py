@@ -488,14 +488,17 @@ if __name__ == '__main__':
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
     # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(30)
+    pool = ProcessPoolExecutor(3)
 
     # for ff in files[::-1]:
-    for ff in sorted(files):
+    for ff in sorted(files[:3]):
         # process_file(_file=ff, _collections=collections, _batch_size=batch_size,
         #              _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
         pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
                     _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
+
+    # with mp.Pool(processes=np.min((4, n_cpu))) as p:
+    #     alerts = np.array(list(tqdm(p.imap(load_json, path.glob('*.json')), total=n_alerts)))
 
     # wait for everything to finish
     pool.shutdown(wait=True)
