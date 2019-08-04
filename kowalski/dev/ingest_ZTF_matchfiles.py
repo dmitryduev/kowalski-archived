@@ -488,10 +488,10 @@ if __name__ == '__main__':
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
     # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(3)
+    pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
-    for ff in sorted(files[:3]):
+    for ff in sorted(files):
         # process_file(_file=ff, _collections=collections, _batch_size=batch_size,
         #              _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
         pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
