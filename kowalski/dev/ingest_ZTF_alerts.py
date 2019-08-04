@@ -331,14 +331,14 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
 
                         # ML models:
                         scores = alert_filter__ml(alert, ml_models=ml_models)
-                        alert['classifications'] = scores
+                        doc['classifications'] = scores
 
                         # cross-match with external catalogs:
                         # print(alert['candid'], alert['candidate']['programpi'])
                         # if record['candidate']['programpi'].strip() == 'TESS':
                         # tic = time.time()
                         xmatches = alert_filter__xmatch(_db, alert)
-                        alert['cross_matches'] = xmatches
+                        doc['cross_matches'] = xmatches
 
                         documents.append(doc)
 
