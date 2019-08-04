@@ -402,7 +402,7 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    location = '/_tmp/ztf_alerts'
+    location = '/_tmp/ztf_alerts2'
 
     dates = os.listdir(location) if not args.obsdate else [args.obsdate]
     dates = [d for d in dates if os.path.isdir(os.path.join(location, d))]
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     batch_size = 1024
 
     # collection name
-    collection = 'ZTF_alerts'
+    collection = 'ZTF_alerts2'
 
     # indexes
     db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
@@ -434,17 +434,17 @@ if __name__ == '__main__':
                                  ('classifications.braai', pymongo.DESCENDING),
                                  ('candid', pymongo.DESCENDING)],
                                 background=True)
-    db[collection].create_index([('candidate.jd', 1),
-                                 ('candidate.field', 1),
-                                 ('candidate.rb', 1),
-                                 ('candidate.drb', 1),
-                                 ('classifications.braai', 1),
-                                 ('candidate.ndethist', 1),
-                                 ('candidate.magpsf', 1),
-                                 ('candidate.isdiffpos', 1),
-                                 ('objectId', 1)],
-                                name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
-                                background=True)
+    # db[collection].create_index([('candidate.jd', 1),
+    #                              ('candidate.field', 1),
+    #                              ('candidate.rb', 1),
+    #                              ('candidate.drb', 1),
+    #                              ('classifications.braai', 1),
+    #                              ('candidate.ndethist', 1),
+    #                              ('candidate.magpsf', 1),
+    #                              ('candidate.isdiffpos', 1),
+    #                              ('objectId', 1)],
+    #                             name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
+    #                             background=True)
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)

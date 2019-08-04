@@ -308,7 +308,6 @@ class AlertConsumer(object):
                                                             ('candidate.field', 1),
                                                             ('candidate.rb', 1),
                                                             ('candidate.drb', 1),
-                                                            ('classifications.braai', 1),
                                                             ('candidate.ndethist', 1),
                                                             ('candidate.magpsf', 1),
                                                             ('candidate.isdiffpos', 1),
