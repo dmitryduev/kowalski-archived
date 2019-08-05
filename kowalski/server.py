@@ -1885,7 +1885,7 @@ async def ztf_alert_get_handler(request):
     #                                                           {'cutoutScience': 0,
     #                                                            'cutoutTemplate': 0,
     #                                                            'cutoutDifference': 0})
-    alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid})
+    alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid}, max_time_ms=30000)
     alert = loads(dumps(alert))
 
     download = request.query.get('download', None)
@@ -1908,7 +1908,8 @@ async def ztf_alert_get_handler(request):
             obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
                                                                 {'cutoutScience': 0,
                                                                  'cutoutTemplate': 0,
-                                                                 'cutoutDifference': 0}).to_list(length=None)
+                                                                 'cutoutDifference': 0},
+                                                                max_time_ms=60000).to_list(length=None)
             dflc = make_dataframe(obj)
             lc_object = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
                                     match_radius_arcsec=match_radius_arcsec,
@@ -1941,11 +1942,12 @@ async def ztf_alert_get_handler(request):
             lc_['data'] = lc__
             lc_candid.append(lc_)
 
-        # todo: make composite light curve from all packets for alert['objectId']
+        # make composite light curve from all packets for alert['objectId']
         obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
                                                             {'cutoutScience': 0,
                                                              'cutoutTemplate': 0,
-                                                             'cutoutDifference': 0}).to_list(length=None)
+                                                             'cutoutDifference': 0},
+                                                            max_time_ms=60000).to_list(length=None)
         # print([o['_id'] for o in obj])
         dflc = make_dataframe(obj)
         lc_obj = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
@@ -2010,7 +2012,8 @@ async def ztf_alert_get_cutout_handler(request):
     assert file_format in ['fits', 'png']
 
     alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
-                                                              {f'cutout{cutout}': 1})
+                                                              {f'cutout{cutout}': 1},
+                                                              max_time_ms=60000)
 
     cutout_data = loads(dumps([alert[f'cutout{cutout}']['stampData']]))[0]
 
@@ -2187,7 +2190,8 @@ async def ztf_alert_post_handler(request):
             alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'prv_candidates': 0,
                                                                        'cutoutScience': 0,
                                                                        'cutoutTemplate': 0,
-                                                                       'cutoutDifference': 0}).to_list(length=None)
+                                                                       'cutoutDifference': 0},
+                                                                   max_time_ms=300000).to_list(length=None)
 
             context = {'logo': config['server']['logo'],
                        'user': session['user_id'],
@@ -2236,7 +2240,8 @@ async def my_queries_handler(request):
     # grab user tasks:
     user_tasks = await request.app['mongo'].queries.find({'user': session['user_id']},
                                                          {'task_id': 1, 'status': 1, 'created': 1, 'expires': 1,
-                                                          'last_modified': 1}).sort('created', -1).to_list(length=1000)
+                                                          'last_modified': 1},
+                                                         max_time_ms=60000).sort('created', -1).to_list(length=1000)
 
     context = {'logo': config['server']['logo'],
                'user': session['user_id'],
