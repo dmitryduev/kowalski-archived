@@ -992,7 +992,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
         # cone search:
         if query['query_type'] == 'cone_search':
 
-            known_kwargs = ('skip', 'hint', 'limit')
+            known_kwargs = ('skip', 'hint', 'limit', 'sort')
             kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
             kwargs['comment'] = str(query['user'])
 
@@ -1017,7 +1017,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
         elif query['query_type'] == 'find':
             # print(query)
 
-            known_kwargs = ('skip', 'hint', 'limit')
+            known_kwargs = ('skip', 'hint', 'limit', 'sort')
             kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
             kwargs['comment'] = str(query['user'])
 
@@ -1041,7 +1041,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
         elif query['query_type'] == 'find_one':
             # print(query)
 
-            known_kwargs = ('skip', 'hint', 'limit')
+            known_kwargs = ('skip', 'hint', 'limit', 'sort')
             kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
             kwargs['comment'] = str(query['user'])
 
