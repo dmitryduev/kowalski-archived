@@ -117,7 +117,7 @@ def dump_tess_parallel(obsdate=None):
         query = {'candidate.jd': {'$gt': jd, '$lt': jd + 1},
                  # 'candidate.programid': 1,
                  'candidate.programid': {'$in': [1, 3]},
-                 'candidate.programpi': 'TESS'}
+                 'candidate.programpi': {'$in': ['TESS', 'TESS_Prince']}}
 
         # index name to use:
         hint = 'candidate.jd_1_candidate.programid_1_candidate.programpi_1'
