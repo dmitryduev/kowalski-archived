@@ -104,10 +104,6 @@ def dump_tess_parallel(obsdate=None):
 
         path_date = os.path.join(config['path']['path_tess'], datestr)
 
-        # mkdir if necessary
-        if not os.path.exists(path_date):
-            os.makedirs(path_date)
-
         jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
 
         collection_alerts = 'ZTF_alerts'
@@ -126,6 +122,10 @@ def dump_tess_parallel(obsdate=None):
         print(f'Alerts in TESS fields to compress: {num_doc}')
 
         if num_doc > 0:
+
+            # mkdir if necessary
+            if not os.path.exists(path_date):
+                os.makedirs(path_date)
 
             # fetch candid's:
             cursor = db[collection_alerts].find(query, {'_id': 0, 'candid': 1}).hint(hint)  # .limit(3)
@@ -159,6 +159,11 @@ def dump_tess_parallel(obsdate=None):
             subprocess.run(['/usr/local/bin/gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
             print(time_stamps(), 'Done')
 
+            # remove compressed file to save space
+            print(time_stamps(), f"Removing compressed tar-ball: {path_date}")
+            subprocess.run(['rm', '-f', path_tarball_date])
+            print(time_stamps(), 'Done')
+
         else:
             print(time_stamps(), 'Nothing to do')
 
@@ -182,10 +187,6 @@ def dump_tess(obsdate=None):
 
         path_date = os.path.join(config['path']['path_tess'], datestr)
 
-        # mkdir if necessary
-        if not os.path.exists(path_date):
-            os.makedirs(path_date)
-
         jd = Time(datetime.datetime.strptime(datestr, '%Y%m%d')).jd
 
         collection_alerts = 'ZTF_alerts'
@@ -204,8 +205,11 @@ def dump_tess(obsdate=None):
         print(f'Alerts in TESS fields to compress: {num_doc}')
 
         if num_doc > 0:
+            # mkdir if necessary
+            if not os.path.exists(path_date):
+                os.makedirs(path_date)
 
-            cursor = db[collection_alerts].find(query).hint(hint)#.limit(3)
+            cursor = db[collection_alerts].find(query).hint(hint)  # .limit(3)
 
             # for alert in cursor.limit(1):
             for alert in tqdm.tqdm(cursor, total=num_doc):
@@ -232,6 +236,11 @@ def dump_tess(obsdate=None):
             print(time_stamps(), f'Uploading to gs://{bucket_name} bucket on Google Cloud')
             subprocess.run(['/usr/local/bin/gsutil', 'cp', path_tarball_date, f'gs://{bucket_name}/'])
             subprocess.run(['/usr/local/bin/gsutil', 'iam', 'ch', 'allUsers:objectViewer', f'gs://{bucket_name}'])
+            print(time_stamps(), 'Done')
+
+            # remove compressed file to save space
+            print(time_stamps(), f"Removing compressed tar-ball: {path_date}")
+            subprocess.run(['rm', '-f', path_tarball_date])
             print(time_stamps(), 'Done')
 
         else:
