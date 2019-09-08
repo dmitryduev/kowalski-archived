@@ -321,6 +321,13 @@ class AlertConsumer(object):
                                                             ('candid', pymongo.DESCENDING)],
                                                            background=True)
         # self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
+        #                                                     ('classifications.braai', 1),
+        #                                                     ('candidate.magpsf', 1),
+        #                                                     ('candidate.isdiffpos', 1),
+        #                                                     ('candidate.ndethist', 1)],
+        #                                                    name='jd__braai__magpsf__isdiffpos__ndethist',
+        #                                                    background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
         #                                                     ('candidate.field', 1),
         #                                                     ('candidate.rb', 1),
         #                                                     ('candidate.drb', 1),

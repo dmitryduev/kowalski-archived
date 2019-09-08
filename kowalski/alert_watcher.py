@@ -280,7 +280,7 @@ class AlertConsumer(object):
         self.config = config
         # self.collection_alerts = 'ZTF_alerts'
         self.collection_alerts = 'ZTF_alerts2'
-        self.collection_alert_cross_matches = 'ZTF_alerts_cross_match'
+        self.collection_alerts_aux = 'ZTF_alerts2_aux'
         self.db = None
         self.connect_to_db()
 
@@ -303,6 +303,13 @@ class AlertConsumer(object):
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
                                                             ('classifications.braai', pymongo.DESCENDING),
                                                             ('candid', pymongo.DESCENDING)],
+                                                           background=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
+                                                            ('classifications.braai', 1),
+                                                            ('candidate.magpsf', 1),
+                                                            ('candidate.isdiffpos', 1),
+                                                            ('candidate.ndethist', 1)],
+                                                           name='jd__braai__magpsf__isdiffpos__ndethist',
                                                            background=True)
         self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
                                                             ('candidate.field', 1),
@@ -478,7 +485,7 @@ class AlertConsumer(object):
 
                 print(*time_stamps(), self.topic, objectId, candid)
 
-                # candid in db?
+                # check that candid not in collection_alerts
                 if self.db['db'][self.collection_alerts].count_documents({'candid': candid}, limit=1) == 0:
                     # candid not in db, ingest
 
@@ -491,30 +498,30 @@ class AlertConsumer(object):
                     scores = alert_filter__ml(record, ml_models=self.ml_models)
                     alert['classifications'] = scores
 
-                    # cross-match with external catalogs:
-                    if self.db['db'][self.collection_alert_cross_matches].count_documents({'_id': objectId},
-                                                                                          limit=1) == 0:
-                        # print(alert['candid'], alert['candidate']['programpi'])
-                        # if record['candidate']['programpi'].strip() == 'TESS':
+                    print(*time_stamps(), f'ingesting {alert["candid"]} into db')
+                    self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
+
+                    # cross-match with external catalogs if objectId not in collection_alerts_aux:
+                    if self.db['db'][self.collection_alerts_aux].count_documents({'_id': objectId}, limit=1) == 0:
                         # tic = time.time()
                         xmatches = alert_filter__xmatch(self.db['db'], alert)
                         # alert['cross_matches'] = xmatches
                         # toc = time.time()
                         # print(f'xmatch for {alert["candid"]} took {toc-tic:.2f} s')
 
-                        alert_xmatches = {'_id': objectId,
-                                          'cross_matches': xmatches}
+                        alert_aux = {'_id': objectId,
+                                     'cross_matches': xmatches,
+                                     'prv_candidates': []}
 
-                        self.insert_db_entry(_collection=self.collection_alert_cross_matches, _db_entry=alert_xmatches)
-
-                    print(*time_stamps(), f'ingesting {alert["candid"]} into db')
-                    self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
+                        self.insert_db_entry(_collection=self.collection_alerts_aux, _db_entry=alert_aux)
 
                     # dump packet as json to disk if in a public TESS sector
-                    if alert['candidate']['programpi'] == 'TESS' and alert['candidate']['programid'] == 1:
+                    if 'TESS' in alert['candidate']['programpi']:
+                        # put prv_candidates back
+                        alert['prv_candidates'] = prv_candidates
 
                         # get cross-matches
-                        xmatches = self.db['db'][self.collection_alert_cross_matches].find_one({'_id': objectId})
+                        xmatches = self.db['db'][self.collection_alerts_aux].find_one({'_id': objectId})
                         alert['cross_matches'] = xmatches['cross_matches']
 
                         path_alert_dir = os.path.join(path_alerts, datestr)
@@ -531,127 +538,16 @@ class AlertConsumer(object):
                             _err = traceback.format_exc()
                             print(*time_stamps(), str(_err))
 
-                    # iterate over prv_candidates
+                    # ingest prv_candidates
 
-                    for prv_candidate in prv_candidates:
-                        prv_candid = prv_candidate['candid']
-                        prv_pid = prv_candidate['candid']
-                        # pop nulls
-                        prv_candidate = {kk: vv for kk, vv in prv_candidate.items() if vv is not None}
-                        if prv_candid is not None:
-                            if self.db['db'][self.collection_alerts].count_documents({'candid': prv_candid},
-                                                                                     limit=1) == 0:
-                                # candid not in db, ingest
-                                _a = {'objectId': objectId,
-                                      'candid': prv_candid,
-                                      'candidate': prv_candidate}
+                    # fixme? pop nulls - save space
+                    prv_candidates = [{kk: vv for kk, vv in prv_candidate.items() if vv is not None}
+                                      for prv_candidate in prv_candidates]
 
-                                # remove possible non-detection with same pid
-                                if self.db['db'][self.collection_alerts].count_documents(
-                                        {'candidate.pid': prv_pid},
-                                        limit=1) == 1:
-                                    self.replace_db_entry(_collection=self.collection_alerts,
-                                                          _filter={'candidate.pid': prv_pid}, _db_entry=_a)
-                                else:
-                                    self.insert_db_entry(_collection=self.collection_alerts, _db_entry=_a)
-                        else:
-                            # candid==None
-                            if self.db['db'][self.collection_alerts].count_documents({'candidate.pid': prv_pid},
-                                                                                     limit=1) == 0:
-                                # pid not in db (non-detection), ingest
-                                _a = {'objectId': objectId,
-                                      'candidate': prv_candidate}
-                                self.insert_db_entry(_collection=self.collection_alerts, _db_entry=_a)
-
-                else:
-                    # candid in db
-                    tmp = list(self.db['db'][self.collection_alerts].find({'candid': candid},
-                                                                          {'_id': 0, 'coordinates': 1}))
-                    if (len(tmp) > 0) and ('coordinates' not in tmp[0]):
-                        # saved from prv_candidates of another alert, update entry
-
-                        # ingest decoded avro packet into db
-                        alert, prv_candidates = self.alert_mongify(record)
-
-                        # alert filters:
-
-                        # ML models:
-                        scores = alert_filter__ml(record, ml_models=self.ml_models)
-                        alert['classifications'] = scores
-
-                        # cross-match with external catalogs:
-                        if self.db['db'][self.collection_alert_cross_matches].count_documents({'_id': objectId},
-                                                                                              limit=1) == 0:
-                            # print(alert['candid'], alert['candidate']['programpi'])
-                            # if record['candidate']['programpi'].strip() == 'TESS':
-                            # tic = time.time()
-                            xmatches = alert_filter__xmatch(self.db['db'], alert)
-                            # alert['cross_matches'] = xmatches
-                            # toc = time.time()
-                            # print(f'xmatch for {alert["candid"]} took {toc-tic:.2f} s')
-
-                            alert_xmatches = {'_id': objectId,
-                                              'cross_matches': xmatches}
-
-                            self.insert_db_entry(_collection=self.collection_alert_cross_matches,
-                                                 _db_entry=alert_xmatches)
-
-                        print(*time_stamps(), f're-ingesting {alert["candid"]} into db')
-                        self.replace_db_entry(_collection=self.collection_alerts,
-                                              _filter={'candid': alert['candid']}, _db_entry=alert)
-
-                        # dump packet as json to disk if in a public TESS sector
-                        if alert['candidate']['programpi'] == 'TESS' and alert['candidate']['programid'] == 1:
-
-                            # get cross-matches
-                            xmatches = self.db['db'][self.collection_alert_cross_matches].find_one({'_id': objectId})
-                            alert['cross_matches'] = xmatches['cross_matches']
-
-                            path_alert_dir = os.path.join(path_alerts, datestr)
-                            # mkdir if does not exist
-                            if not os.path.exists(path_alert_dir):
-                                os.makedirs(path_alert_dir)
-
-                            print(*time_stamps(), f'saving {alert["candid"]} to disk')
-                            try:
-                                with open(os.path.join(path_alert_dir, f"{alert['candid']}.json"), 'w') as f:
-                                    f.write(dumps(alert))
-                            except Exception as e:
-                                print(time_stamps(), str(e))
-                                _err = traceback.format_exc()
-                                print(*time_stamps(), str(_err))
-
-                        # iterate over prv_candidates
-                        for prv_candidate in prv_candidates:
-                            prv_candid = prv_candidate['candid']
-                            prv_pid = prv_candidate['candid']
-                            # todo: pop nulls
-                            prv_candidate = {kk: vv for kk, vv in prv_candidate.items() if vv is not None}
-                            if prv_candid is not None:
-                                if self.db['db'][self.collection_alerts].count_documents({'candid': prv_candid},
-                                                                                         limit=1) == 0:
-                                    # candid not in db, ingest
-                                    _a = {'objectId': objectId,
-                                          'candid': prv_candid,
-                                          'candidate': prv_candidate}
-
-                                    # remove possible non-detection with same pid
-                                    if self.db['db'][self.collection_alerts].count_documents(
-                                            {'candidate.pid': prv_pid},
-                                            limit=1) == 1:
-                                        self.replace_db_entry(_collection=self.collection_alerts,
-                                                              _filter={'candidate.pid': prv_pid}, _db_entry=_a)
-                                    else:
-                                        self.insert_db_entry(_collection=self.collection_alerts, _db_entry=_a)
-                            else:
-                                # candid==None
-                                if self.db['db'][self.collection_alerts].count_documents(
-                                        {'candidate.pid': prv_pid},
-                                        limit=1) == 0:
-                                    # pid not in db (non-detection), ingest
-                                    _a = {'objectId': objectId,
-                                          'candidate': prv_candidate}
-                                    self.insert_db_entry(_collection=self.collection_alerts, _db_entry=_a)
+                    self.db['db'][self.collection_alerts_aux].update_one({'_id': objectId},
+                                                                         {'$addToSet':
+                                                                              {'prv_candidates':
+                                                                                   {'$each': prv_candidates}}})
 
     def decodeMessage(self, msg):
         """Decode Avro message according to a schema.
