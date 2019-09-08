@@ -547,7 +547,8 @@ class AlertConsumer(object):
                     self.db['db'][self.collection_alerts_aux].update_one({'_id': objectId},
                                                                          {'$addToSet':
                                                                               {'prv_candidates':
-                                                                                   {'$each': prv_candidates}}})
+                                                                                   {'$each': prv_candidates}}},
+                                                                         upsert=True)
 
     def decodeMessage(self, msg):
         """Decode Avro message according to a schema.
