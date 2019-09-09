@@ -525,11 +525,12 @@ if __name__ == '__main__':
     pool = ProcessPoolExecutor(min(len(dates), 8))
 
     for date in sorted(dates):
-        # pool.submit(process_file, _date=date, _path_alerts=location,
-        #             _collection=collection, _collection_aux=collection_aux, _batch_size=batch_size, verbose=True)
-        process_file(_date=date, _path_alerts=location,
-                     _collection=collection, _collection_aux=collection_aux,
-                     _batch_size=batch_size, verbose=True)
+        pool.submit(process_file, _date=date, _path_alerts=location,
+                    _collection=collection, _collection_aux=collection_aux,
+                    _batch_size=batch_size, verbose=True)
+        # process_file(_date=date, _path_alerts=location,
+        #              _collection=collection, _collection_aux=collection_aux,
+        #              _batch_size=batch_size, verbose=True)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
