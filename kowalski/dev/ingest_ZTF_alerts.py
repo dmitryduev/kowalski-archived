@@ -393,7 +393,7 @@ def process_file(_date, _path_alerts, _collection, _collection_aux, _batch_size=
                                              'cross_matches': xmatches,
                                              'prv_candidates': []}
 
-                                insert_db_entry(_collection=_collection_aux, _db_entry=alert_aux)
+                                insert_db_entry(_db, _collection=_collection_aux, _db_entry=alert_aux)
 
                             # ingest prv_candidates
 
