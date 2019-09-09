@@ -378,9 +378,10 @@ def process_file(_date, _path_alerts, _collection, _collection_aux, _batch_size=
 
                             # alert filters:
 
-                            # ML models:
-                            scores = alert_filter__ml(alert, ml_models=ml_models)
-                            alert['classifications'] = scores
+                            if not cutout_old:  # too lazy to figure out proper cutout scaling to old jpeg's
+                                # ML models:
+                                scores = alert_filter__ml(alert, ml_models=ml_models)
+                                alert['classifications'] = scores
 
                             if _db[_collection_aux].count_documents({'_id': alert['objectId']}, limit=1) == 0:
                                 # tic = time.time()
