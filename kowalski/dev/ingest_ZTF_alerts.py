@@ -14,6 +14,8 @@ from tensorflow.keras.models import load_model
 import gzip
 import io
 from astropy.io import fits
+from copy import deepcopy
+from PIL import Image
 # from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 
@@ -258,7 +260,71 @@ def alert_filter__xmatch(db, alert):
     return xmatches
 
 
-def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=False):
+def alert_mongify(alert):
+
+    doc = dict(alert)
+
+    # let mongo create a unique id
+    # candid+objectId is a unique combination:
+    # doc['_id'] = f"{alert['candid']}_{alert['objectId']}"
+
+    # placeholders for cross-matches and classifications
+    # doc['cross_matches'] = dict()
+    doc['classifications'] = dict()
+
+    # GeoJSON for 2D indexing
+    doc['coordinates'] = {}
+    _ra = doc['candidate']['ra']
+    _dec = doc['candidate']['dec']
+    _radec = [_ra, _dec]
+    # string format: H:M:S, D:M:S
+    # tic = time.time()
+    _radec_str = [deg2hms(_ra), deg2dms(_dec)]
+    # print(time.time() - tic)
+    # print(_radec_str)
+    doc['coordinates']['radec_str'] = _radec_str
+    # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+    _radec_geojson = [_ra - 180.0, _dec]
+    doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                           'coordinates': _radec_geojson}
+    # radians and degrees:
+    # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+    # doc['coordinates']['radec_deg'] = [_ra, _dec]
+
+    prv_candidates = deepcopy(doc['prv_candidates'])
+    doc.pop('prv_candidates', None)
+    if prv_candidates is None:
+        prv_candidates = []
+
+    return doc, prv_candidates
+
+
+def cutout_jpeg2fitsgz(alert):
+    for tag in ('Science', 'Template', 'Difference'):
+        # print(alert[f'cutout{tag}']['fileName'])
+        data = alert[f'cutout{tag}']['stampData']
+        tmp = io.BytesIO()
+        tmp.write(data)
+        tmp.seek(0)
+
+        with Image.open(tmp) as im:
+            i = np.asarray(im)
+
+        # convert to zipped fits
+        hdu = fits.PrimaryHDU(i)
+        hdul = fits.HDUList([hdu])
+        stamp_fits = io.BytesIO()
+        hdul.writeto(fileobj=stamp_fits)
+        stamp_fits.seek(0)
+        fitsgz = gzip.compress(stamp_fits.read())
+
+        alert[f'cutout{tag}']['fileName'] = alert[f'cutout{tag}']['fileName'].replace('.jpeg', 'fits.gz')
+        alert[f'cutout{tag}']['stampData'] = fitsgz
+
+    return alert
+
+
+def process_file(_date, _path_alerts, _collection, _collection_aux, _batch_size=2048, verbose=False):
 
     # connect to MongoDB:
     if verbose:
@@ -290,6 +356,9 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
 
     # print(f'{_date} :: # files to process: {len(avros)}')
 
+    # old cutout format? convert jpeg to fits
+    cutout_old = True if datetime.datetime.strptime(_date, '%Y%m%d') < datetime.datetime(2018, 3, 1) else False
+
     ci = 1
     for cf in find_files(os.path.join(_path_alerts, _date)):
         # print(f'{_date} :: processing file #{ci+1} of {len(avros)}: {os.path.basename(cf)}')
@@ -300,57 +369,43 @@ def process_file(_date, _path_alerts, _collection, _batch_size=2048, verbose=Fal
                 reader = avro.reader(f)
                 for alert in reader:
                     try:
-                        doc = dict(alert)
+                        # check that candid not in collection_alerts
+                        if _db[_collection].count_documents({'candid': alert['candid']}, limit=1) == 0:
+                            alert, prv_candidates = alert_mongify(alert)
 
-                        # candid+objectId is a unique combination:
-                        doc['_id'] = f"{doc['candid']}_{doc['objectId']}"
+                            if cutout_old:
+                                alert = cutout_jpeg2fitsgz(alert)
 
-                        # GeoJSON for 2D indexing
-                        doc['coordinates'] = {}
-                        # doc['coordinates']['epoch'] = doc['candidate']['jd']
-                        _ra = doc['candidate']['ra']
-                        _dec = doc['candidate']['dec']
-                        _radec = [_ra, _dec]
-                        # string format: H:M:S, D:M:S
-                        # tic = time.time()
-                        _radec_str = [deg2hms(_ra), deg2dms(_dec)]
-                        # print(time.time() - tic)
-                        # print(_radec_str)
-                        doc['coordinates']['radec_str'] = _radec_str
-                        # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-                        _radec_geojson = [_ra - 180.0, _dec]
-                        doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                               'coordinates': _radec_geojson}
-                        # radians and degrees:
-                        # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
-                        # doc['coordinates']['radec_deg'] = [_ra, _dec]
+                            # alert filters:
 
-                        # print(doc['coordinates'])
+                            # ML models:
+                            scores = alert_filter__ml(alert, ml_models=ml_models)
+                            alert['classifications'] = scores
 
-                        # alert filters:
+                            if _db[_collection_aux].count_documents({'_id': alert['objectId']}, limit=1) == 0:
+                                # tic = time.time()
+                                xmatches = alert_filter__xmatch(_db, alert)
+                                # alert['cross_matches'] = xmatches
+                                # toc = time.time()
+                                # print(f'xmatch for {alert["candid"]} took {toc-tic:.2f} s')
 
-                        # ML models:
-                        scores = alert_filter__ml(alert, ml_models=ml_models)
-                        doc['classifications'] = scores
+                                alert_aux = {'_id': alert['objectId'],
+                                             'cross_matches': xmatches,
+                                             'prv_candidates': []}
 
-                        # cross-match with external catalogs:
-                        # print(alert['candid'], alert['candidate']['programpi'])
-                        # if record['candidate']['programpi'].strip() == 'TESS':
-                        # tic = time.time()
-                        xmatches = alert_filter__xmatch(_db, alert)
-                        doc['cross_matches'] = xmatches
+                                insert_db_entry(_collection=_collection_aux, _db_entry=alert_aux)
 
-                        documents.append(doc)
+                            documents.append(alert)
 
-                        # time.sleep(1)
+                            # time.sleep(1)
 
-                        # insert batch, then flush
-                        if len(documents) % _batch_size == 0:
-                            print(f'{_date} :: inserting batch #{batch_num}')
-                            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
-                            # flush:
-                            documents = []
-                            batch_num += 1
+                            # insert batch, then flush
+                            if len(documents) % _batch_size == 0:
+                                print(f'{_date} :: inserting batch #{batch_num}')
+                                insert_multiple_db_entries(_db, _collection=_collection, _db_entries=documents)
+                                # flush:
+                                documents = []
+                                batch_num += 1
 
                     except Exception as e:
                         traceback.print_exc()
@@ -412,7 +467,8 @@ if __name__ == '__main__':
     batch_size = 1024
 
     # collection name
-    collection = 'ZTF_alerts'
+    collection = 'ZTF_alerts2'
+    collection_aux = 'ZTF_alerts2_aux'
 
     # indexes
     db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
@@ -434,26 +490,34 @@ if __name__ == '__main__':
                                  ('classifications.braai', pymongo.DESCENDING),
                                  ('candid', pymongo.DESCENDING)],
                                 background=True)
-    # db[collection].create_index([('candidate.jd', 1),
-    #                              ('candidate.field', 1),
-    #                              ('candidate.rb', 1),
-    #                              ('candidate.drb', 1),
-    #                              ('classifications.braai', 1),
-    #                              ('candidate.ndethist', 1),
-    #                              ('candidate.magpsf', 1),
-    #                              ('candidate.isdiffpos', 1),
-    #                              ('objectId', 1)],
-    #                             name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
-    #                             background=True)
+    db[collection].create_index([('candidate.jd', 1),
+                                 ('classifications.braai', 1),
+                                 ('candidate.magpsf', 1),
+                                 ('candidate.isdiffpos', 1),
+                                 ('candidate.ndethist', 1)],
+                                name='jd__braai__magpsf__isdiffpos__ndethist',
+                                background=True)
+    db[collection].create_index([('candidate.jd', 1),
+                                 ('candidate.field', 1),
+                                 ('candidate.rb', 1),
+                                 ('candidate.drb', 1),
+                                 ('candidate.ndethist', 1),
+                                 ('candidate.magpsf', 1),
+                                 ('candidate.isdiffpos', 1),
+                                 ('objectId', 1)],
+                                name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
+                                background=True)
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(min(len(dates), 3))
+    pool = ProcessPoolExecutor(min(len(dates), 8))
 
     for date in sorted(dates):
         pool.submit(process_file, _date=date, _path_alerts=location,
-                    _collection=collection, _batch_size=batch_size, verbose=True)
-        # process_file(_date=date, _path_alerts=location, _collection=collection, _batch_size=batch_size, verbose=True)
+                    _collection=collection, _collection_aux=collection_aux, _batch_size=batch_size, verbose=True)
+        # process_file(_date=date, _path_alerts=location,
+        #              _collection=collection, _collection_aux=collection_aux,
+        #              _batch_size=batch_size, verbose=True)
 
     # wait for everything to finish
     pool.shutdown(wait=True)
