@@ -395,6 +395,17 @@ def process_file(_date, _path_alerts, _collection, _collection_aux, _batch_size=
 
                                 insert_db_entry(_collection=_collection_aux, _db_entry=alert_aux)
 
+                            # ingest prv_candidates
+
+                            # fixme? pop nulls - save space
+                            prv_candidates = [{kk: vv for kk, vv in prv_candidate.items() if vv is not None}
+                                              for prv_candidate in prv_candidates]
+
+                            _db[_collection_aux].update_one({'_id': alert['objectId']},
+                                                            {'$addToSet': {'prv_candidates': {
+                                                                           '$each': prv_candidates}}},
+                                                            upsert=True)
+
                             documents.append(alert)
 
                             # time.sleep(1)
