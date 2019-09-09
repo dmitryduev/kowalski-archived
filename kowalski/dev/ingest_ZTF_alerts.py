@@ -318,7 +318,7 @@ def cutout_jpeg2fitsgz(alert):
         stamp_fits.seek(0)
         fitsgz = gzip.compress(stamp_fits.read())
 
-        alert[f'cutout{tag}']['fileName'] = alert[f'cutout{tag}']['fileName'].replace('.jpg', 'fits.gz')
+        alert[f'cutout{tag}']['fileName'] = alert[f'cutout{tag}']['fileName'].replace('.jpg', '.fits.gz')
         alert[f'cutout{tag}']['stampData'] = fitsgz
 
         # print(alert[f'cutout{tag}']['fileName'])
