@@ -469,7 +469,7 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    location = '/_tmp/ztf_alerts2'
+    location = '/_tmp/ztf_alerts3'
 
     dates = os.listdir(location) if not args.obsdate else [args.obsdate]
     dates = [d for d in dates if os.path.isdir(os.path.join(location, d))]
