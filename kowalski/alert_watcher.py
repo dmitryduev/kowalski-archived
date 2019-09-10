@@ -456,10 +456,11 @@ class AlertConsumer(object):
 
         return doc, prv_candidates
 
-    def poll(self, path_alerts=None, datestr=None):
+    def poll(self, path_alerts=None, path_tess=None, datestr=None, save_packets=True):
         """
             Polls Kafka broker to consume topic.
         :param path_alerts:
+        :param path_tess:
         :param datestr:
         :return:
         """
@@ -488,6 +489,17 @@ class AlertConsumer(object):
                 # check that candid not in collection_alerts
                 if self.db['db'][self.collection_alerts].count_documents({'candid': candid}, limit=1) == 0:
                     # candid not in db, ingest
+
+                    if save_packets:
+                        # save avro packet to disk
+                        path_alert_dir = os.path.join(path_alerts, datestr)
+                        # mkdir if does not exist
+                        if not os.path.exists(path_alert_dir):
+                            os.makedirs(path_alert_dir)
+                        path_avro = os.path.join(path_alert_dir, f'{candid}.avro')
+                        print(*time_stamps(), f'saving {candid} to disk')
+                        with open(path_avro, 'wb') as f:
+                            f.write(msg.value())
 
                     # ingest decoded avro packet into db
                     alert, prv_candidates = self.alert_mongify(record)
@@ -524,19 +536,20 @@ class AlertConsumer(object):
                         xmatches = self.db['db'][self.collection_alerts_aux].find_one({'_id': objectId})
                         alert['cross_matches'] = xmatches['cross_matches']
 
-                        path_alert_dir = os.path.join(path_alerts, datestr)
-                        # mkdir if does not exist
-                        if not os.path.exists(path_alert_dir):
-                            os.makedirs(path_alert_dir)
+                        if save_packets:
+                            path_tess_dir = os.path.join(path_tess, datestr)
+                            # mkdir if does not exist
+                            if not os.path.exists(path_tess_dir):
+                                os.makedirs(path_tess_dir)
 
-                        print(*time_stamps(), f'saving {alert["candid"]} to disk')
-                        try:
-                            with open(os.path.join(path_alert_dir, f"{alert['candid']}.json"), 'w') as f:
-                                f.write(dumps(alert))
-                        except Exception as e:
-                            print(time_stamps(), str(e))
-                            _err = traceback.format_exc()
-                            print(*time_stamps(), str(_err))
+                            print(*time_stamps(), f'saving {alert["candid"]} to disk')
+                            try:
+                                with open(os.path.join(path_tess_dir, f"{alert['candid']}.json"), 'w') as f:
+                                    f.write(dumps(alert))
+                            except Exception as e:
+                                print(time_stamps(), str(e))
+                                _err = traceback.format_exc()
+                                print(*time_stamps(), str(_err))
 
                     # ingest prv_candidates
 
@@ -733,7 +746,7 @@ def alert_filter__xmatch(db, alert):
 
 
 def listener(topic, bootstrap_servers='', offset_reset='earliest',
-             group=None, path_alerts=None):
+             group=None, path_alerts=None, path_tess=None, save_packets=True):
     """
         Listen to a topic
     :param topic:
@@ -782,7 +795,8 @@ def listener(topic, bootstrap_servers='', offset_reset='earliest',
         try:
             # poll!
             # print(*time_stamps(), 'Polling')
-            stream_reader.poll(path_alerts=path_alerts, datestr=datestr)
+            stream_reader.poll(path_alerts=path_alerts, path_tess=path_tess,
+                               datestr=datestr, save_packets=save_packets)
 
         except EopError as e:
             # Write when reaching end of partition
@@ -805,7 +819,7 @@ def listener(topic, bootstrap_servers='', offset_reset='earliest',
             sys.exit()
 
 
-def main(_obs_date=None):
+def main(_obs_date=None, _save_packets=True):
 
     topics_on_watch = dict()
 
@@ -840,14 +854,17 @@ def main(_obs_date=None):
                     bootstrap_servers = config['kafka']['bootstrap.servers']
                     group = '{:s}'.format(config['kafka']['group'])
                     # print(group)
-                    # path_alerts = config['path']['path_alerts']
-                    path_alerts = config['path']['path_tess']
+                    path_alerts = config['path']['path_alerts']
+                    path_tess = config['path']['path_tess']
+                    save_packets = _save_packets
                     # topics_on_watch[t] = threading.Thread(target=listener,
                     #                                       args=(t, bootstrap_servers,
                     #                                             offset_reset, group, path_alerts))
                     topics_on_watch[t] = multiprocessing.Process(target=listener,
                                                                  args=(t, bootstrap_servers,
-                                                                       offset_reset, group, path_alerts))
+                                                                       offset_reset, group,
+                                                                       path_alerts, path_tess,
+                                                                       save_packets))
                     topics_on_watch[t].daemon = True
                     topics_on_watch[t].start()
 
@@ -877,9 +894,11 @@ def main(_obs_date=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Fetch AVRO packets from Kafka streams and ingest them into DB')
     parser.add_argument('--obsdate', help='observing date')
+    parser.add_argument('--noio', help='reduce i/o - do not save packets', action='store_true')
 
     args = parser.parse_args()
     obs_date = args.obsdate
+    save = False if args.noio else True
     # print(obs_date)
 
-    main(_obs_date=obs_date)
+    main(_obs_date=obs_date, _save_packets=save)
