@@ -294,21 +294,35 @@ def random_alphanumeric_str(length: int = 8):
 ''' ZTF Alert Light Curve helpers '''
 
 
+# def make_dataframe(packets):
+#     if is_array(packets):
+#         dfs = []
+#         for packet in packets:
+#             df = pd.DataFrame(packet['candidate'], index=[0])
+#             df_prv = pd.DataFrame(packet['prv_candidates'])
+#             dfs.append(df)
+#             dfs.append(df_prv)
+#         # drop duplicate entries. decide using jd
+#         return pd.concat(dfs, ignore_index=True, sort=False).drop_duplicates(subset='jd').reset_index(drop=True)
+#     else:
+#         # single packet
+#         df = pd.DataFrame(packets['candidate'], index=[0])
+#         df_prv = pd.DataFrame(packets['prv_candidates'])
+#         return pd.concat([df, df_prv], ignore_index=True, sort=False)
+
+
 def make_dataframe(packets):
     if is_array(packets):
         dfs = []
         for packet in packets:
             df = pd.DataFrame(packet['candidate'], index=[0])
-            df_prv = pd.DataFrame(packet['prv_candidates'])
             dfs.append(df)
-            dfs.append(df_prv)
         # drop duplicate entries. decide using jd
         return pd.concat(dfs, ignore_index=True, sort=False).drop_duplicates(subset='jd').reset_index(drop=True)
     else:
         # single packet
         df = pd.DataFrame(packets['candidate'], index=[0])
-        df_prv = pd.DataFrame(packets['prv_candidates'])
-        return pd.concat([df, df_prv], ignore_index=True, sort=False)
+        return df
 
 
 def is_star(dflc, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):

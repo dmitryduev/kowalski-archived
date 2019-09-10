@@ -840,7 +840,8 @@ def main(_obs_date=None):
                     bootstrap_servers = config['kafka']['bootstrap.servers']
                     group = '{:s}'.format(config['kafka']['group'])
                     # print(group)
-                    path_alerts = config['path']['path_alerts']
+                    # path_alerts = config['path']['path_alerts']
+                    path_alerts = config['path']['path_tess']
                     # topics_on_watch[t] = threading.Thread(target=listener,
                     #                                       args=(t, bootstrap_servers,
                     #                                             offset_reset, group, path_alerts))

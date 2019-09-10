@@ -121,25 +121,28 @@ def dump_tess_parallel(obsdate=None):
         num_doc = db[collection_alerts].count_documents(query, hint=hint)
         print(f'Alerts in TESS fields to compress: {num_doc}')
 
+        fetch_from_db = False
+
         if num_doc > 0:
 
             # mkdir if necessary
             if not os.path.exists(path_date):
                 os.makedirs(path_date)
 
-            # fetch candid's:
-            cursor = db[collection_alerts].find(query, {'_id': 0, 'candid': 1}).hint(hint)  # .limit(3)
+            if fetch_from_db:
+                # fetch candid's:
+                cursor = db[collection_alerts].find(query, {'_id': 0, 'candid': 1}).hint(hint)  # .limit(3)
 
-            candids = []
-            print("Fetching alert candid's:")
-            for alert in tqdm.tqdm(cursor, total=num_doc):
-                candids.append(alert['candid'])
+                candids = []
+                print("Fetching alert candid's:")
+                for alert in tqdm.tqdm(cursor, total=num_doc):
+                    candids.append(alert['candid'])
 
-            chunk_size = 2000
-            n_chunks = int(np.ceil(num_doc / chunk_size))
+                chunk_size = 2000
+                n_chunks = int(np.ceil(num_doc / chunk_size))
 
-            with mp.Pool(processes=np.min((8, n_chunks))) as p:
-                list(tqdm.tqdm(p.imap(fetch_chunk, yield_batch(candids, obsdate, chunk_size)), total=n_chunks))
+                with mp.Pool(processes=np.min((8, n_chunks))) as p:
+                    list(tqdm.tqdm(p.imap(fetch_chunk, yield_batch(candids, obsdate, chunk_size)), total=n_chunks))
 
             # compress
             print(time_stamps(), 'Compressing')
@@ -204,21 +207,24 @@ def dump_tess(obsdate=None):
         num_doc = db[collection_alerts].count_documents(query, hint=hint)
         print(f'Alerts in TESS fields to compress: {num_doc}')
 
+        fetch_from_db = False
+
         if num_doc > 0:
             # mkdir if necessary
             if not os.path.exists(path_date):
                 os.makedirs(path_date)
 
-            cursor = db[collection_alerts].find(query).hint(hint)  # .limit(3)
+            if fetch_from_db:
+                cursor = db[collection_alerts].find(query).hint(hint)  # .limit(3)
 
-            # for alert in cursor.limit(1):
-            for alert in tqdm.tqdm(cursor, total=num_doc):
-                # print(alert['candid'])
-                try:
-                    with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
-                        f.write(dumps(alert))
-                except Exception as e:
-                    print(time_stamps(), str(e))
+                # for alert in cursor.limit(1):
+                for alert in tqdm.tqdm(cursor, total=num_doc):
+                    # print(alert['candid'])
+                    try:
+                        with open(os.path.join(path_date, f"{alert['candid']}.json"), 'w') as f:
+                            f.write(dumps(alert))
+                    except Exception as e:
+                        print(time_stamps(), str(e))
 
             # compress
             print(time_stamps(), 'Compressing')

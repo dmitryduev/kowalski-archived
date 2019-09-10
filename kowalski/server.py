@@ -1881,12 +1881,12 @@ async def ztf_alert_get_handler(request):
     match_radius_arcsec = float(request.query.get('match_radius_arcsec', 1.5))
     star_galaxy_threshold = float(request.query.get('star_galaxy_threshold', 0.4))
 
-    # alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid},
-    #                                                           {'cutoutScience': 0,
-    #                                                            'cutoutTemplate': 0,
-    #                                                            'cutoutDifference': 0})
     alert = await request.app['mongo']['ZTF_alerts'].find_one({'candid': candid}, max_time_ms=30000)
     alert = loads(dumps(alert))
+
+    # get aux data (cross-matches and prv_candidates)
+    alert_aux = await request.app['mongo']['ZTF_alerts_aux'].find_one({'_id': alert['objectId']}, max_time_ms=60000) \
+        if alert is not None else None
 
     download = request.query.get('download', None)
     # frmt = request.query.get('format', 'web')
@@ -1897,12 +1897,8 @@ async def ztf_alert_get_handler(request):
         if download == 'alert':
             return web.json_response(alert, status=200, dumps=dumps)
 
-        elif download == 'lc_alert':
-            dflc = make_dataframe(alert)
-            lc_candid = assemble_lc(dflc, objectId=alert['objectId'], composite=False,
-                                    match_radius_arcsec=match_radius_arcsec,
-                                    star_galaxy_threshold=star_galaxy_threshold)
-            return web.json_response(lc_candid, status=200, dumps=dumps)
+        elif download == 'alert_aux':
+            return web.json_response(alert_aux, status=200, dumps=dumps)
 
         elif download == 'lc_object':
             obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
@@ -1917,31 +1913,6 @@ async def ztf_alert_get_handler(request):
             return web.json_response(lc_object, status=200, dumps=dumps)
 
     if alert is not None and (len(alert) > 0):
-        # make packet light curve
-        dflc = make_dataframe(alert)
-        lc_alert = assemble_lc(dflc, objectId=alert['objectId'], composite=False,
-                               match_radius_arcsec=match_radius_arcsec,
-                               star_galaxy_threshold=star_galaxy_threshold)
-
-        # pre-process for plotly:
-        lc_candid = []
-        for lc_ in lc_alert:
-            lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
-                    'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
-                    'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
-            for dp in lc_['data']:
-                if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
-                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
-                        lc__['lc_nodet_u'][kk].append(dp[kk])
-                if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
-                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
-                        lc__['lc_nodet_l'][kk].append(dp[kk])
-                if ('mag' in dp) and (dp['mag'] > 0.01):
-                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
-                        lc__['lc_det'][kk].append(dp[kk])
-            lc_['data'] = lc__
-            lc_candid.append(lc_)
-
         # make composite light curve from all packets for alert['objectId']
         obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
                                                             {'cutoutScience': 0,
@@ -1950,6 +1921,13 @@ async def ztf_alert_get_handler(request):
                                                             max_time_ms=60000).to_list(length=None)
         # print([o['_id'] for o in obj])
         dflc = make_dataframe(obj)
+
+        # concat alert_aux with dflc
+        df_prv = pd.DataFrame(alert_aux['prv_candidates'])
+        dflc = pd.concat([dflc, df_prv],
+                         ignore_index=True,
+                         sort=False).drop_duplicates(subset='jd').reset_index(drop=True).sort_values(by=['jd'])
+
         lc_obj = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
                              match_radius_arcsec=match_radius_arcsec,
                              star_galaxy_threshold=star_galaxy_threshold)
@@ -1980,7 +1958,7 @@ async def ztf_alert_get_handler(request):
                    'match_radius_arcsec': match_radius_arcsec,
                    'star_galaxy_threshold': star_galaxy_threshold,
                    'alert': alert,
-                   'lc_candid': lc_candid,
+                   'alert_aux': alert_aux,
                    'lc_object': lc_object}
         response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
                                                   request,

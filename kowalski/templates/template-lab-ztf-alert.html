@@ -20,7 +20,7 @@
     <div class="container">
         <div class="row mb-2">
             <div class="col-12">
-                <h3 class="title-blue">ZTF Alert {{ alert['_id'] }}</h3>
+                <h3 class="title-blue">ZTF Alert <code>{{ alert['candid'] }}</code></h3>
             </div>
         </div>
 
@@ -54,7 +54,14 @@
                 <span class="badge badge-secondary">{{ alert['coordinates']['radec_str'][1] }}</span><br>
                 fid: {{ alert['candidate']['fid'] }}<br>
                 isdiffpos: {{ alert['candidate']['isdiffpos'] }}<br>
-                rb: {{ "{:.3f}".format(alert['candidate']['rb']) }}
+                magpsf: {{ "{:.3f}".format(alert['candidate']['magpsf']) }}<br>
+                magnr: {{ "{:.3f}".format(alert['candidate']['magnr']) }}<br>
+                rb: {{ "{:.3f}".format(alert['candidate']['rb']) }}<br>
+                {% if 'classifications' in alert %}
+                    {% if 'braai' in alert['classifications'] %}
+                        braai: {{ "{:.3f}".format(alert['classifications']['braai']) }}
+                    {% endif %}
+                {% endif %}
             </div>
 
         </div>
@@ -70,60 +77,6 @@
             </div>
         </div>
 
-        <div class="row mt-2">
-            <div class="col-12">
-                <h5 class="title-blue">Light curves from the alert packet
-                    <a download='{{alert['candid']}}.lc.json'
-                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?match_radius_arcsec={{-match_radius_arcsec-}}&star_galaxy_threshold={{-star_galaxy_threshold-}}&download=lc_alert"><i class='fas fa-download'></i></a>
-                </h5>
-
-                {% if lc_candid | length == 0 %}
-                {# this should never happen! #}
-                <p>No photometry available.</p>
-
-                {% else %}
-
-                <div id="lc" style="width: 100%; height: 300px;"></div>
-
-                <div class="form-group row mt-2">
-                    <label for="epoch" class="col-lg-2 control-label">
-                        Epoch:
-                    </label>
-
-                    <div class="col-md-4">
-                        <select class="form-control form-control-sm col-lg-6" id="epoch" name="epoch">
-                            <option>date</option>
-                            <option>mjd</option>
-                            <option>jd</option>
-                            <option>days ago</option>
-                        </select>
-                    </div>
-                </div>
-
-                <hr>
-
-                <p class="mt-2">
-                {% for lc in lc_candid %}
-                    {% if lc['lc_type'] == 'temporal' %}
-                        {% set lc_info = {'telescope': lc['telescope'],
-                                          'instrument': lc['instrument'],
-                                          'filter': lc['filter'],
-                                          'comment': lc['comment']} %}
-                        <b>LC_{{ loop.index }}:</b> {{ lc_info | safe }}<br>
-                    {% endif %}
-                {% endfor %}
-                </p>
-
-                <p class="mt-2">
-                    <span class="badge badge-primary">Note</span>
-                    Using ?<b>match_radius_arcsec</b>={{-match_radius_arcsec-}}&<b>star_galaxy_threshold</b>={{-star_galaxy_threshold-}}<br>
-                </p>
-
-                {% endif %}
-                <hr>
-            </div>
-        </div>
-
         <div class="row mt-1">
             <div class="col-12">
                 <h5 class="title-blue">Alert packet contents
@@ -132,16 +85,32 @@
                 </h5>
 {#                <pre><code class="json">{{alert|tojson_pretty|safe}}</code></pre>#}
                 <p>
-                    <pre id="json-renderer" class="pl-4 pr-4"></pre>
+                    <pre id="json-renderer-alert" class="pl-4 pr-4"></pre>
                 </p>
 
                 <hr>
             </div>
         </div>
 
-        <div class="row mt-2">
+        <div class="row mt-1">
             <div class="col-12">
-                <h5 class="title-blue">Composite light curves for {{ alert['objectId'] }}
+                <h5 class="title-blue">
+                    Cross-matches with external catalogs within 5" and
+                    detection history for <code>{{ alert['objectId'] }}</code>
+                    <a download='{{alert['objectId']}}.aux.json'
+                       href="/lab/ztf-alerts/{{-alert["candid"]-}}?download=alert_aux"><i class='fas fa-download'></i></a>
+                </h5>
+                <p>
+                    <pre id="json-renderer-alert-aux" class="pl-4 pr-4"></pre>
+                </p>
+
+                <hr>
+            </div>
+        </div>
+
+        <div class="row mt-1">
+            <div class="col-12">
+                <h5 class="title-blue">Composite light curves for <code>{{ alert['objectId'] }}</code>
                     <a download='{{alert['objectId']}}.lc.json'
                        href="/lab/ztf-alerts/{{-alert["candid"]-}}?match_radius_arcsec={{-match_radius_arcsec-}}&star_galaxy_threshold={{-star_galaxy_threshold-}}&download=lc_object"><i class='fas fa-download'></i></a>
                 </h5>
@@ -223,12 +192,19 @@
     <script src="{{-script_root-}}/static/js/jquery.json-viewer.js"></script>
 
     <script>
-        var data = JSONbig.parse('{{-alert|tojson_pretty|safe|replace('\n', '')-}}');
+        // display alert JSON
+        let data_alert = JSONbig.parse('{{-alert|tojson_pretty|safe|replace('\n', '')-}}');
         {#var data = JSONbig.parse('{{ alert }}');#}
         {#console.log(data);#}
-        $('#json-renderer').jsonViewer(data, {collapsed: true, withQuotes: true});
+        $('#json-renderer-alert').jsonViewer(data_alert, {collapsed: true, withQuotes: true});
         // open
-        $('#json-renderer').find(">:first-child").trigger("click");
+        $('#json-renderer-alert').find(">:first-child").trigger("click");
+
+        // display alert_aux JSON
+        let data_alert_aux = JSONbig.parse('{{-alert_aux|tojson_pretty|safe|replace('\n', '')-}}');
+        $('#json-renderer-alert-aux').jsonViewer(data_alert_aux, {collapsed: true, withQuotes: true});
+        // open
+        $('#json-renderer-alert-aux').find(">:first-child").trigger("click");
     </script>
 
 
