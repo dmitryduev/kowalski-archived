@@ -242,6 +242,19 @@
             let layout = {xaxis: {autorange: true},
                           yaxis: {autorange: 'reversed'},
                           margin: {b: 30, t: 30, l: 50, r: 50, pad: 1},
+                          shapes: [{
+                                type: 'line',
+                                x0: '2019-06-09',
+                                y0: 0,
+                                x1: '2019-06-09',
+                                yref: 'paper',
+                                y1: 1,
+                                line: {
+                                  color: 'grey',
+                                  width: 1.5,
+                                  dash: 'dot'
+                                }
+                              }]
             };
 
             {# iterate over individual light-curves #}
@@ -317,6 +330,12 @@
                 {% endfor %}
 
             {% endfor %}
+
+            // mark alert's jd
+            if (x_axis === 'dt') {
+                // revese x axis
+                layout.xaxis.autorange = 'reversed';
+            }
 
             if (x_axis === 'days ago') {
                 // revese x axis
