@@ -525,7 +525,7 @@ if __name__ == '__main__':
 
     # init threaded operations
     # pool = ThreadPoolExecutor(4)
-    pool = ProcessPoolExecutor(min(len(dates), 8))
+    pool = ProcessPoolExecutor(min(len(dates), 4))
 
     for date in sorted(dates):
         pool.submit(process_file, _date=date, _path_alerts=location,

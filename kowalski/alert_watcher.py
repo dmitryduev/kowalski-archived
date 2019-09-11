@@ -513,6 +513,10 @@ class AlertConsumer(object):
                     print(*time_stamps(), f'ingesting {alert["candid"]} into db')
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
 
+                    # prv_candidates: pop nulls - save space
+                    prv_candidates = [{kk: vv for kk, vv in prv_candidate.items() if vv is not None}
+                                      for prv_candidate in prv_candidates]
+
                     # cross-match with external catalogs if objectId not in collection_alerts_aux:
                     if self.db['db'][self.collection_alerts_aux].count_documents({'_id': objectId}, limit=1) == 0:
                         # tic = time.time()
@@ -523,9 +527,16 @@ class AlertConsumer(object):
 
                         alert_aux = {'_id': objectId,
                                      'cross_matches': xmatches,
-                                     'prv_candidates': []}
+                                     'prv_candidates': prv_candidates}
 
                         self.insert_db_entry(_collection=self.collection_alerts_aux, _db_entry=alert_aux)
+
+                    else:
+                        self.db['db'][self.collection_alerts_aux].update_one({'_id': objectId},
+                                                                             {'$addToSet':
+                                                                                  {'prv_candidates':
+                                                                                       {'$each': prv_candidates}}},
+                                                                             upsert=True)
 
                     # dump packet as json to disk if in a public TESS sector
                     if 'TESS' in alert['candidate']['programpi']:
@@ -551,17 +562,6 @@ class AlertConsumer(object):
                                 _err = traceback.format_exc()
                                 print(*time_stamps(), str(_err))
 
-                    # ingest prv_candidates
-
-                    # fixme? pop nulls - save space
-                    prv_candidates = [{kk: vv for kk, vv in prv_candidate.items() if vv is not None}
-                                      for prv_candidate in prv_candidates]
-
-                    self.db['db'][self.collection_alerts_aux].update_one({'_id': objectId},
-                                                                         {'$addToSet':
-                                                                              {'prv_candidates':
-                                                                                   {'$each': prv_candidates}}},
-                                                                         upsert=True)
 
     def decodeMessage(self, msg):
         """Decode Avro message according to a schema.
