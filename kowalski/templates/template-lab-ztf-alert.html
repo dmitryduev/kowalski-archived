@@ -332,14 +332,28 @@
             {% endfor %}
 
             // mark alert's jd
-            if (x_axis === 'dt') {
+            if (x_axis === 'jd') {
+                layout.shapes[0].x0 = {{ alert['candidate']['jd'] }};
+                layout.shapes[0].x1 = {{ alert['candidate']['jd'] }};
+            }
+            else if (x_axis === 'mjd') {
+                layout.shapes[0].x0 = {{ alert['candidate']['jd'] }} - 2400000.5;
+                layout.shapes[0].x1 = {{ alert['candidate']['jd'] }} - 2400000.5;
+            }
+            else if (x_axis === 'days ago') {
+                let jd = new JulianDate().julian({{ alert['candidate']['jd'] }});
+                let dt = moment.utc(jd.getDate());
+                let da = moment.utc().diff(dt, 'days', true);
+                layout.shapes[0].x0 = da;
+                layout.shapes[0].x1 = da;
                 // revese x axis
                 layout.xaxis.autorange = 'reversed';
             }
-
-            if (x_axis === 'days ago') {
-                // revese x axis
-                layout.xaxis.autorange = 'reversed';
+            else {
+                let jd = new JulianDate().julian({{ alert['candidate']['jd'] }});
+                let dt = moment.utc(jd.getDate());
+                layout.shapes[0].x0 = dt.format('YYYY-MM-DD HH:mm:ss');
+                layout.shapes[0].x1 = dt.format('YYYY-MM-DD HH:mm:ss');
             }
 
             // plot detections. there should always be at least one detection since there's an alert
