@@ -1904,9 +1904,17 @@ async def ztf_alert_get_handler(request):
             obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
                                                                 {'cutoutScience': 0,
                                                                  'cutoutTemplate': 0,
-                                                                 'cutoutDifference': 0},
+                                                                 'cutoutDifference': 0,
+                                                                 'classifications': 0},
                                                                 max_time_ms=60000).to_list(length=None)
             dflc = make_dataframe(obj)
+
+            # concat alert_aux with dflc
+            df_prv = pd.DataFrame(alert_aux['prv_candidates'])
+            dflc = pd.concat([dflc, df_prv],
+                             ignore_index=True,
+                             sort=False).drop_duplicates(subset='jd').reset_index(drop=True).sort_values(by=['jd'])
+
             lc_object = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
                                     match_radius_arcsec=match_radius_arcsec,
                                     star_galaxy_threshold=star_galaxy_threshold)
@@ -1917,7 +1925,8 @@ async def ztf_alert_get_handler(request):
         obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
                                                             {'cutoutScience': 0,
                                                              'cutoutTemplate': 0,
-                                                             'cutoutDifference': 0},
+                                                             'cutoutDifference': 0,
+                                                             'classifications': 0},
                                                             max_time_ms=60000).to_list(length=None)
         # print([o['_id'] for o in obj])
         dflc = make_dataframe(obj)
