@@ -473,6 +473,7 @@ if __name__ == '__main__':
     print('Successfully connected')
 
     location = '/_tmp/ztf_alerts3'
+    # location = '/data/alerts'
 
     dates = os.listdir(location) if not args.obsdate else [args.obsdate]
     dates = [d for d in dates if os.path.isdir(os.path.join(location, d))]
