@@ -856,7 +856,7 @@ def main(_obs_date=None):
                 else:
                     datestr = _obs_date
                 # as of 20180403 naming convention is ztf_%Y%m%d_programidN
-                topics_tonight = [t for t in topics if datestr in t and 'programid' in t]
+                topics_tonight = [t for t in topics if (datestr in t) and ('programid' in t) and ('tess' not in t)]
                 print(*time_stamps(), topics_tonight)
 
             if False:
