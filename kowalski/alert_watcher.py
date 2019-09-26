@@ -278,9 +278,10 @@ class AlertConsumer(object):
 
         # MongoDB:
         self.config = config
-        # self.collection_alerts = 'ZTF_alerts'
-        self.collection_alerts = 'ZTF_alerts2'
-        self.collection_alerts_aux = 'ZTF_alerts2_aux'
+        self.collection_alerts = 'ZTF_alerts'
+        self.collection_alerts_aux = 'ZTF_alerts_aux'
+        # self.collection_alerts = 'ZTF_alerts2'
+        # self.collection_alerts_aux = 'ZTF_alerts2_aux'
         self.db = None
         self.connect_to_db()
 
