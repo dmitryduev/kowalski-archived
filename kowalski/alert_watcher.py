@@ -548,6 +548,7 @@ class AlertConsumer(object):
                         xmatches = self.db['db'][self.collection_alerts_aux].find({'_id': objectId},
                                                                                   {'cross_matches': 1},
                                                                                   limit=1)
+                        xmatches = list(xmatches)[0]
                         alert['cross_matches'] = xmatches['cross_matches']
 
                         if save_packets:
