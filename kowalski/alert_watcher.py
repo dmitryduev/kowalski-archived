@@ -544,7 +544,10 @@ class AlertConsumer(object):
                         alert['prv_candidates'] = prv_candidates
 
                         # get cross-matches
-                        xmatches = self.db['db'][self.collection_alerts_aux].find_one({'_id': objectId})
+                        # xmatches = self.db['db'][self.collection_alerts_aux].find_one({'_id': objectId})
+                        xmatches = self.db['db'][self.collection_alerts_aux].find({'_id': objectId},
+                                                                                  {'cross_matches': 1},
+                                                                                  limit=1)
                         alert['cross_matches'] = xmatches['cross_matches']
 
                         if save_packets:
@@ -561,7 +564,6 @@ class AlertConsumer(object):
                                 print(time_stamps(), str(e))
                                 _err = traceback.format_exc()
                                 print(*time_stamps(), str(_err))
-
 
     def decodeMessage(self, msg):
         """Decode Avro message according to a schema.
@@ -840,7 +842,10 @@ def main(_obs_date=None, _save_packets=True):
                 else:
                     datestr = _obs_date
                 # as of 20180403 naming convention is ztf_%Y%m%d_programidN
-                topics_tonight = [t for t in topics if (datestr in t) and ('programid' in t) and ('tess' not in t)]
+                # programid3_public is a (duplicate) subset of programid3, thus skip it
+                topics_tonight = [t for t in topics if (datestr in t) and
+                                  ('programid' in t) and
+                                  ('programid3_public' not in t)]
                 print(*time_stamps(), topics_tonight)
 
             if False:
