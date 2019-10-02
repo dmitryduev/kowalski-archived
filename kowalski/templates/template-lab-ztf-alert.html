@@ -57,7 +57,19 @@
                 magpsf: {{ "{:.3f}".format(alert['candidate']['magpsf']) }}<br>
                 magnr: {{ "{:.3f}".format(alert['candidate']['magnr']) }}<br>
                 rb: {{ "{:.3f}".format(alert['candidate']['rb']) }}&nbsp;&nbsp;&nbsp;
-
+                {% if 'rbversion' in alert['candidate'] %}
+                    rb_v: {{ "{:}".format(alert['candidate']['rbversion']) }}<br>
+                {% endif %}
+                {% if 'drb' in alert['candidate'] %}
+                    drb: {{ "{:.3f}".format(alert['candidate']['drb']) }}&nbsp;&nbsp;&nbsp;
+                    drb_v: {{ "{:}".format(alert['candidate']['drbversion']) }}<br>
+                {% endif %}
+                {% if 'classifications' in alert %}
+                    {% if 'braai' in alert['classifications'] %}
+                        braai: {{ "{:.3f}".format(alert['classifications']['braai']) }}&nbsp;&nbsp;&nbsp;
+                        braai_v: {{ "{:}".format(alert['classifications']['braai_version']) }}
+                    {% endif %}
+                {% endif %}
             </div>
 
         </div>
