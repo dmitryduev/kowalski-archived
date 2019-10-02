@@ -56,10 +56,16 @@
                 isdiffpos: {{ alert['candidate']['isdiffpos'] }}<br>
                 magpsf: {{ "{:.3f}".format(alert['candidate']['magpsf']) }}<br>
                 magnr: {{ "{:.3f}".format(alert['candidate']['magnr']) }}<br>
-                rb: {{ "{:.3f}".format(alert['candidate']['rb']) }}<br>
+                rb: {{ "{:.3f}".format(alert['candidate']['rb']) }}&nbsp;&nbsp;&nbsp;
+                rb_v: {{ "{:.3f}".format(alert['candidate']['rbversion']) }}<br>
+                {% if 'drb' in alert['candidate'] %}
+                    drb: {{ "{:.3f}".format(alert['candidate']['drb']) }}&nbsp;&nbsp;&nbsp;
+                    drb_v: {{ "{:.3f}".format(alert['candidate']['drbversion']) }}<br>
+                {% endif %}
                 {% if 'classifications' in alert %}
                     {% if 'braai' in alert['classifications'] %}
-                        braai: {{ "{:.3f}".format(alert['classifications']['braai']) }}
+                        braai: {{ "{:.3f}".format(alert['classifications']['braai']) }}&nbsp;&nbsp;&nbsp;
+                        braai_v: {{ "{:.3f}".format(alert['classifications']['braai_version']) }}
                     {% endif %}
                 {% endif %}
             </div>
