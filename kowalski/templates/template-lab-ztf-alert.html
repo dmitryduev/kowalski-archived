@@ -65,7 +65,7 @@
                 {% if 'classifications' in alert %}
                     {% if 'braai' in alert['classifications'] %}
                         braai: {{ "{:.3f}".format(alert['classifications']['braai']) }}&nbsp;&nbsp;&nbsp;
-                        braai_v: {{ "{:.3f}".format(alert['classifications']['braai_version']) }}
+{#                        braai_v: {{ "{:.3f}".format(alert['classifications']['braai_version']) }}#}
                     {% endif %}
                 {% endif %}
             </div>
