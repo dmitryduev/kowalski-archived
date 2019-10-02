@@ -856,10 +856,8 @@ def main(_obs_date=None):
                 else:
                     datestr = _obs_date
                 # as of 20180403 naming convention is ztf_%Y%m%d_programidN
-                # programid3_public is a (duplicate) subset of programid3, thus skip it
                 topics_tonight = [t for t in topics if (datestr in t) and
-                                  ('programid' in t) and
-                                  ('programid3_public' not in t)]
+                                  ('programid' in t)]
                 print(*time_stamps(), topics_tonight)
 
             if False:
