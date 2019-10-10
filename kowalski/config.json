@@ -19,7 +19,7 @@
   },
 
   "database": {
-    "max_pool_size": 1000,
+    "max_pool_size": 1200,
     "host": "kowalski_mongo_1",
     "port": 27017,
     "db": "kowalski",
@@ -108,7 +108,23 @@
           "phot_bp_mean_mag": 1,
           "phot_rp_mean_mag": 1
         }
-      }
+      },
+
+      "LAMOST_DR4_v2": {
+          "filter": {},
+          "projection": {
+            "_id": 1,
+            "coordinates.radec_str": 1,
+            "mjd": 1,
+            "snru": 1,
+            "snrg": 1,
+            "snrr": 1,
+            "snri": 1,
+            "snrz": 1,
+            "objtype": 1,
+            "class": 1,
+            "subclass":  1}
+        }
     }
   },
 
