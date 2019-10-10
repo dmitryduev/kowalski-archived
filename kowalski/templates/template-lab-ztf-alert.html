@@ -209,7 +209,7 @@
         $('#json-renderer-alert').find(">:first-child").trigger("click");
 
         // display alert_aux JSON
-        let data_alert_aux = JSONbig.parse('{{-alert_aux|tojson_pretty|safe|replace('\n', '')-}}');
+        let data_alert_aux = JSONbig.parse('{{-alert_aux|tojson_pretty|safe|replace('\n', '')|replace('NaN', 'null')-}}');
         $('#json-renderer-alert-aux').jsonViewer(data_alert_aux, {collapsed: true, withQuotes: true});
         // open
         $('#json-renderer-alert-aux').find(">:first-child").trigger("click");
