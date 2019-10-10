@@ -292,6 +292,7 @@
                     if (!data.hasOwnProperty('message')) {
                         if (save === false){
                             $("#modal-query-id").html(task_id);
+                            // fixme: NaNs don't get rendered properly
                             $("#modal-body-code").html(JSONbig.stringify(JSONbig.parse(data), null, 2));
                             // show if not shown already
                             if (!($("#modal").data('bs.modal') || {})._isShown ) {

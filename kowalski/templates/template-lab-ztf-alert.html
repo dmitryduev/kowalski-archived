@@ -201,7 +201,7 @@
 
     <script>
         // display alert JSON
-        let data_alert = JSONbig.parse('{{-alert|tojson_pretty|safe|replace('\n', '')-}}');
+        let data_alert = JSONbig.parse('{{-alert|tojson_pretty|safe|replace('\n', '')|replace('NaN', 'null')-}}');
         {#var data = JSONbig.parse('{{ alert }}');#}
         {#console.log(data);#}
         $('#json-renderer-alert').jsonViewer(data_alert, {collapsed: true, withQuotes: true});
