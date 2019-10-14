@@ -611,7 +611,7 @@ regex['collection_main'] = re.compile(r"db\[['\"](.*?)['\"]\]")
 regex['aggregate'] = re.compile(r"aggregate\((\[(?s:.*)\])")
 
 
-def parse_query(task, save: bool=False):
+def parse_query(task, save: bool = False):
     # save auxiliary stuff
     kwargs = task['kwargs'] if 'kwargs' in task else {}
 
