@@ -10,7 +10,7 @@ from bson.json_util import loads
 
 
 ''' PENQUINS - Processing ENormous Queries of ztf Users INStantaneously '''
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 
 Num = Union[int, float]
@@ -207,8 +207,12 @@ class Kowalski(object):
         :return: True if connection ok, False otherwise
         """
         try:
-            _query = {"query_type": "general_search",
-                      "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+            _query = {"query_type": "find",
+                      "query": {
+                          "catalog": collection,
+                          "filter": {},
+                          "projection": {'_id': 1}
+                      },
                       "kwargs": {"save": False}
                       }
             if self.v:
