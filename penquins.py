@@ -44,10 +44,11 @@ class Kowalski(object):
         self.username = username
         self.password = password
 
+        self.session = requests.Session()
+
         self.access_token = self.authenticate()
 
         self.headers = {'Authorization': self.access_token}
-        self.session = requests.Session()
 
     # use with "with":
     def __enter__(self):
@@ -81,13 +82,18 @@ class Kowalski(object):
 
         for retry in range(retries):
             # post username and password, get access token
-            auth = requests.post(f'{self.base_url}/auth',
-                                 json={"username": self.username, "password": self.password,
-                                       "penquins.__version__": __version__})
+            auth = self.session.post(f'{self.base_url}/auth',
+                                     json={"username": self.username, "password": self.password,
+                                           "penquins.__version__": __version__})
 
             if auth.status_code == requests.codes.ok:
                 if self.v:
                     print(auth.json())
+
+                # # mimic a web login, too
+                # auth_web = self.session.post(f'{self.base_url}/login',
+                #                              json={"username": self.username, "password": self.password,
+                #                                    "zvm.__version__": __version__})
 
                 if 'token' not in auth.json():
                     print('Authentication failed')
