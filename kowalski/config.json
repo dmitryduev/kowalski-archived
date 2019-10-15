@@ -110,7 +110,7 @@
         }
       },
 
-      "LAMOST_DR4_v2": {
+      "LAMOST_DR5_v3": {
           "filter": {},
           "projection": {
             "_id": 1,
