@@ -110,7 +110,7 @@ class Kowalski(object):
                 # bad status code? sleep before retrying, maybe no connections available due to high load
                 time.sleep(0.5)
 
-    def lab(self):
+    def lab(self, endpoint: str, method: str, json: dict):
         # todo: get individual ZTF alert contents, cutouts, and (compound) light curves
         pass
 
@@ -219,7 +219,7 @@ class Kowalski(object):
                           "filter": {},
                           "projection": {'_id': 1}
                       },
-                      "kwargs": {"save": False}
+                      "kwargs": {"limit": 1, "save": False}
                       }
             if self.v:
                 print(_query)
