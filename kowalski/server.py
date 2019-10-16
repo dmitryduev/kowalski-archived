@@ -1019,7 +1019,7 @@ async def execute_query(mongo, task_hash, task_reduced, task_doc, save: bool = F
 
             known_kwargs = ('skip', 'hint', 'limit', 'sort')
             kwargs = {kk: vv for kk, vv in query['kwargs'].items() if kk in known_kwargs}
-            kwargs['comment'] = str(query['user'])
+            kwargs['comment'] = str(query['user'])/query
 
             # project?
             if len(query['query']['projection']) > 0:
@@ -1275,6 +1275,8 @@ async def query(request):
                 task_hash, result = await execute_query(request.app['mongo'], task_hash, task_reduced, task_doc, save)
 
                 return web.json_response(result, status=200, dumps=dumps)
+                # fixme:?
+                # return web.json_response({'message': 'success', 'result': result}, status=200, dumps=dumps)
 
     except Exception as _e:
         print(f'Got error: {str(_e)}')
