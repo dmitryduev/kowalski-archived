@@ -90,7 +90,7 @@ class Kowalski(object):
                 if self.v:
                     print(auth.json())
 
-                # # mimic a web login, too
+                # mimic a web login, too
                 auth_web = self.session.post(f'{self.base_url}/login',
                                              json={"username": self.username, "password": self.password,
                                                    "zvm.__version__": __version__})
