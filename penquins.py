@@ -15,6 +15,7 @@ __version__ = '1.0.2'
 
 Num = Union[int, float]
 QueryPart = Union['task', 'result']
+Method = Union['get', 'post', 'put', 'patch', 'delete']
 
 
 class Kowalski(object):
@@ -49,6 +50,12 @@ class Kowalski(object):
         self.access_token = self.authenticate()
 
         self.headers = {'Authorization': self.access_token}
+
+        self.methods = {'get': self.session.get,
+                        'post': self.session.post,
+                        'put': self.session.put,
+                        'patch': self.session.patch,
+                        'delete': self.session.delete}
 
     # use with "with":
     def __enter__(self):
@@ -110,9 +117,37 @@ class Kowalski(object):
                 # bad status code? sleep before retrying, maybe no connections available due to high load
                 time.sleep(0.5)
 
-    def lab(self, endpoint: str, method: str, json: dict):
-        # todo: get individual ZTF alert contents, cutouts, and (compound) light curves
-        pass
+    def api(self, data: dict, endpoint: str = None, method: Method = None, timeout: Num = 30, retries: int = 3):
+
+        try:
+            assert endpoint is not None, 'endpoint not specified'
+            # assert data is not None, 'api call not specified'
+            assert method in ['get', 'post', 'put', 'patch', 'delete'], f'unsupported method: {method}'
+
+            cookies = {'jwt_token': self.access_token, 'user_id': self.username}
+
+            for retry in range(retries):
+                if method.lower() != 'get':
+                    resp = self.methods[method.lower()](os.path.join(self.base_url, endpoint),
+                                                        json=data, headers=self.headers, timeout=timeout,
+                                                        cookies=cookies)
+                else:
+                    resp = self.methods[method.lower()](os.path.join(self.base_url, endpoint),
+                                                        params=data, headers=self.headers, timeout=timeout,
+                                                        cookies=cookies)
+
+                # print(resp.text)
+
+                if resp.status_code == requests.codes.ok:
+                    return loads(resp.text)
+                else:
+                    # bad status code? sleep before retrying, maybe no connections available due to high load
+                    time.sleep(0.5)
+
+        except Exception as _e:
+            _err = traceback.format_exc()
+
+            return {'status': 'failed', 'message': _err}
 
     def query(self, query, timeout: Num = 5*3600, retries: int = 3):
 
