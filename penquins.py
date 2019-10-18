@@ -114,8 +114,9 @@ class Kowalski(object):
                 return access_token
 
             else:
+                if self.v:
+                    print('Authentication failed, retrying...')
                 # bad status code? sleep before retrying, maybe no connections available due to high load
-                print('Authentication failed, retrying...')
                 time.sleep(0.5)
         raise Exception('Authentication failed')
 
