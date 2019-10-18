@@ -89,18 +89,18 @@ class Kowalski(object):
 
         for retry in range(retries):
             # post username and password, get access token
-            auth = requests.post(f'{self.base_url}/auth',
-                                 json={"username": self.username, "password": self.password,
-                                       "penquins.__version__": __version__})
+            auth = self.session.post(f'{self.base_url}/auth',
+                                     json={"username": self.username, "password": self.password,
+                                           "penquins.__version__": __version__})
 
             if auth.status_code == requests.codes.ok:
                 if self.v:
                     print(auth.json())
 
                 # mimic a web login, too
-                # auth_web = self.session.post(f'{self.base_url}/login',
-                #                              json={"username": self.username, "password": self.password,
-                #                                    "zvm.__version__": __version__})
+                auth_web = self.session.post(f'{self.base_url}/login',
+                                             json={"username": self.username, "password": self.password,
+                                                   "zvm.__version__": __version__})
 
                 if 'token' not in auth.json():
                     print('Authentication failed')
@@ -115,7 +115,9 @@ class Kowalski(object):
 
             else:
                 # bad status code? sleep before retrying, maybe no connections available due to high load
+                print('Authentication failed, retrying...')
                 time.sleep(0.5)
+        raise Exception('Authentication failed')
 
     def api(self, data: dict, endpoint: str = None, method: Method = None, timeout: Num = 30, retries: int = 3):
 
