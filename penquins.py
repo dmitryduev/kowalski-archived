@@ -89,9 +89,9 @@ class Kowalski(object):
 
         for retry in range(retries):
             # post username and password, get access token
-            auth = self.session.post(f'{self.base_url}/auth',
-                                     json={"username": self.username, "password": self.password,
-                                           "penquins.__version__": __version__})
+            auth = requests.post(f'{self.base_url}/auth',
+                                 json={"username": self.username, "password": self.password,
+                                       "penquins.__version__": __version__})
 
             if auth.status_code == requests.codes.ok:
                 if self.v:
