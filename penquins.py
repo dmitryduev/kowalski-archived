@@ -242,7 +242,7 @@ class Kowalski(object):
 
             return {'status': 'failed', 'message': _err}
 
-    def check_connection(self, collection='RFC_2018d') -> bool:
+    def check_connection(self, collection='RFC_2019a') -> bool:
         """
             Check connection to Kowalski with a trivial query
         :return: True if connection ok, False otherwise
