@@ -98,9 +98,9 @@ class Kowalski(object):
                     print(auth.json())
 
                 # mimic a web login, too
-                auth_web = self.session.post(f'{self.base_url}/login',
-                                             json={"username": self.username, "password": self.password,
-                                                   "zvm.__version__": __version__})
+                # auth_web = self.session.post(f'{self.base_url}/login',
+                #                              json={"username": self.username, "password": self.password,
+                #                                    "zvm.__version__": __version__})
 
                 if 'token' not in auth.json():
                     print('Authentication failed')
