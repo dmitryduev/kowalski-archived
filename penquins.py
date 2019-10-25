@@ -118,6 +118,7 @@ class Kowalski(object):
                     print('Authentication failed, retrying...')
                 # bad status code? sleep before retrying, maybe no connections available due to high load
                 time.sleep(0.5)
+
         raise Exception('Authentication failed')
 
     def api(self, data: dict, endpoint: str = None, method: Method = None, timeout: Num = 30, retries: int = 3):
