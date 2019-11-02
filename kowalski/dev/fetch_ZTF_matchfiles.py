@@ -31,7 +31,7 @@ def gunzip(f):
     subprocess.run(['gunzip', f])
 
 
-t_tag = '20190718'
+t_tag = '20191101'
 
 path = f'/_tmp/ztf_matchfiles_{t_tag}/'
 if not os.path.exists(path):
