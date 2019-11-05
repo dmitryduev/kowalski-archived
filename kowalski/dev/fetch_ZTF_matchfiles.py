@@ -58,7 +58,7 @@ if __name__ == '__main__':
     print('Collecting urls of matchfiles to download:')
 
     # collect urls of matchfiles to download
-    for rc in tqdm(range(1, 64), total=63):
+    for rc in tqdm(range(0, 64), total=64):
         bu = os.path.join(base_url, f'rc{rc:02d}')
 
         response = requests.get(bu, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
