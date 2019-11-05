@@ -5,6 +5,7 @@ import multiprocessing as mp
 import subprocess
 import json
 from tqdm import tqdm
+import time
 
 
 ''' load config and secrets '''
@@ -18,13 +19,22 @@ for k_ in secrets:
     config[k_].update(secrets.get(k_, {}))
 
 
-def fetch_url(url):
+def fetch_url(url, source='supernova'):
     p = os.path.join(path, os.path.basename(url))
     if not os.path.exists(p):
-        subprocess.run(['wget',
-                        f"--http-user={secrets['ztf_depot']['user']}", f"--http-passwd={secrets['ztf_depot']['pwd']}",
-                        '-q', '--timeout=600', '--waitretry=10',
-                        '--tries=5', '-O', p, url])
+        if source == 'ipac':
+            subprocess.run(['wget',
+                            f"--http-user={secrets['ztf_depot']['user']}",
+                            f"--http-passwd={secrets['ztf_depot']['pwd']}",
+                            '-q', '--timeout=600', '--waitretry=10',
+                            '--tries=5', '-O', p, url])
+        elif source == 'supernova':
+            _url = url.replace('https://', '/media/Data2/Matchfiles/')
+            subprocess.run(['scp',
+                            f'duev@supernova.caltech.edu:{_url}',
+                            path])
+
+        time.sleep(0.5)
 
 
 def gunzip(f):
@@ -33,7 +43,8 @@ def gunzip(f):
 
 t_tag = '20191101'
 
-path = f'/_tmp/ztf_matchfiles_{t_tag}/'
+# path = f'/_tmp/ztf_matchfiles_{t_tag}/'
+path = '/home/dmitry_duev/matchfiles'
 if not os.path.exists(path):
     os.makedirs(path)
 
@@ -47,7 +58,7 @@ if __name__ == '__main__':
     print('Collecting urls of matchfiles to download:')
 
     # collect urls of matchfiles to download
-    for rc in tqdm(range(64), total=64):
+    for rc in tqdm(range(1, 64), total=63):
         bu = os.path.join(base_url, f'rc{rc:02d}')
 
         response = requests.get(bu, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
@@ -81,5 +92,8 @@ if __name__ == '__main__':
     print(f'Downloading {n_matchfiles} matchfiles:')
 
     # download
-    with mp.Pool(processes=4) as p:
-        list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
+    # with mp.Pool(processes=4) as p:
+    #     list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
+
+    for url in tqdm(urls):
+        fetch_url(url, source='supernova')

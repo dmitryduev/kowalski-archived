@@ -113,7 +113,7 @@ docker build --rm -t kowalski:latest -f Dockerfile .
 docker run --name kowalski -d --restart always -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski_mongo_1:mongo kowalski:latest
 # test mode:
 docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data -v /path/to/tmp:/_tmp --link kowalski_mongo_1:mongo kowalski:latest
-
+docker run -it --rm --name kowalski -p 8000:4000 -v kowalski_data:/data --link kowalski_mongo_1:mongo kowalski:latest
 ```
 
 `Kowalski` will be available on port 8000 of the `Docker` host machine. 
