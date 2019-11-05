@@ -19,7 +19,7 @@ for k_ in secrets:
     config[k_].update(secrets.get(k_, {}))
 
 
-def fetch_url(url, source='supernova'):
+def fetch_url(url, source='ipac'):
     p = os.path.join(path, os.path.basename(url))
     if not os.path.exists(p):
         if source == 'ipac':
@@ -34,7 +34,7 @@ def fetch_url(url, source='supernova'):
                             f'duev@supernova.caltech.edu:{_url}',
                             path])
 
-        time.sleep(0.5)
+        # time.sleep(0.5)
 
 
 def gunzip(f):
@@ -43,8 +43,8 @@ def gunzip(f):
 
 t_tag = '20191101'
 
-# path = f'/_tmp/ztf_matchfiles_{t_tag}/'
-path = '/home/dmitry_duev/matchfiles'
+path = f'/_tmp/ztf_matchfiles_{t_tag}/'
+# path = '/home/dmitry_duev/matchfiles'
 if not os.path.exists(path):
     os.makedirs(path)
 
@@ -92,8 +92,8 @@ if __name__ == '__main__':
     print(f'Downloading {n_matchfiles} matchfiles:')
 
     # download
-    # with mp.Pool(processes=4) as p:
-    #     list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
+    with mp.Pool(processes=4) as p:
+        list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
 
-    for url in tqdm(urls):
-        fetch_url(url, source='supernova')
+    # for url in tqdm(urls):
+    #     fetch_url(url, source='supernova')

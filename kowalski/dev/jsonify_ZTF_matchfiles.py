@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pymongo
 import json
+from bson.json_util import dumps
 import argparse
 import traceback
 import datetime
@@ -17,88 +18,18 @@ import typing
 # from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 
-
-''' load config and secrets '''
-with open('/app/config.json') as cjson:
-    config = json.load(cjson)
-
-with open('/app/secrets.json') as sjson:
-    secrets = json.load(sjson)
-
-for k_ in secrets:
-    config[k_].update(secrets.get(k_, {}))
+from json import encoder
+encoder.FLOAT_REPR = lambda o: format(o, '.7f')
 
 
 def utc_now():
     return datetime.datetime.now(pytz.utc)
 
 
-def connect_to_db():
-    """ Connect to the mongodb database
-
-    :return:
-    """
-    try:
-        # there's only one instance of DB, it's too big to be replicated
-        _client = pymongo.MongoClient(host=config['database']['host'],
-                                      port=config['database']['port'])
-        # grab main database:
-        _db = _client[config['database']['db']]
-    except Exception as _e:
-        raise ConnectionRefusedError
-    try:
-        # authenticate
-        _db.authenticate(config['database']['user'], config['database']['pwd'])
-    except Exception as _e:
-        raise ConnectionRefusedError
-
-    return _client, _db
-
-
-def insert_db_entry(_db, _collection=None, _db_entry=None):
-    """
-        Insert a document _doc to collection _collection in DB.
-        It is monitored for timeout in case DB connection hangs for some reason
-    :param _collection:
-    :param _db_entry:
-    :return:
-    """
-    assert _collection is not None, 'Must specify collection'
-    assert _db_entry is not None, 'Must specify document'
-    try:
-        _db[_collection].insert_one(_db_entry)
-    except Exception as _e:
-        print('Error inserting {:s} into {:s}'.format(str(_db_entry['_id']), _collection))
-        traceback.print_exc()
-        print(_e)
-
-
-def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose=False):
-    """
-        Insert a document _doc to collection _collection in DB.
-        It is monitored for timeout in case DB connection hangs for some reason
-    :param _db:
-    :param _collection:
-    :param _db_entries:
-    :param _verbose:
-    :return:
-    """
-    assert _collection is not None, 'Must specify collection'
-    assert _db_entries is not None, 'Must specify documents'
-    try:
-        _db[_collection].insert_many(_db_entries, ordered=False)
-    except pymongo.errors.BulkWriteError as bwe:
-        if _verbose:
-            print(bwe.details)
-    except Exception as _e:
-        if _verbose:
-            traceback.print_exc()
-            print(_e)
-
-
 @jit
 def deg2hms(x):
-    """Transform degrees to *hours:minutes:seconds* strings.
+    """
+    Transform degrees to *hours:minutes:seconds* strings.
 
     Parameters
     ----------
@@ -163,15 +94,7 @@ def ccd_quad_2_rc(ccd: int, quad: int) -> int:
 filters = {'zg': 1, 'zr': 2, 'zi': 3}
 
 
-def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
-                 _rm_file=False, verbose=False, _dry_run=False):
-
-    # connect to MongoDB:
-    if verbose:
-        print('Connecting to DB')
-    _client, _db = connect_to_db()
-    if verbose:
-        print('Successfully connected')
+def process_file(_file, _keep_all=False, _rm_file=False, verbose=False):
 
     print(f'processing {_file}')
 
@@ -200,7 +123,6 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             exp_baseid = int(1e16 + field * 1e12 + rc * 1e10 + filt * 1e9)
             # print(int(1e16), int(field*1e12), int(rc*1e10), int(filt*1e9), exp_baseid)
 
-            # tic = time.time()
             exposures = pd.DataFrame.from_records(group.exposures[:])
             # exposures_colnames = exposures.columns.values
             # print(exposures_colnames)
@@ -226,17 +148,10 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                 except Exception as e_:
                     print(str(e_))
 
-            # ingest exposures in one go:
-            if not _dry_run:
-                print(f'ingesting exposures for {_file}')
-                insert_multiple_db_entries(_db, _collection=_collections['exposures'], _db_entries=docs_exposures)
-                print(f'done ingesting exposures for {_file}')
-
             docs_sources = []
-            batch_num = 1
             # fixme? skip transients
             # for source_type in ('source', 'transient'):
-            for source_type in ('source',):
+            for source_type in ('source', ):
 
                 sources_colnames = group[f'{source_type}s'].colnames
                 sources = np.array(group[f'{source_type}s'].read())
@@ -262,27 +177,6 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
 
                         # dump unwanted fields:
                         if not _keep_all:
-                            # do not store all fields to save space
-                            # sources_fields_to_keep = ('astrometricrms', 'chisq', 'con', 'lineartrend',
-                            #                           'magrms', 'maxslope', 'meanmag', 'medianabsdev',
-                            #                           'medianmag', 'minmag', 'maxmag',
-                            #                           'nabovemeanbystd', 'nbelowmeanbystd',
-                            #                           'nconsecabovemeanbystd', 'nconsecbelowmeanbystd',
-                            #                           'nconsecfrommeanbystd',
-                            #                           'nmedianbufferrange',
-                            #                           'npairposslope', 'percentiles', 'skewness',
-                            #                           'smallkurtosis', 'stetsonj', 'stetsonk',
-                            #                           'vonneumannratio', 'weightedmagrms',
-                            #                           'weightedmeanmag',
-                            #                           'dec', 'matchid', 'nobs', 'ngoodobs',
-                            #                           'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
-
-                            # sources_fields_to_keep = ('meanmag',
-                            #                           'percentiles',
-                            #                           'vonneumannratio',
-                            #                           'dec', 'matchid', 'nobs',
-                            #                           'ra', 'refchi', 'refmag', 'refmagerr', 'refsharp', 'refsnr')
-
                             # refmagerr = 1.0857/refsnr
                             sources_fields_to_keep = ('meanmag',
                                                       'percentiles',
@@ -302,6 +196,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                 doc[k] = int(doc[k])
                             if np.issubdtype(type(v), np.inexact):
                                 doc[k] = float(doc[k])
+                                if k not in ('ra', 'dec'):
+                                    doc[k] = round(doc[k], 3)
                             # convert numpy arrays into lists
                             if type(v) == np.ndarray:
                                 doc[k] = doc[k].tolist()
@@ -313,6 +209,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                         # oid = ((fieldid * 100000 + fid * 10000 + ccdid * 100 + qid * 10) * 10 ** 7) + int(matchid)
 
                         doc['iqr'] = doc['percentiles'][8] - doc['percentiles'][3]
+                        doc['iqr'] = round(doc['iqr'], 3)
                         doc.pop('percentiles')
 
                         # doc['matchfile'] = ff_basename
@@ -370,6 +267,10 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                     dd[k] = int(dd[k])
                                 if np.issubdtype(type(v), np.inexact):
                                     dd[k] = float(dd[k])
+                                    if k not in ('ra', 'dec', 'hjd'):
+                                        dd[k] = round(dd[k], 3)
+                                    elif k == 'hjd':
+                                        dd[k] = round(dd[k], 5)
                                 # convert numpy arrays into lists
                                 if type(v) == np.ndarray:
                                     dd[k] = dd[k].tolist()
@@ -383,50 +284,16 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                     except Exception as e_:
                         print(str(e_))
 
-                    # ingest in batches
-                    try:
-                        if len(docs_sources) % _batch_size == 0:
-                            print(f'inserting batch #{batch_num} for {_file}')
-                            if not _dry_run:
-                                insert_multiple_db_entries(_db, _collection=_collections['sources'],
-                                                           _db_entries=docs_sources, _verbose=True)
-                            # flush:
-                            docs_sources = []
-                            batch_num += 1
-                    except Exception as e_:
-                        print(str(e_))
-
-        # ingest remaining
-        while len(docs_sources) > 0:
-            try:
-                # In case mongo crashed and disconnected, docs will accumulate in documents
-                # keep on trying to insert them until successful
-                print(f'inserting batch #{batch_num} for {_file}')
-                if not _dry_run:
-                    insert_multiple_db_entries(_db, _collection=_collections['sources'], _db_entries=docs_sources)
-                    # flush:
-                    docs_sources = []
-
-            except Exception as e:
-                traceback.print_exc()
-                print(e)
-                print('Failed, waiting 5 seconds to retry')
-                time.sleep(5)
+        # dump to json:
+        with open(_file.replace('.pytable', '.exposures.json'), 'w') as fe:
+            fe.write(dumps(docs_exposures))
+        with open(_file.replace('.pytable', '.sources.json'), 'w') as fs:
+            # fs.write(dumps(docs_sources))
+            json.dump(docs_sources, fs)
 
     except Exception as e:
         traceback.print_exc()
         print(e)
-
-    # disconnect from db:
-    try:
-        if _rm_file:
-            os.remove(_file)
-            print(f'Successfully removed {_file}')
-        _client.close()
-        if verbose:
-            print('Successfully disconnected from db')
-    finally:
-        pass
 
 
 if __name__ == '__main__':
@@ -436,82 +303,27 @@ if __name__ == '__main__':
 
     parser.add_argument('--keepall', action='store_true', help='keep all fields from the matchfiles?')
     parser.add_argument('--rm', action='store_true', help='remove matchfiles after ingestion?')
-    parser.add_argument('--dryrun', action='store_true', help='dry run?')
 
     args = parser.parse_args()
 
-    dry_run = args.dryrun
     keep_all = args.keepall
     rm_file = args.rm
 
-    # connect to MongoDB:
-    print('Connecting to DB')
-    client, db = connect_to_db()
-    print('Successfully connected')
-
-    # t_tag = '20181220'
-    # t_tag = '20190412'
-    # t_tag = '20190614'
-    t_tag = '20190718'
-
-    collections = {'exposures': f'ZTF_exposures_{t_tag}',
-                   'sources': f'ZTF_sources_{t_tag}'}
-
-    # create indices:
-    print('Creating indices')
-    if not dry_run:
-        db[collections['exposures']].create_index([('expid', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                                 ('_id', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('field', pymongo.ASCENDING),
-                                                 ('ccd', pymongo.ASCENDING),
-                                                 ('quad', pymongo.ASCENDING)], background=True)
-        db[collections['sources']].create_index([('nobs', pymongo.ASCENDING),
-                                                 ('_id', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('data.programid', pymongo.ASCENDING)], background=True)
-        # db[collections['sources']].create_index([('data.expid', pymongo.ASCENDING)], background=True)
-
-    # number of records to insert
-    batch_size = 2048
-    # batch_size = 1
-
-    # fixme:
-    # test
-    # _location = '/_tmp/ztf_matchfiles_20181219/'
-    # files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
-
-    # production
-    # _location = f'/_tmp/ztf_matchfiles_{t_tag}/ztfweb.ipac.caltech.edu/ztf/ops/srcmatch/'
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))
-    # files = glob.glob(os.path.join(_location, '*', '*', 'ztf_*.pytable'))[:2]
-    _location = f'/_tmp/ztf_matchfiles_{t_tag}/'
+    # _location = f'/_tmp/ztf_matchfiles_{t_tag}/'
+    _location = '/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev'
     files = glob.glob(os.path.join(_location, 'ztf_*.pytable'))
-
-    # files = ['/matchfiles/rc63/fr000301-000350/ztf_000303_zr_c16_q4_match.pytable',
-    #          '/matchfiles/rc63/fr000301-000350/ztf_000303_zg_c16_q4_match.pytable']
-    # print(files)
-    # file_sizes = [os.path.getsize(ff) for ff in files]
-    # total_file_size = np.sum(file_sizes) / 1e6
-    # print(f'Total file size: {total_file_size} MB')
 
     print(f'# files to process: {len(files)}')
 
     # init threaded operations
-    # pool = ThreadPoolExecutor(2)
     # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(30)
 
     # for ff in files[::-1]:
     for ff in sorted(files):
-        # process_file(_file=ff, _collections=collections, _batch_size=batch_size,
-        #              _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
-        pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
-                    _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
-
-    # with mp.Pool(processes=np.min((4, n_cpu))) as p:
-    #     alerts = np.array(list(tqdm(p.imap(load_json, path.glob('*.json')), total=n_alerts)))
+        process_file(_file=ff, _keep_all=keep_all, _rm_file=rm_file, verbose=True)
+        # pool.submit(process_file, _file=ff, _keep_all=keep_all, _rm_file=rm_file, verbose=True)
 
     # wait for everything to finish
-    pool.shutdown(wait=True)
+    # pool.shutdown(wait=True)
 
     print('All done')
