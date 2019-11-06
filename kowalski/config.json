@@ -111,20 +111,33 @@
       },
 
       "LAMOST_DR5_v3": {
-          "filter": {},
-          "projection": {
-            "_id": 1,
-            "coordinates.radec_str": 1,
-            "mjd": 1,
-            "snru": 1,
-            "snrg": 1,
-            "snrr": 1,
-            "snri": 1,
-            "snrz": 1,
-            "objtype": 1,
-            "class": 1,
-            "subclass":  1}
+        "filter": {},
+        "projection": {
+          "_id": 1,
+          "coordinates.radec_str": 1,
+          "mjd": 1,
+          "snru": 1,
+          "snrg": 1,
+          "snrr": 1,
+          "snri": 1,
+          "snrz": 1,
+          "objtype": 1,
+          "class": 1,
+          "subclass":  1
         }
+      },
+
+      "PS1_DR1": {
+        "filter": {},
+        "projection": {
+          "_id": 1, "coordinates.radec_str": 1,
+          "gMeanPSFMag": 1, "gMeanPSFMagErr": 1,
+          "rMeanPSFMag": 1, "rMeanPSFMagErr": 1,
+          "iMeanPSFMag": 1, "iMeanPSFMagErr": 1,
+          "zMeanPSFMag": 1, "zMeanPSFMagErr": 1,
+          "yMeanPSFMag": 1, "yMeanPSFMagErr": 1
+        }
+      }
     }
   },
 
