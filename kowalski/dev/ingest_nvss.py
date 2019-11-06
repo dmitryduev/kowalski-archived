@@ -84,7 +84,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
         print(_e)
 
 
-@jit
+@jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -112,7 +112,7 @@ def deg2hms(x):
     return hms
 
 
-@jit
+@jit(forceobj=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
@@ -225,7 +225,7 @@ if __name__ == '__main__':
                 doc['coordinates']['radec_geojson'] = {'type': 'Point',
                                                        'coordinates': _radec_geojson}
                 # radians:
-                doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
+                # doc['coordinates']['radec'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
 
                 # print(doc['coordinates'])
 

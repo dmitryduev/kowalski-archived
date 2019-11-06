@@ -91,7 +91,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
         print('insertion error')
 
 
-@jit
+@jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -119,7 +119,7 @@ def deg2hms(x):
     return hms
 
 
-@jit
+@jit(forceobj=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
@@ -155,7 +155,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
     if verbose:
         print('Successfully connected')
 
-    print(f'processing {_file}')
+    if verbose:
+        print(f'processing {_file}')
     documents = []
     batch_num = 1
 
