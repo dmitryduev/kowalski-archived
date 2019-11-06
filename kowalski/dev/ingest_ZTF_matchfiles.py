@@ -16,6 +16,8 @@ from numba import jit
 import typing
 # from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
+import multiprocessing as mp
+from tqdm import tqdm
 
 
 ''' load config and secrets '''
@@ -96,7 +98,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose
             print(_e)
 
 
-@jit
+@jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -124,7 +126,7 @@ def deg2hms(x):
     return hms
 
 
-@jit
+@jit(forceobj=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
@@ -151,7 +153,7 @@ def deg2dms(x):
     return dms
 
 
-@jit
+@jit(forceobj=True)
 def ccd_quad_2_rc(ccd: int, quad: int) -> int:
     # assert ccd in range(1, 17)
     # assert quad in range(1, 5)
@@ -173,7 +175,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
     if verbose:
         print('Successfully connected')
 
-    print(f'processing {_file}')
+    if verbose:
+        print(f'processing {_file}')
 
     try:
         with tables.open_file(_file) as f:
@@ -194,8 +197,9 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
 
             rc = ccd_quad_2_rc(ccd=ccd, quad=quad)
             baseid = int(1e13 + field * 1e9 + rc * 1e7 + filt * 1e6)
-            # print(f'{_file}: {field} {filt} {ccd} {quad}')
-            print(f'{_file}: baseid {baseid}')
+            if verbose:
+                # print(f'{_file}: {field} {filt} {ccd} {quad}')
+                print(f'{_file}: baseid {baseid}')
 
             exp_baseid = int(1e16 + field * 1e12 + rc * 1e10 + filt * 1e9)
             # print(int(1e16), int(field*1e12), int(rc*1e10), int(filt*1e9), exp_baseid)
@@ -228,9 +232,11 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
 
             # ingest exposures in one go:
             if not _dry_run:
-                print(f'ingesting exposures for {_file}')
+                if verbose:
+                    print(f'ingesting exposures for {_file}')
                 insert_multiple_db_entries(_db, _collection=_collections['exposures'], _db_entries=docs_exposures)
-                print(f'done ingesting exposures for {_file}')
+                if verbose:
+                    print(f'done ingesting exposures for {_file}')
 
             docs_sources = []
             batch_num = 1
@@ -302,6 +308,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                 doc[k] = int(doc[k])
                             if np.issubdtype(type(v), np.inexact):
                                 doc[k] = float(doc[k])
+                                if k not in ('ra', 'dec'):
+                                    doc[k] = round(doc[k], 3)
                             # convert numpy arrays into lists
                             if type(v) == np.ndarray:
                                 doc[k] = doc[k].tolist()
@@ -313,6 +321,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                         # oid = ((fieldid * 100000 + fid * 10000 + ccdid * 100 + qid * 10) * 10 ** 7) + int(matchid)
 
                         doc['iqr'] = doc['percentiles'][8] - doc['percentiles'][3]
+                        doc['iqr'] = round(doc['iqr'], 3)
                         doc.pop('percentiles')
 
                         # doc['matchfile'] = ff_basename
@@ -370,6 +379,10 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                     dd[k] = int(dd[k])
                                 if np.issubdtype(type(v), np.inexact):
                                     dd[k] = float(dd[k])
+                                    if k not in ('ra', 'dec', 'hjd'):
+                                        dd[k] = round(dd[k], 3)
+                                    elif k == 'hjd':
+                                        dd[k] = round(dd[k], 5)
                                 # convert numpy arrays into lists
                                 if type(v) == np.ndarray:
                                     dd[k] = dd[k].tolist()
@@ -386,7 +399,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                     # ingest in batches
                     try:
                         if len(docs_sources) % _batch_size == 0:
-                            print(f'inserting batch #{batch_num} for {_file}')
+                            if verbose:
+                                print(f'inserting batch #{batch_num} for {_file}')
                             if not _dry_run:
                                 insert_multiple_db_entries(_db, _collection=_collections['sources'],
                                                            _db_entries=docs_sources, _verbose=True)
@@ -401,7 +415,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             try:
                 # In case mongo crashed and disconnected, docs will accumulate in documents
                 # keep on trying to insert them until successful
-                print(f'inserting batch #{batch_num} for {_file}')
+                if verbose:
+                    print(f'inserting batch #{batch_num} for {_file}')
                 if not _dry_run:
                     insert_multiple_db_entries(_db, _collection=_collections['sources'], _db_entries=docs_sources)
                     # flush:
@@ -421,10 +436,12 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
     try:
         if _rm_file:
             os.remove(_file)
-            print(f'Successfully removed {_file}')
+            if verbose:
+                print(f'Successfully removed {_file}')
         _client.close()
         if verbose:
-            print('Successfully disconnected from db')
+            if verbose:
+                print('Successfully disconnected from db')
     finally:
         pass
 
@@ -452,7 +469,8 @@ if __name__ == '__main__':
     # t_tag = '20181220'
     # t_tag = '20190412'
     # t_tag = '20190614'
-    t_tag = '20190718'
+    # t_tag = '20190718'
+    t_tag = '20191101'
 
     collections = {'exposures': f'ZTF_exposures_{t_tag}',
                    'sources': f'ZTF_sources_{t_tag}'}
@@ -499,19 +517,20 @@ if __name__ == '__main__':
     # init threaded operations
     # pool = ThreadPoolExecutor(2)
     # pool = ProcessPoolExecutor(1)
-    pool = ProcessPoolExecutor(30)
+    # # pool = ProcessPoolExecutor(30)
+    #
+    # # for ff in files[::-1]:
+    # for ff in sorted(files):
+    #     # process_file(_file=ff, _collections=collections, _batch_size=batch_size,
+    #     #              _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
+    #     pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
+    #                 _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
+    #
+    # # wait for everything to finish
+    # pool.shutdown(wait=True)
 
-    # for ff in files[::-1]:
-    for ff in sorted(files):
-        # process_file(_file=ff, _collections=collections, _batch_size=batch_size,
-        #              _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
-        pool.submit(process_file, _file=ff, _collections=collections, _batch_size=batch_size,
-                    _keep_all=keep_all, _rm_file=rm_file, verbose=True, _dry_run=dry_run)
-
-    # with mp.Pool(processes=np.min((4, n_cpu))) as p:
-    #     alerts = np.array(list(tqdm(p.imap(load_json, path.glob('*.json')), total=n_alerts)))
-
-    # wait for everything to finish
-    pool.shutdown(wait=True)
+    input_list = [[f, collections, batch_size, keep_all, rm_file, False, dry_run] for f in sorted(files)]
+    with mp.Pool(processes=1) as p:
+        list(tqdm(p.starmap(process_file, input_list), total=len(files)))
 
     print('All done')

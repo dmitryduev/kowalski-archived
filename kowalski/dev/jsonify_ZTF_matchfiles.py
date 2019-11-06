@@ -157,7 +157,12 @@ def process_file(_file, _keep_all=False, _rm_file=False, verbose=False):
                 sources = np.array(group[f'{source_type}s'].read())
                 # sources = group[f'{source_type}s'].read()
 
+                # tic = time.time()
                 # sourcedata = pd.DataFrame.from_records(group[f'{source_type}data'][:])
+                # sourcedatas = pd.DataFrame.from_records(group[f'{source_type}data'][:])
+                # toc = time.time()
+                # print(toc-tic)
+                # print(sourcedatas)
                 # sourcedata_colnames = sourcedata.columns.values
                 sourcedata_colnames = group[f'{source_type}data'].colnames
                 # sourcedata = np.array(group[f'{source_type}data'].read())
@@ -168,8 +173,12 @@ def process_file(_file, _keep_all=False, _rm_file=False, verbose=False):
 
                         # grab data first
                         sourcedata = np.array(group[f'{source_type}data'].read_where(f'matchid == {doc["matchid"]}'))
+                        # w = sourcedatas['matchid'] == doc["matchid"]
+                        # sourcedata = sourcedatas.loc[w]
+
                         # print(sourcedata)
                         doc_data = [dict(zip(sourcedata_colnames, sd)) for sd in sourcedata]
+                        # doc_data = sourcedata.to_dict('records')
 
                         # skip sources that are only detected in the reference image:
                         if len(doc_data) == 0:
