@@ -290,7 +290,4 @@ if __name__ == '__main__':
     # wait for everything to finish
     pool.shutdown(wait=True)
 
-    # create indices:
-    print('Creating indices')
-
     print('All done')
