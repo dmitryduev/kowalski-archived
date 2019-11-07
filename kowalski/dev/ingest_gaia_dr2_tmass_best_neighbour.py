@@ -198,12 +198,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                 # fix types:
                 for col_name, col_type in column_names:
                     try:
-                        if doc[col_name] == 'NOT_AVAILABLE':
-                            continue
-                        elif doc[col_name] in ('false', 'true'):
-                            doc[col_name] = eval(doc[col_name].capitalize())
-                        elif doc[col_name] == '':
-                            doc[col_name] = None
+                        if doc[col_name] == '':
+                            doc.pop(col_name, None)
                         else:
                             doc[col_name] = col_type(doc[col_name])
                     except Exception as e:
