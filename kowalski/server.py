@@ -2058,6 +2058,7 @@ async def ztf_alert_get_cutout_handler(request):
         plt.savefig(buff, dpi=42)
 
         buff.seek(0)
+        plt.close('all')
         return web.Response(body=buff, content_type='image/png')
 
 
