@@ -110,6 +110,19 @@
         }
       },
 
+      "Gaia_DR2_WD": {
+          "filter": {},
+          "projection": {
+            "_id": 1,
+            "coordinates.radec_str": 1,
+            "White_dwarf_name": 1,
+            "Pwd": 1,
+            "Pwd_correction": 1,
+            "SDSS_name": 1,
+            "Teff": 1,
+            "eTeff": 1}
+        },
+
       "LAMOST_DR5_v3": {
         "filter": {},
         "projection": {
