@@ -96,7 +96,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose
             print(_e)
 
 
-@jit
+@jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -124,7 +124,7 @@ def deg2hms(x):
     return hms
 
 
-@jit
+@jit(forceobj=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
@@ -274,12 +274,15 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
                     # convert
                     for col_name, col_type in column_names:
                         try:
-                            if doc[col_name] == 'NOT_AVAILABLE':
-                                continue
+                            # fixme:
+                            if (doc[col_name] == 'NOT_AVAILABLE') or (doc[col_name] is None):
+                                # continue
+                                doc.pop(col_name, None)
                             elif doc[col_name] in ('false', 'true'):
                                 doc[col_name] = eval(doc[col_name].capitalize())
                             elif len(doc[col_name]) == 0:
-                                doc[col_name] = None
+                                # doc[col_name] = None
+                                doc.pop(col_name, None)
                             else:
                                 doc[col_name] = col_type(doc[col_name])
                         except Exception as e:
