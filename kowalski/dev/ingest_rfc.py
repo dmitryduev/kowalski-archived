@@ -90,7 +90,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
         print(_e)
 
 
-@jit
+@jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -118,7 +118,7 @@ def deg2hms(x):
     return hms
 
 
-@jit
+@jit(forceobj=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
@@ -160,7 +160,8 @@ if __name__ == '__main__':
 
     # _collection = 'RFC_2017c'
     # _collection = 'RFC_2018d'
-    _collection = 'RFC_2019a'
+    # _collection = 'RFC_2019a'
+    _collection = 'RFC_2019d'
 
     # create 2d index:
     print('Creating 2d index')
@@ -172,9 +173,7 @@ if __name__ == '__main__':
     batch_num = 1
     documents = []
 
-    # f_in = '/_tmp/rfc_2017c_cat.txt'
-    # f_in = '/_tmp/rfc_2018d_cat.txt'
-    f_in = '/_tmp/rfc_2019a_cat.txt'
+    f_in = f'/_tmp/{_collection.lower()}_cat.txt'
 
     field_names = ['category', 'IVS_name', 'J2000_name', 'ra', 'dec', 'ra_error_mas',
                    'dec_error_mas', 'corr', 'n_obs',
