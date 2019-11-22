@@ -280,6 +280,26 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 
     <script>
+        $(document).ready(function() {
+            // show on load:
+            $("#wrapper").toggleClass("toggled");
+            $("#menu-toggle").click(function (e) {
+                e.preventDefault();
+                $("#wrapper").toggleClass("toggled");
+            });
+        });
+
+        // arrow up/down on show/hide
+        $(document).ready(function() {
+            $('.sidebar-collapse').on('hide.bs.collapse', function () {
+                {#console.log(this.id);#}
+                $("[id="+this.id+"-dropdown]").children("i").attr("class", "fa fa-lg fa-angle-down float-right");
+            });
+            $('.sidebar-collapse').on('show.bs.collapse', function () {
+                $("[id="+this.id+"-dropdown]").children("i").attr("class", "fa fa-lg fa-angle-up float-right");
+            });
+        });
+
         // Fancy table stuff
         function getHeight() {
             var window_height = $(window).height();
