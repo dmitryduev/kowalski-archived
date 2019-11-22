@@ -41,19 +41,19 @@
 
                         <form id="simple_query_form" class="form mt-1 mb-1" method="get">
 
-                            <div class="form-group">
-
-                                <label for="quick_search__candid" class="col control-label">
-                                    candid
-                                </label>
-
-                                <div class="col pr-4">
-                                    <input type="text" class="form-control form-control-sm"
-                                           id="quick_search__candid" name="quick_search__candid"
-                                           data-id="candid" placeholder="">
-                                </div>
-
-                            </div>
+{#                            <div class="form-group">#}
+{##}
+{#                                <label for="quick_search__candid" class="col control-label">#}
+{#                                    candid#}
+{#                                </label>#}
+{##}
+{#                                <div class="col pr-4">#}
+{#                                    <input type="text" class="form-control form-control-sm"#}
+{#                                           id="quick_search__candid" name="quick_search__candid"#}
+{#                                           data-id="candid" placeholder="">#}
+{#                                </div>#}
+{##}
+{#                            </div>#}
 
                             <div class="form-group">
 
@@ -676,8 +676,9 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                                 let f_id = $(this).data("id");
                                 let f_val = $(this).val();
                                 if (f_val.length > 0) {
+                                    // todo: fixme
                                     if (f_id === "candid") {
-                                        simple_query[f_id] = BigInt(f_val);
+                                        simple_query[f_id] = BigInt(f_val).toString();
                                     }
                                     else {
                                         simple_query[f_id] = f_val;
