@@ -43,36 +43,28 @@
 
                             <div class="form-group">
 
-                                <label for="quick_search__created_by" class="col control-label">
-                                    created_by
+                                <label for="quick_search__candid" class="col control-label">
+                                    candid
                                 </label>
 
                                 <div class="col pr-4">
-                                    <select class="form-control form-control-sm" id="quick_search__created_by"
-                                            name="quick_search__created_by" data-id="created_by">
-                                        <option></option>
-                                        {% for u in users %}
-                                            <option>{{ u }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="quick_search__candid" name="quick_search__candid"
+                                           data-id="candid" placeholder="">
                                 </div>
 
                             </div>
 
                             <div class="form-group">
 
-                                <label for="quick_search__zvm_program_id" class="col control-label">
-                                    zvm_program_id
+                                <label for="quick_search__objectId" class="col control-label">
+                                    objectId
                                 </label>
 
                                 <div class="col pr-4">
-                                    <select multiple size="3"
-                                            class="form-control form-control-sm" id="quick_search__zvm_program_id"
-                                            name="quick_search__zvm_program_id" data-id="zvm_program_id">
-                                        {% for p in programs %}
-                                            <option>{{ p }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="quick_search__objectId" name="quick_search__objectId"
+                                           data-id="objectId" placeholder="">
                                 </div>
 
                             </div>
@@ -680,12 +672,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                                 let f_id = $(this).data("id");
                                 let f_val = $(this).val();
                                 if (f_val.length > 0) {
-                                    if (f_id === "zvm_program_id") {
-                                        simple_query[f_id] = {"$in": f_val.map(x => parseInt(x))};
-                                    }
-                                    else {
-                                        simple_query[f_id] = f_val;
-                                    }
+                                    simple_query[f_id] = f_val;
                                 }
 
                             });
