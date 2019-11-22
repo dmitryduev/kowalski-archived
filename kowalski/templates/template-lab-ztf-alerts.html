@@ -625,6 +625,10 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
             }, 100);
         }
 
+        function replaceAll(str, find, replace) {
+            return str.replace(new RegExp(find, 'g'), replace);
+        }
+
         // submit query
         $(document).ready(function() {
             $('#submit_query').click(function () {
@@ -672,7 +676,12 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                                 let f_id = $(this).data("id");
                                 let f_val = $(this).val();
                                 if (f_val.length > 0) {
-                                    simple_query[f_id] = f_val;
+                                    if (f_id === "candid") {
+                                        simple_query[f_id] = parseInt(x);
+                                    }
+                                    else {
+                                        simple_query[f_id] = f_val;
+                                    }
                                 }
 
                             });
