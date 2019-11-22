@@ -5,8 +5,7 @@
 {# custom css #}
 {% block css %}
     <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">
-    <link rel="stylesheet" href="{{-script_root-}}/static/css/js9support.css">
-    <link rel="stylesheet" href="{{-script_root-}}/static/css/js9.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/sidebar.fat.css">
 {% endblock %}
 
 {% block nav_lab %}
@@ -14,53 +13,143 @@
 {% endblock %}
 
 {% block body_top %}
+
+{% endblock %}
+
+{% block body %}
+
     <div class="container-fluid mt-2">
 
-        <div id="accordion" role="tablist" class="mt-2">
-            <div class="card">
-                <div class="card-header" role="tab" id="headingQueryTab">
-                    <h5 class="mb-0">
-                        <a data-toggle="collapse" href="#queryTab" aria-expanded="true"
-                           aria-controls="queryTab">
-                            Lab: Search ZTF Alerts
-                        </a>
-                    </h5>
-                </div>
-                <div id="queryTab" class="collapse" role="tabpanel" aria-labelledby="headingQueryTab">
-                    <div class="card-body">
-                        <form id="query_form" class="form" method="post">
+        <div id="wrapper">
 
-                            <div class="form-group row">
-                                <label for="ra" class="col-md-2 col-form-label">RA/Dec, ICRS</label>
-                                <div class="col-md-10">
-                                    <textarea class="form-control form-control-sm object_coordinates" id="radec" name="radec"
-                                              placeholder="Python-readable list of comma-separated object coordinates or dictionary:
+            <!-- Sidebar -->
+            <div id="sidebar-wrapper">
+                <ul class="sidebar-nav ml-2 mb-5 pb-5">
+
+                    <!-- Quick search -->
+                    <li class="sidebar-brand m-0 mt-3 p-0">
+                        <a data-toggle="collapse" href="#quick_search_form"
+                           aria-expanded="true" aria-controls="quick_search_form"
+                           id="quick_search_form-dropdown"
+                           style="margin-top: -0.1rem;">
+                            Quick search
+                            <i class="fa fa-lg fa-angle-up float-right"></i>
+                        </a>
+                    </li>
+
+                    <div class="collapse multi-collapse show sidebar-collapse" id="quick_search_form">
+
+                        <form id="simple_query_form" class="form mt-1 mb-1" method="get">
+
+                            <div class="form-group">
+
+                                <label for="quick_search__created_by" class="col control-label">
+                                    created_by
+                                </label>
+
+                                <div class="col pr-4">
+                                    <select class="form-control form-control-sm" id="quick_search__created_by"
+                                            name="quick_search__created_by" data-id="created_by">
+                                        <option></option>
+                                        {% for u in users %}
+                                            <option>{{ u }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label for="quick_search__zvm_program_id" class="col control-label">
+                                    zvm_program_id
+                                </label>
+
+                                <div class="col pr-4">
+                                    <select multiple size="3"
+                                            class="form-control form-control-sm" id="quick_search__zvm_program_id"
+                                            name="quick_search__zvm_program_id" data-id="zvm_program_id">
+                                        {% for p in programs %}
+                                            <option>{{ p }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+
+
+                            <div class="col">
+                                <button type="button" class="btn btn-dark btn-sm"
+                                        id="submit_simple_query">Submit</button>
+                            </div>
+
+                        </form>
+                    </div>
+                    <!-- /quick search -->
+
+                    <hr class="mr-3 mb-2">
+
+                    <!-- Search -->
+                    <li class="sidebar-brand m-0 mt-3 p-0">
+                        <a data-toggle="collapse" href="#query"
+                           aria-expanded="true" aria-controls="query"
+                           id="query-dropdown"
+                           style="margin-top: -0.1rem;">
+                            Search saved sources
+                            <i class="fa fa-lg fa-angle-up float-right"></i>
+                        </a>
+                    </li>
+
+                    <div class="collapse multi-collapse show sidebar-collapse" id="query">
+
+                        <form id="query_form" class="form mt-1 mb-2" method="post">
+
+                            <div class="form-group">
+
+                                <label for="radec" class="col control-label">
+                                    RA/Dec, ICRS
+                                </label>
+
+                                <div class="col pr-4">
+                                    <textarea class="form-control form-control-sm" id="radec" name="radec"
+                                                      placeholder="Python-readable list of comma-separated object coordinates or dictionary:
 [(HH:MM:SS, DD:MM:SS) or (HHhMMmSSs, DDdMMmSSs) or (deg, deg)]
 Examples:
 [(0.0, 0.0)]
 [(0.0, 0.0), (1.0, 1.0)]
 [('08:55:29.205', '-34:02:36.8944')]
 {'object1': ('08h55m29.205s', '-34d02m36.8944s'), 'object2': ('06h55m29.205s', '32d02m36.1944s')}
-
 Alternatively, for a single source, either two numbers [deg deg] or two strings [HH:MM:SS DD:MM:SS] or [HHhMMmSSs DDdMMmSSs]:
 0.0 0.0
 18:43:58.5333 -20:41:41.513
 "
-                                              rows="8"></textarea>
+                                                      rows="4"></textarea>
                                 </div>
+
                             </div>
 
-                            <div class="form-group row">
-                                <label for="cone_search_radius" class="col-md-2 control-label">
+                            <div class="form-group">
+
+                                <label for="cone_search_radius" class="col control-label">
                                     Cone search radius
                                 </label>
 
-                                <div class="col-md-5">
-                                    <input type="text" class="form-control form-control-sm object_coordinates" id="cone_search_radius"
-                                           name="cone_search_radius" placeholder="">
+                                <div class="col pr-4">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="cone_search_radius" name="cone_search_radius" placeholder="">
                                 </div>
-                                <div class="col-md-5">
-                                    <select class="form-control form-control-sm object_coordinates" id="cone_search_unit"
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label for="cone_search_unit" class="col control-label">
+                                    Cone search units
+                                </label>
+
+                                <div class="col pr-4">
+                                    <select class="form-control form-control-sm" id="cone_search_unit"
                                             name="cone_search_unit">
                                         <option>arcsec</option>
                                         <option>arcmin</option>
@@ -71,68 +160,83 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
 
                             </div>
 
-                            <div class="form-group row">
-                                <label for="filter" class="col-md-2 col-form-label">Filter</label>
-                                <div class="col-md-10">
+                            <div class="form-group">
+
+                                <label for="filter" class="col control-label">
+                                    Filter
+                                </label>
+
+                                <div class="col pr-4">
                                     <textarea class="form-control form-control-sm"
-                                              id="filter" name="filter"
-                                              placeholder="Filter in MongoDB syntax, see help"
-                                              rows="3"></textarea>
+                                                      id="filter" name="filter"
+                                                      placeholder="Filter in MongoDB syntax, see help"
+                                                      rows="4"></textarea>
                                 </div>
+
                             </div>
 
-                            <button type="button" class="btn btn-dark btn-sm" id="submit_query">Submit</button>
+                            <div class="col">
+                                <button type="button" class="btn btn-dark btn-sm"
+                                        id="submit_query">Submit</button>
+                            </div>
 
                         </form>
                     </div>
+                    <!-- /search -->
+
+                </ul>
+
+
+            </div>
+            <!-- /#sidebar-wrapper -->
+
+            <!-- Page Content -->
+            <div id="page-content-wrapper">
+                <div class="container-fluid">
+                    <h4>
+                        <a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars p-1 py-2" aria-hidden="true"></i></a>
+                        ZTF Alert Lab
+                    </h4>
+
+                    <!-- table -->
+                    <div id="toolbar" class="btn-group">
+                        <button type="button" class="btn btn-outline-dark"
+                                style="cursor: pointer;" onclick="toggle_expansion()"
+                                data-toggle="tooltip" data-placement="top" title="Show/hide more">
+                            <i id="expansion_toggle" class="fas fa-plus" aria-hidden="true"></i>
+                        </button>
+
+                    </div>
+
+                    <table id="table"
+                           class="table table-hover table-condensed"
+                           data-toggle="table"
+                           data-toolbar="#toolbar"
+                           data-pagination="true"
+                           data-side-pagination="client"
+                           data-minimum-count-columns="2"
+                           data-page-size="20"
+                           data-page-list="[20, 50, 100, 500, All]"
+                           data-search="true"
+                           data-detail-view="true"
+                           data-detail-formatter="detailFormatter"
+                           data-show-columns="true"
+                           data-show-multi-sort="true"
+                           data-show-export="true"
+                           data-export-types="['json', 'csv']"
+                           data-export-options='{ "fileName": "ztf-alerts",
+                                                      "worksheetName": "ztf-alerts"
+                                                     }'>
+                    </table>
                 </div>
             </div>
-        </div>
-    </div>
-{% endblock %}
-
-{% block body %}
-
-
-    <div class="container-fluid ">
-
-        <div id="toolbar" class="btn-group">
-            <button type="button" class="btn btn-outline-dark"
-                    style="cursor: pointer;" onclick="toggle_expansion()"
-                    data-toggle="tooltip" data-placement="top" title="Show/hide more">
-                <i id="expansion_toggle" class="fas fa-plus" aria-hidden="true"></i>
-            </button>
-
-{#            <button type="button" class="btn btn-outline-dark"#}
-{#                    style="cursor: pointer;" onclick="toggle_invert_cutouts()"#}
-{#                    data-toggle="tooltip" data-placement="top" title="Invert cutout colors">#}
-{#                <i id="expansion_toggle" class="fas fa-adjust" aria-hidden="true"></i>#}
-{#            </button>#}
+            <!-- /#page-content-wrapper -->
 
         </div>
-
-        <table id="table"
-               class="table table-hover table-condensed"
-               data-toggle="table"
-               data-toolbar="#toolbar"
-               data-pagination="true"
-               data-side-pagination="client"
-               data-minimum-count-columns="2"
-               data-page-size="20"
-               data-page-list="[20, 50, 100, 500, All]"
-               data-search="true"
-               data-detail-view="true"
-               data-detail-formatter="detailFormatter"
-               data-show-columns="true"
-               data-show-multi-sort="true"
-               data-show-export="true"
-               data-export-types="['json', 'csv']"
-               data-export-options='{ "fileName": "ztf-alerts",
-                                          "worksheetName": "ztf-alerts"
-                                         }'>
-        </table>
+        <!-- /#wrapper -->
 
     </div>
+    <!-- /container-fluid -->
 
     <!-- Modal -->
     <div class="modal fade" id="modal" tabindex="-1" role="dialog"
@@ -526,6 +630,48 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         // console.log('This was logged in the callback: ' + result);
                         // confirmed? emit request to server:
                         if (result) {
+                            $('#query_form').submit();
+                        }
+                    }
+                });
+            });
+        });
+
+        // submit simple query
+        $(document).ready(function() {
+            $('#submit_simple_query').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the simple query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fas fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fas fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            let simple_query = {};
+                            $('#simple_query_form *').filter(':input').each(function(){
+                                {#console.log($(this).data("id"), $(this).val(), $(this).val().length);#}
+                                let f_id = $(this).data("id");
+                                let f_val = $(this).val();
+                                if (f_val.length > 0) {
+                                    if (f_id === "zvm_program_id") {
+                                        simple_query[f_id] = {"$in": f_val.map(x => parseInt(x))};
+                                    }
+                                    else {
+                                        simple_query[f_id] = f_val;
+                                    }
+                                }
+
+                            });
+                            {#console.log(simple_query);#}
+                            $('#filter').val(JSON.stringify(simple_query));
+                            $('#filter').val(replaceAll($('#filter').val(), "\"", "'"));
                             $('#query_form').submit();
                         }
                     }
