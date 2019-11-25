@@ -532,7 +532,7 @@ if __name__ == '__main__':
     # pool.shutdown(wait=True)
 
     input_list = [[f, collections, batch_size, keep_all, rm_file, False, dry_run] for f in sorted(files)]
-    with mp.Pool(processes=30) as p:
+    with mp.Pool(processes=40) as p:
         list(tqdm(p.starmap(process_file, input_list), total=len(files)))
 
     print('All done')
