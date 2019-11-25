@@ -2016,6 +2016,7 @@ if __name__ == '__main__':
                         if txt_fr.endswith('.pytable') and txt_fr == mf:
                             print('\t', txt_fr)
                             urls.append(os.path.join(bu_fr, txt_fr))
+                            break
 
     # # collect urls of matchfiles to download
     # for rc in tqdm(range(0, 64), total=64):
