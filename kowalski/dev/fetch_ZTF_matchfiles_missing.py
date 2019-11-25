@@ -1989,6 +1989,34 @@ if __name__ == '__main__':
             r = ccd_quad_2_rc(c, q)
             print(mf, c, q, r)
 
+            bu = os.path.join(base_url, f'rc{r:02d}')
+
+            response = requests.get(bu, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
+            html = response.text
+
+            # link_list = []
+            soup = BeautifulSoup(html, 'html.parser')
+            links = soup.findAll('a')
+
+            for link in links:
+                txt = link.getText()
+                if 'fr' in txt:
+                    # print(txt)
+
+                    bu_fr = os.path.join(bu, txt)
+
+                    response_fr = requests.get(bu_fr, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
+                    html_fr = response_fr.text
+
+                    soup_fr = BeautifulSoup(html_fr, 'html.parser')
+                    links_fr = soup_fr.findAll('a')
+
+                    for link_fr in links_fr:
+                        txt_fr = link_fr.getText()
+                        if txt_fr.endswith('.pytable') and txt_fr == mf:
+                            print('\t', txt_fr)
+                            urls.append(os.path.join(bu_fr, txt_fr))
+
     # # collect urls of matchfiles to download
     # for rc in tqdm(range(0, 64), total=64):
     #     bu = os.path.join(base_url, f'rc{rc:02d}')
