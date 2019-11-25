@@ -2014,47 +2014,18 @@ if __name__ == '__main__':
                     for link_fr in links_fr:
                         txt_fr = link_fr.getText()
                         if txt_fr.endswith('.pytable') and txt_fr == mf:
-                            print('\t', txt_fr)
+                            # print('\t', txt_fr)
+                            print('\t', os.path.join(bu_fr, txt_fr))
                             urls.append(os.path.join(bu_fr, txt_fr))
                             break
 
-    # # collect urls of matchfiles to download
-    # for rc in tqdm(range(0, 64), total=64):
-    #     bu = os.path.join(base_url, f'rc{rc:02d}')
-    #
-    #     response = requests.get(bu, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
-    #     html = response.text
-    #
-    #     # link_list = []
-    #     soup = BeautifulSoup(html, 'html.parser')
-    #     links = soup.findAll('a')
-    #
-    #     for link in links:
-    #         txt = link.getText()
-    #         if 'fr' in txt:
-    #             # print(txt)
-    #
-    #             bu_fr = os.path.join(bu, txt)
-    #
-    #             response_fr = requests.get(bu_fr, auth=(secrets['ztf_depot']['user'], secrets['ztf_depot']['pwd']))
-    #             html_fr = response_fr.text
-    #
-    #             soup_fr = BeautifulSoup(html_fr, 'html.parser')
-    #             links_fr = soup_fr.findAll('a')
-    #
-    #             for link_fr in links_fr:
-    #                 txt_fr = link_fr.getText()
-    #                 if txt_fr.endswith('.pytable'):
-    #                     # print('\t', txt_fr)
-    #                     urls.append(os.path.join(bu_fr, txt_fr))
-    #
-    # n_matchfiles = len(urls)
-    #
-    # print(f'Downloading {n_matchfiles} matchfiles:')
-    #
-    # # download
-    # with mp.Pool(processes=4) as p:
-    #     list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
+    n_matchfiles = len(urls)
 
-    # for url in tqdm(urls):
-    #     fetch_url(url, source='supernova')
+    print(f'Downloading {n_matchfiles} matchfiles:')
+
+    # download
+    with mp.Pool(processes=4) as p:
+        list(tqdm(p.imap(fetch_url, urls), total=n_matchfiles))
+
+    for url in tqdm(urls):
+        fetch_url(url, source='supernova')
