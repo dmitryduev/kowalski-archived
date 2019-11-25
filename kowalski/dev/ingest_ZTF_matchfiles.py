@@ -114,7 +114,7 @@ def deg2hms(x):
         form, hours:minutes:seconds.
 
     """
-    assert 0.0 <= x < 360.0, 'Bad RA value in degrees'
+    assert 0.0 <= x < 360.00000000000001, 'Bad RA value in degrees'
     # ac = Angle(x, unit='degree')
     # hms = str(ac.to_string(unit='hour', sep=':', pad=True))
     # print(str(hms))
@@ -234,7 +234,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
             if not _dry_run:
                 if verbose:
                     print(f'ingesting exposures for {_file}')
-                insert_multiple_db_entries(_db, _collection=_collections['exposures'], _db_entries=docs_exposures)
+                insert_multiple_db_entries(_db, _collection=_collections['exposures'],
+                                           _db_entries=docs_exposures)
                 if verbose:
                     print(f'done ingesting exposures for {_file}')
 
@@ -403,7 +404,7 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                                 print(f'inserting batch #{batch_num} for {_file}')
                             if not _dry_run:
                                 insert_multiple_db_entries(_db, _collection=_collections['sources'],
-                                                           _db_entries=docs_sources, _verbose=True)
+                                                           _db_entries=docs_sources, _verbose=False)
                             # flush:
                             docs_sources = []
                             batch_num += 1
@@ -418,7 +419,8 @@ def process_file(_file, _collections, _batch_size=2048, _keep_all=False,
                 if verbose:
                     print(f'inserting batch #{batch_num} for {_file}')
                 if not _dry_run:
-                    insert_multiple_db_entries(_db, _collection=_collections['sources'], _db_entries=docs_sources)
+                    insert_multiple_db_entries(_db, _collection=_collections['sources'],
+                                               _db_entries=docs_sources, _verbose=False)
                     # flush:
                     docs_sources = []
 
