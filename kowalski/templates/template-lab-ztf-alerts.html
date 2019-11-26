@@ -486,7 +486,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         ypos: "{{'{:.2f}'.format(alert['candidate']['ypos'])}}",
                         rb: "{{'{:.2f}'.format(alert['candidate']['rb'])}}",
                         drb: "{{'{:.2f}'.format(alert['candidate']['drb']) if 'drb' in alert['candidate'] else None}}",
-                        braai: "{{'{:.2f}'.format(alert['classifications']['braai']) if 'classifications' in alert else None}}",
+                        braai: "{{'{:.2f}'.format(alert['classifications']['braai']) if (('classifications' in alert) and ('braai' in alert['classifications'])) else None}}",
                         magpsf: "{{'{:.2f}'.format(alert['candidate']['magpsf'])}}",
                         sigmapsf: "{{'{:.2f}'.format(alert['candidate']['sigmapsf'])}}",
                         pdiffimfilename: "{{alert['candidate']['pdiffimfilename']}}"

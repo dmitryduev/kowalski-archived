@@ -90,7 +90,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None):
         print(_e)
 
 
-@jit(forceobj=True)
+# @jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -118,7 +118,7 @@ def deg2hms(x):
     return hms
 
 
-@jit(forceobj=True)
+# @jit(nopython=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
