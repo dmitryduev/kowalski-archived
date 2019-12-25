@@ -273,15 +273,14 @@ class AlertConsumer(object):
         self.consumer.subscribe([topic], on_assign=on_assign)
         # self.consumer.subscribe([topic])
 
-        if schema_files is not None:
-            self.alert_schema = combineSchemas(schema_files)
+        # fixme?
+        # if schema_files is not None:
+        #     self.alert_schema = combineSchemas(schema_files)
 
         # MongoDB:
         self.config = config
-        self.collection_alerts = 'ZTF_alerts'
-        self.collection_alerts_aux = 'ZTF_alerts_aux'
-        # self.collection_alerts = 'ZTF_alerts2'
-        # self.collection_alerts_aux = 'ZTF_alerts2_aux'
+        self.collection_alerts = 'ZUDS_alerts'
+        self.collection_alerts_aux = 'ZUDS_alerts_aux'
         self.db = None
         self.connect_to_db()
 
@@ -290,38 +289,38 @@ class AlertConsumer(object):
                                                             ('candid', pymongo.DESCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                             ('objectId', pymongo.DESCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candid', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.DESCENDING),
-                                                            ('candidate.pid', pymongo.ASCENDING)], background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.pdiffimfilename', pymongo.ASCENDING)],
-                                                           background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.ASCENDING),
-                                                            ('candidate.programid', pymongo.ASCENDING),
-                                                            ('candidate.programpi', pymongo.ASCENDING)],
-                                                           background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
-                                                            ('classifications.braai', pymongo.DESCENDING),
-                                                            ('candid', pymongo.DESCENDING)],
-                                                           background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
-                                                            ('classifications.braai', 1),
-                                                            ('candidate.magpsf', 1),
-                                                            ('candidate.isdiffpos', 1),
-                                                            ('candidate.ndethist', 1)],
-                                                           name='jd__braai__magpsf__isdiffpos__ndethist',
-                                                           background=True)
-        self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
-                                                            ('candidate.field', 1),
-                                                            ('candidate.rb', 1),
-                                                            ('candidate.drb', 1),
-                                                            ('candidate.ndethist', 1),
-                                                            ('candidate.magpsf', 1),
-                                                            ('candidate.isdiffpos', 1),
-                                                            ('objectId', 1)],
-                                                           name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
-                                                           background=True)
+        # self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.ASCENDING)], background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candid', pymongo.ASCENDING)], background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
+        # self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.DESCENDING),
+        #                                                     ('candidate.pid', pymongo.ASCENDING)], background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.pdiffimfilename', pymongo.ASCENDING)],
+        #                                                    background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.ASCENDING),
+        #                                                     ('candidate.programid', pymongo.ASCENDING),
+        #                                                     ('candidate.programpi', pymongo.ASCENDING)],
+        #                                                    background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
+        #                                                     ('classifications.braai', pymongo.DESCENDING),
+        #                                                     ('candid', pymongo.DESCENDING)],
+        #                                                    background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
+        #                                                     ('classifications.braai', 1),
+        #                                                     ('candidate.magpsf', 1),
+        #                                                     ('candidate.isdiffpos', 1),
+        #                                                     ('candidate.ndethist', 1)],
+        #                                                    name='jd__braai__magpsf__isdiffpos__ndethist',
+        #                                                    background=True)
+        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
+        #                                                     ('candidate.field', 1),
+        #                                                     ('candidate.rb', 1),
+        #                                                     ('candidate.drb', 1),
+        #                                                     ('candidate.ndethist', 1),
+        #                                                     ('candidate.magpsf', 1),
+        #                                                     ('candidate.isdiffpos', 1),
+        #                                                     ('objectId', 1)],
+        #                                                    name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
+        #                                                    background=True)
 
         # ML models:
         self.ml_models = dict()
@@ -450,12 +449,12 @@ class AlertConsumer(object):
         # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
         # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
-        prv_candidates = deepcopy(doc['prv_candidates'])
-        doc.pop('prv_candidates', None)
-        if prv_candidates is None:
-            prv_candidates = []
+        light_curve = deepcopy(doc['light_curve'])
+        doc.pop('light_curve', None)
+        if light_curve is None:
+            light_curve = []
 
-        return doc, prv_candidates
+        return doc, light_curve
 
     def poll(self, path_alerts=None, path_tess=None, datestr=None, save_packets=True):
         """
@@ -503,7 +502,7 @@ class AlertConsumer(object):
                             f.write(msg.value())
 
                     # ingest decoded avro packet into db
-                    alert, prv_candidates = self.alert_mongify(record)
+                    alert, light_curve = self.alert_mongify(record)
 
                     # alert filters:
 
@@ -514,9 +513,8 @@ class AlertConsumer(object):
                     print(*time_stamps(), f'ingesting {alert["candid"]} into db')
                     self.insert_db_entry(_collection=self.collection_alerts, _db_entry=alert)
 
-                    # prv_candidates: pop nulls - save space
-                    prv_candidates = [{kk: vv for kk, vv in prv_candidate.items() if vv is not None}
-                                      for prv_candidate in prv_candidates]
+                    # light_curve: pop nulls - save space
+                    light_curve = [{kk: vv for kk, vv in lc.items() if vv is not None} for lc in light_curve]
 
                     # cross-match with external catalogs if objectId not in collection_alerts_aux:
                     if self.db['db'][self.collection_alerts_aux].count_documents({'_id': objectId}, limit=1) == 0:
@@ -528,21 +526,21 @@ class AlertConsumer(object):
 
                         alert_aux = {'_id': objectId,
                                      'cross_matches': xmatches,
-                                     'prv_candidates': prv_candidates}
+                                     'light_curve': light_curve}
 
                         self.insert_db_entry(_collection=self.collection_alerts_aux, _db_entry=alert_aux)
 
                     else:
                         self.db['db'][self.collection_alerts_aux].update_one({'_id': objectId},
                                                                              {'$addToSet':
-                                                                                  {'prv_candidates':
-                                                                                       {'$each': prv_candidates}}},
+                                                                                  {'light_curve':
+                                                                                       {'$each': light_curve}}},
                                                                              upsert=True)
 
                     # dump packet as json to disk if in a public TESS sector
                     if 'TESS' in alert['candidate']['programpi']:
-                        # put prv_candidates back
-                        alert['prv_candidates'] = prv_candidates
+                        # put light_curve back
+                        alert['light_curve'] = light_curve
 
                         # get cross-matches
                         # xmatches = self.db['db'][self.collection_alerts_aux].find_one({'_id': objectId})
@@ -783,7 +781,7 @@ def listener(topic, bootstrap_servers='', offset_reset='earliest',
     # Configure Avro reader schema
     schema_files = ["ztf-avro-alert/schema/candidate.avsc",
                     "ztf-avro-alert/schema/cutout.avsc",
-                    "ztf-avro-alert/schema/prv_candidate.avsc",
+                    "ztf-avro-alert/schema/light_curve.avsc",
                     "ztf-avro-alert/schema/alert.avsc"]
 
     # date string:
