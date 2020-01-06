@@ -832,8 +832,8 @@ def main(_obs_date=None, _save_packets=True):
                     datestr = _obs_date
                 # as of 20180403 naming convention is ztf_%Y%m%d_programidN
                 # topics_tonight = [t for t in topics if (datestr in t) and ('programid' in t)]
-                # exclude ZUDS, ingest separately
-                topics_tonight = [t for t in topics if (datestr in t) and ('programid' in t) and ('zuds' not in t)]
+                # ZUDS only
+                topics_tonight = [t for t in topics if (datestr in t) and ('programid' in t) and ('zuds' in t)]
                 print(*time_stamps(), topics_tonight)
 
             if False:

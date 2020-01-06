@@ -2213,6 +2213,28 @@ async def ztf_alert_post_handler(request):
         return response
 
 
+''' ZUDS Alert Lab API '''
+
+
+@routes.get('/lab/zuds-alerts', name='zuds-alerts')
+@login_required
+async def zuds_alert_get_handler(request):
+    """
+        Serve zuds alert lab page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    context = {'logo': config['server']['logo'],
+               'user': session['user_id']}
+    response = aiohttp_jinja2.render_template('template-lab-zuds-alerts.html',
+                                              request,
+                                              context)
+    return response
+
+
 ''' web endpoints '''
 
 

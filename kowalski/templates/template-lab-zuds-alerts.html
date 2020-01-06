@@ -1,0 +1,708 @@
+{% extends "template.html" %}
+
+{% block title %} - ZUDS Alert Lab{% endblock %}
+
+{# custom css #}
+{% block css %}
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/bootstrap-table.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/sidebar.fat.css">
+{% endblock %}
+
+{% block nav_lab %}
+    active
+{% endblock %}
+
+{% block body_top %}
+
+{% endblock %}
+
+{% block body %}
+
+    <div class="container-fluid mt-2">
+
+        <div id="wrapper">
+
+            <!-- Sidebar -->
+            <div id="sidebar-wrapper">
+                <ul class="sidebar-nav ml-2 mb-5 pb-5">
+
+                    <!-- Quick search -->
+                    <li class="sidebar-brand m-0 mt-3 p-0">
+                        <a data-toggle="collapse" href="#quick_search_form"
+                           aria-expanded="true" aria-controls="quick_search_form"
+                           id="quick_search_form-dropdown"
+                           style="margin-top: -0.1rem;">
+                            Quick search
+                            <i class="fa fa-lg fa-angle-up float-right"></i>
+                        </a>
+                    </li>
+
+                    <div class="collapse multi-collapse show sidebar-collapse" id="quick_search_form">
+
+                        <form id="simple_query_form" class="form mt-1 mb-1" method="get">
+
+{#                            <div class="form-group">#}
+{##}
+{#                                <label for="quick_search__candid" class="col control-label">#}
+{#                                    candid#}
+{#                                </label>#}
+{##}
+{#                                <div class="col pr-4">#}
+{#                                    <input type="text" class="form-control form-control-sm"#}
+{#                                           id="quick_search__candid" name="quick_search__candid"#}
+{#                                           data-id="candid" placeholder="">#}
+{#                                </div>#}
+{##}
+{#                            </div>#}
+
+                            <div class="form-group">
+
+                                <label for="quick_search__objectId" class="col control-label">
+                                    objectId
+                                </label>
+
+                                <div class="col pr-4">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="quick_search__objectId" name="quick_search__objectId"
+                                           data-id="objectId" placeholder="">
+                                </div>
+
+                            </div>
+
+
+
+                            <div class="col">
+                                <button type="button" class="btn btn-dark btn-sm"
+                                        id="submit_simple_query">Submit</button>
+                            </div>
+
+                        </form>
+                    </div>
+                    <!-- /quick search -->
+
+                    <hr class="mr-3 mb-2">
+
+                    <!-- Search -->
+                    <li class="sidebar-brand m-0 mt-3 p-0">
+                        <a data-toggle="collapse" href="#query"
+                           aria-expanded="true" aria-controls="query"
+                           id="query-dropdown"
+                           style="margin-top: -0.1rem;">
+                            Search ZUDS alerts
+                            <i class="fa fa-lg fa-angle-up float-right"></i>
+                        </a>
+                    </li>
+
+                    <div class="collapse multi-collapse show sidebar-collapse" id="query">
+
+                        <form id="query_form" class="form mt-1 mb-2" method="post">
+
+                            <div class="form-group">
+
+                                <label for="radec" class="col control-label">
+                                    RA/Dec, ICRS
+                                </label>
+
+                                <div class="col pr-4">
+                                    <textarea class="form-control form-control-sm" id="radec" name="radec"
+                                                      placeholder="Python-readable list of comma-separated object coordinates or dictionary:
+[(HH:MM:SS, DD:MM:SS) or (HHhMMmSSs, DDdMMmSSs) or (deg, deg)]
+Examples:
+[(0.0, 0.0)]
+[(0.0, 0.0), (1.0, 1.0)]
+[('08:55:29.205', '-34:02:36.8944')]
+{'object1': ('08h55m29.205s', '-34d02m36.8944s'), 'object2': ('06h55m29.205s', '32d02m36.1944s')}
+Alternatively, for a single source, either two numbers [deg deg] or two strings [HH:MM:SS DD:MM:SS] or [HHhMMmSSs DDdMMmSSs]:
+0.0 0.0
+18:43:58.5333 -20:41:41.513
+"
+                                                      rows="4"></textarea>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label for="cone_search_radius" class="col control-label">
+                                    Cone search radius
+                                </label>
+
+                                <div class="col pr-4">
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="cone_search_radius" name="cone_search_radius" placeholder="">
+                                </div>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label for="cone_search_unit" class="col control-label">
+                                    Cone search units
+                                </label>
+
+                                <div class="col pr-4">
+                                    <select class="form-control form-control-sm" id="cone_search_unit"
+                                            name="cone_search_unit">
+                                        <option>arcsec</option>
+                                        <option>arcmin</option>
+                                        <option>deg</option>
+                                        <option>rad</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label for="filter" class="col control-label">
+                                    Filter
+                                </label>
+
+                                <div class="col pr-4">
+                                    <textarea class="form-control form-control-sm"
+                                                      id="filter" name="filter"
+                                                      placeholder="Filter in MongoDB syntax, see help"
+                                                      rows="4"></textarea>
+                                </div>
+
+                            </div>
+
+                            <div class="col">
+                                <button type="button" class="btn btn-dark btn-sm"
+                                        id="submit_query">Submit</button>
+                            </div>
+
+                        </form>
+                    </div>
+                    <!-- /search -->
+
+                </ul>
+
+
+            </div>
+            <!-- /#sidebar-wrapper -->
+
+            <!-- Page Content -->
+            <div id="page-content-wrapper">
+                <div class="container-fluid">
+                    <h4>
+                        <a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars p-1 py-2" aria-hidden="true"></i></a>
+                        ZUDS Alert Lab
+                    </h4>
+
+                    <!-- table -->
+                    <div id="toolbar" class="btn-group">
+                        <button type="button" class="btn btn-outline-dark"
+                                style="cursor: pointer;" onclick="toggle_expansion()"
+                                data-toggle="tooltip" data-placement="top" title="Show/hide more">
+                            <i id="expansion_toggle" class="fas fa-plus" aria-hidden="true"></i>
+                        </button>
+
+                    </div>
+
+                    <table id="table"
+                           class="table table-hover table-condensed"
+                           data-toggle="table"
+                           data-toolbar="#toolbar"
+                           data-pagination="true"
+                           data-side-pagination="client"
+                           data-minimum-count-columns="2"
+                           data-page-size="20"
+                           data-page-list="[20, 50, 100, 500, All]"
+                           data-search="true"
+                           data-detail-view="true"
+                           data-detail-formatter="detailFormatter"
+                           data-show-columns="true"
+                           data-show-multi-sort="true"
+                           data-show-export="true"
+                           data-export-types="['json', 'csv']"
+                           data-export-options='{ "fileName": "zuds-alerts",
+                                                      "worksheetName": "zuds-alerts"
+                                                     }'>
+                    </table>
+                </div>
+            </div>
+            <!-- /#page-content-wrapper -->
+
+        </div>
+        <!-- /#wrapper -->
+
+    </div>
+    <!-- /container-fluid -->
+
+    <!-- Modal -->
+    <div class="modal fade" id="modal" tabindex="-1" role="dialog"
+         aria-labelledby="modal-query-id" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-query-id"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <pre><code id="modal-body-code" style="font-size:0.75em;"></code></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+{#                    <button type="button" class="btn btn-primary">Save changes</button>#}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+
+    <!-- Bootstrap table -->
+    <script src="{{-script_root-}}/static/js/bootstrap-table.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-en-US.js"></script>
+    <script src="{{-script_root-}}/static/js/tableExport.js"></script>
+    <script src="{{-script_root-}}/static/js/bootstrap-table-export.js"></script>
+    <script src="{{-script_root-}}/static/js/FileSaver.min.js"></script>
+
+    <!-- Big int support for js -->
+    <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
+
+    <!-- Julian dates -->
+    <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // show on load:
+            $("#wrapper").toggleClass("toggled");
+            $("#menu-toggle").click(function (e) {
+                e.preventDefault();
+                $("#wrapper").toggleClass("toggled");
+            });
+        });
+
+        // arrow up/down on show/hide
+        $(document).ready(function() {
+            $('.sidebar-collapse').on('hide.bs.collapse', function () {
+                {#console.log(this.id);#}
+                $("[id="+this.id+"-dropdown]").children("i").attr("class", "fa fa-lg fa-angle-down float-right");
+            });
+            $('.sidebar-collapse').on('show.bs.collapse', function () {
+                $("[id="+this.id+"-dropdown]").children("i").attr("class", "fa fa-lg fa-angle-up float-right");
+            });
+        });
+
+        // Fancy table stuff
+        function getHeight() {
+            var window_height = $(window).height();
+            {#console.log(window_height);#}
+            {#console.log(document.getElementById('table').getBoundingClientRect().top);#}
+            if (window_height > 1200) {
+                var top = document.getElementById('table').getBoundingClientRect().top;
+                return Math.max(560, window_height - top - 20);
+            }
+            else {
+                var top = document.getElementById('table').getBoundingClientRect().top;
+                return Math.max(560, window_height - top - 20);
+            }
+        }
+
+        var jd = new JulianDate();
+
+        // build table using js
+        $('#table').bootstrapTable({
+            height: getHeight(),
+            onExpandRow: function (index, row, $detail) {
+                {#console.log($detail);#}
+            },
+            columns: [
+                [
+                    {
+                        field: 'obs_date',
+                        title: 'T_obs, UTC',
+                        rowspan: 2,
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'objectId',
+                        title: 'objectId',
+                        rowspan: 2,
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'candid',
+                        title: 'candid',
+                        rowspan: 2,
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true
+                    },
+                    {
+                        field: 'candidate',
+                        title: 'candidate',
+                        colspan: 10,
+                        align: 'center',
+                        valign: 'middle'
+                    }
+                ],
+                [
+                    {
+                        field: 'fid',
+                        title: 'fid',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'ra_deg',
+                        title: 'ra',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'dec_deg',
+                        title: 'dec',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'xpos',
+                        title: 'xpos',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'ypos',
+                        title: 'ypos',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'drb',
+                        title: 'drb',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'braai',
+                        title: 'braai',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'pdiffimfilename',
+                        title: 'pdiffimfilename',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: false
+                    },
+                    {
+                        field: 'ra',
+                        title: 'R.A.',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'dec',
+                        title: 'Decl.',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    }
+                ]
+            ],
+            data: [
+                {%-for alert in alerts-%}
+                   {% set candid = alert['candid'] %}
+                   {% set objectId = alert['objectId'] %}
+                    {
+                        objectId: "{{objectId}}",
+                        candid: "{{candid}}",
+
+                        obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss'),
+
+                        ra: "{{ alert['coordinates']['radec_str'][0] }}",
+                        dec: "{{ alert['coordinates']['radec_str'][1] }}",
+
+                        fid: "{{alert['candidate']['fid']}}",
+                        ra_deg: "{{alert['candidate']['ra']}}",
+                        dec_deg: "{{alert['candidate']['dec']}}",
+                        xpos: "{{'{:.2f}'.format(alert['candidate']['xpos'])}}",
+                        ypos: "{{'{:.2f}'.format(alert['candidate']['ypos'])}}",
+                        drb: "{{'{:.2f}'.format(alert['candidate']['drb']) if 'drb' in alert['candidate'] else None}}",
+                        braai: "{{'{:.2f}'.format(alert['classifications']['braai']) if (('classifications' in alert) and ('braai' in alert['classifications'])) else None}}",
+                        pdiffimfilename: "{{alert['candidate']['pdiffimfilename']}}"
+                    },
+                {%-endfor-%}
+            ]
+        });
+
+        // display details
+        function detailFormatter(index, row, element) {
+            var html = [];
+
+            // Cutouts + LC
+            {#html.push("<div class='row mb-1'>");#}
+            html.push("<div class=\"col-sm-12 p-0 m-0\">");
+            {# cutouts: #}
+            {% for cutout in ["Science", "Template", "Difference"] %}
+            {#html.push("<div class=\"col-md-auto\">");#}
+            html.push("<figure class='figure m-1 align-top'>");
+            html.push("<img src='/lab/zuds-alerts/" + row["candid"] + "/cutout/{{ cutout }}/png'>");
+            html.push("</figure>");
+            {#html.push("</div>");#}
+            {% endfor %}
+            html.push("</div>");
+            {#html.push("</div>");#}
+
+            // Buttons:
+            {#html.push("<div class=\"row p-0 m-0\">");#}
+            html.push("<div class='col-sm-12 p-0 m-0'>");
+            // details:
+            {#html.push("<br>");#}
+            html.push("<a target='_blank' role='button' " + "href='/lab/zuds-alerts/" + row['candid'] +
+                "' class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top btn-details' onshow='alert()'>Details <i class='fas fa-external-link-alt'></i></a>");
+            html.push("</div>");
+            {#html.push("</div>");#}
+
+            {#element.html(html);#}
+
+            return html.join('');
+        }
+
+
+
+        function toggleMenus() {
+            menus = document.getElementsByClassName('JS9Menubar');
+            for (var i = 0; i < menus.length; i++) {
+                menus[i].classList.toggle('d-none');
+            }
+        }
+
+        function setZoom(display) {
+            JS9.SetZoom('ToFit', {display: display});
+        }
+
+        // reset height of table with search results
+        function resetTableHeight() {
+            var $table = $('#table');
+            $table.bootstrapTable('resetView', {
+                height: getHeight()
+            });
+        }
+        $(document).ready(function() {
+            // on load
+            if( $('#table').length ) {
+                resetTableHeight();
+            }
+        });
+        $(window).resize(function () {
+            // on window resize
+            if( $('#table').length ) {
+                resetTableHeight();
+            }
+        });
+
+        {# table sorting #}
+        function getOrder() {
+            var $table = $('#table');
+            return $table.bootstrapTable('getOptions').sortOrder === 'asc' ? -1 : 1;
+        }
+
+        function numberSorter(a, b) {
+            a = $.trim(a.replace(/<\/?[^>]+(>|$)/g, ""));
+            b = $.trim(b.replace(/<\/?[^>]+(>|$)/g, ""));
+            if (!a || a === 'None') return -1 * getOrder();
+            if (!b || b === 'None') return 1 * getOrder();
+            if (parseFloat(a) < parseFloat(b)) return -1;
+            if (parseFloat(a) > parseFloat(b)) return 1;
+            return 0;
+        }
+
+        function stringSorter(a, b) {
+            a = $.trim(a.replace(/<\/?[^>]+(>|$)/g, ""));
+            b = $.trim(b.replace(/<\/?[^>]+(>|$)/g, ""));
+            if (!a || a === 'None') return -1 * getOrder();
+            if (!b || b === 'None') return 1 * getOrder();
+            if (a < b) return -1;
+            if (a > b) return 1;
+            return 0;
+        }
+
+        {# expand all rows in table #}
+        function toggle_expansion(){
+            if ($("#expansion_toggle").hasClass('fa-plus')) {
+                $('#table').bootstrapTable('expandAllRows', false);
+            }
+            else {
+                $('#table').bootstrapTable('collapseAllRows', false);
+            }
+            $("#expansion_toggle").toggleClass('fa-plus fa-minus');
+        }
+
+        {# toggle cutout color invert #}
+        function toggle_invert_cutouts(){
+            $('.cutout').toggleClass('invert');
+        }
+
+
+        {# init tooltips #}
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        });
+
+        {# actions #}
+        {# download json as files #}
+        function download(json, name, type) {
+            var a = document.createElement("a");
+            var file = new Blob([json], {type: type});
+            var url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function(){
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+        function replaceAll(str, find, replace) {
+            return str.replace(new RegExp(find, 'g'), replace);
+        }
+
+        // submit query
+        $(document).ready(function() {
+            $('#submit_query').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fas fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fas fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            $('#query_form').submit();
+                        }
+                    }
+                });
+            });
+        });
+
+        // submit simple query
+        $(document).ready(function() {
+            $('#submit_simple_query').click(function () {
+                bootbox.confirm({
+                    message: "Do you want to submit the simple query?",
+                    buttons: {
+                        cancel: {
+                            label: '<i class="fas fa-times"></i> Cancel'
+                        },
+                        confirm: {
+                            label: '<i class="fas fa-check"></i> Confirm'
+                        }
+                    },
+                    callback: function (result) {
+                        // console.log('This was logged in the callback: ' + result);
+                        // confirmed? emit request to server:
+                        if (result) {
+                            let simple_query = {};
+                            $('#simple_query_form *').filter(':input').each(function(){
+                                {#console.log($(this).data("id"), $(this).val(), $(this).val().length);#}
+                                let f_id = $(this).data("id");
+                                let f_val = $(this).val();
+                                if (f_val.length > 0) {
+                                    // todo: fixme
+                                    if (f_id === "candid") {
+                                        simple_query[f_id] = BigInt(f_val).toString();
+                                    }
+                                    else {
+                                        simple_query[f_id] = f_val;
+                                    }
+                                }
+
+                            });
+                            {#console.log(simple_query);#}
+                            $('#filter').val(JSON.stringify(simple_query));
+                            $('#filter').val(replaceAll($('#filter').val(), "\"", "'"));
+                            $('#query_form').submit();
+                        }
+                    }
+                });
+            });
+        });
+
+        {# show flashing messages #}
+        function showFlashingMessage(title, message, type) {
+            $.notify({title: title, message: message},
+                {placement: {
+                    from: "bottom",
+                    align: "right"
+                },
+                    type: type,
+                    template: '<div data-notify="container" class="col-xs-11 col-sm-3 alert alert-{0}" role="alert" ' +
+                    'style="max-width:400px; font-size: 0.75rem;">' +
+                    '<button type="button" aria-hidden="true" class="close" data-notify="dismiss">×</button>' +
+                    '<span data-notify="icon"></span> ' +
+                    '<span data-notify="title">{1}</span> ' +
+                    '<span data-notify="message">{2}</span>' +
+                    '<div class="progress" data-notify="progressbar">' +
+                    '<div class="progress-bar progress-bar-{0}" role="progressbar" aria-valuenow="0" ' +
+                    'aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>' +
+                    '</div>' +
+                    '<a href="{3}" target="{4}" data-notify="url"></a>' +
+                    '</div>'
+            });
+        }
+        {% if messages | length > 0 %}
+            $(document).ready(function() {
+                {% for message in messages %}
+                    showFlashingMessage('Info:', '{{ message[0] }}', '{{ message[1] }}');
+                {% endfor %}
+            });
+        {% endif %}
+    </script>
+
+    {# populate form from previous request #}
+    {% if form | length > 0 %}
+    <script>
+        $(document).ready(function() {
+            {%-for key in form-%}
+                {%-if form[key] == 'on'-%}
+                    $('#{{-key-}}').prop('checked', true);
+                {%-else-%}
+                    $('#{{-key-}}').val("{{-form[key]|safe|replace('\"', '\'')-}}");
+                {%-endif-%}
+            {%-endfor-%}
+        })
+    </script>
+    {% endif %}
+{% endblock %}
