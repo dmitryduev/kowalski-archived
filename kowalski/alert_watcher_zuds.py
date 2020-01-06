@@ -289,38 +289,22 @@ class AlertConsumer(object):
                                                             ('candid', pymongo.DESCENDING)], background=True)
         self.db['db'][self.collection_alerts].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                             ('objectId', pymongo.DESCENDING)], background=True)
-        # self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.ASCENDING)], background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candid', pymongo.ASCENDING)], background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candidate.pid', pymongo.ASCENDING)], background=True)
-        # self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.DESCENDING),
-        #                                                     ('candidate.pid', pymongo.ASCENDING)], background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candidate.pdiffimfilename', pymongo.ASCENDING)],
-        #                                                    background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.ASCENDING),
-        #                                                     ('candidate.programid', pymongo.ASCENDING),
-        #                                                     ('candidate.programpi', pymongo.ASCENDING)],
-        #                                                    background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
-        #                                                     ('classifications.braai', pymongo.DESCENDING),
-        #                                                     ('candid', pymongo.DESCENDING)],
-        #                                                    background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
-        #                                                     ('classifications.braai', 1),
-        #                                                     ('candidate.magpsf', 1),
-        #                                                     ('candidate.isdiffpos', 1),
-        #                                                     ('candidate.ndethist', 1)],
-        #                                                    name='jd__braai__magpsf__isdiffpos__ndethist',
-        #                                                    background=True)
-        # self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
-        #                                                     ('candidate.field', 1),
-        #                                                     ('candidate.rb', 1),
-        #                                                     ('candidate.drb', 1),
-        #                                                     ('candidate.ndethist', 1),
-        #                                                     ('candidate.magpsf', 1),
-        #                                                     ('candidate.isdiffpos', 1),
-        #                                                     ('objectId', 1)],
-        #                                                    name='jd_field_rb_drb_braai_ndethhist_magpsf_isdiffpos',
-        #                                                    background=True)
+        self.db['db'][self.collection_alerts].create_index([('objectId', pymongo.ASCENDING)], background=True)
+        self.db['db'][self.collection_alerts].create_index([('candid', pymongo.ASCENDING)], background=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.ztfname', pymongo.ASCENDING)], background=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.jdstartstack', pymongo.DESCENDING),
+                                                            ('candidate.jdendstack', pymongo.ASCENDING)],
+                                                           background=True, sparse=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.jd', pymongo.DESCENDING),
+                                                            ('candidate.drb', pymongo.DESCENDING),
+                                                            ('candid', pymongo.DESCENDING)],
+                                                           background=True, sparse=True)
+        self.db['db'][self.collection_alerts].create_index([('candidate.jd', 1),
+                                                            ('candidate.drb', 1),
+                                                            ('candidate.isdiffpos', 1),
+                                                            ('candidate.ndethist', 1)],
+                                                           name='jd__braai__magpsf__isdiffpos__ndethist',
+                                                           background=True, sparse=True)
 
         # ML models:
         self.ml_models = dict()
@@ -453,6 +437,9 @@ class AlertConsumer(object):
         doc.pop('light_curve', None)
         if light_curve is None:
             light_curve = []
+        for lc in light_curve:
+            if lc['flux'] > 0:
+                lc['mag'] = -2.5 * np.log10(lc['flux']) + lc['zp']
 
         return doc, light_curve
 
@@ -652,7 +639,8 @@ def make_triplet(alert, to_tpu: bool = False):
 
     for cutout in ('science', 'template', 'difference'):
         # cutout_data = loads(dumps([alert[f'cutout{cutout.capitalize()}']['stampData']]))[0]
-        cutout_data = alert[f'cutout{cutout.capitalize()}']['stampData']
+        # cutout_data = alert[f'cutout{cutout.capitalize()}']['stampData']
+        cutout_data = alert[f'cutout{cutout.capitalize()}']
 
         # unzip
         with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
@@ -718,7 +706,8 @@ else:
 
 
 def alert_filter__xmatch(db, alert):
-    """Filter to apply to each alert.
+    """
+        Filter to apply to each alert.
     """
 
     xmatches = dict()
