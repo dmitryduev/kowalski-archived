@@ -107,6 +107,104 @@ def deg2dms(x):
     return dms
 
 
+@jit
+def great_circle_distance(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
+    """
+        Distance between two points on the sphere
+    :param ra1_deg:
+    :param dec1_deg:
+    :param ra2_deg:
+    :param dec2_deg:
+    :return: distance in degrees
+    """
+    # this is orders of magnitude faster than astropy.coordinates.Skycoord.separation
+    DEGRA = np.pi / 180.0
+    ra1, dec1, ra2, dec2 = ra1_deg * DEGRA, dec1_deg * DEGRA, ra2_deg * DEGRA, dec2_deg * DEGRA
+    delta_ra = np.abs(ra2 - ra1)
+    distance = np.arctan2(np.sqrt((np.cos(dec2) * np.sin(delta_ra)) ** 2
+                                  + (np.cos(dec1) * np.sin(dec2) - np.sin(dec1) * np.cos(dec2) * np.cos(
+        delta_ra)) ** 2),
+                          np.sin(dec1) * np.sin(dec2) + np.cos(dec1) * np.cos(dec2) * np.cos(delta_ra))
+
+    return distance * 180.0 / np.pi
+
+
+@jit
+def in_ellipse(alpha, delta0, alpha1, delta01, d0, axis_ratio, PA0):
+    """
+        Check if a given point (alpha, delta0)
+        is within an ellipse specified by
+        center (alpha1, delta01), maj_ax (d0), axis ratio and positional angle
+        All angles are in decimal degrees
+        Adapted from q3c: https://github.com/segasai/q3c/blob/master/q3cube.c
+    :param alpha:
+    :param delta0:
+    :param alpha1:
+    :param delta01:
+    :param d0:
+    :param axis_ratio:
+    :param PA0:
+    :return:
+    """
+    DEGRA = np.pi / 180.0
+
+    # convert degrees to radians
+    d_alpha = (alpha1 - alpha) * DEGRA
+    delta1 = delta01 * DEGRA
+    delta = delta0 * DEGRA
+    PA = PA0 * DEGRA
+    d = d0 * DEGRA
+    e = np.sqrt(1.0 - axis_ratio * axis_ratio)
+
+    t1 = np.cos(d_alpha)
+    t22 = np.sin(d_alpha)
+    t3 = np.cos(delta1)
+    t32 = np.sin(delta1)
+    t6 = np.cos(delta)
+    t26 = np.sin(delta)
+    t9 = np.cos(d)
+    t55 = np.sin(d)
+
+    if (t3 * t6 * t1 + t32 * t26) < 0:
+        return False
+
+    t2 = t1 * t1
+
+    t4 = t3 * t3
+    t5 = t2 * t4
+
+    t7 = t6 * t6
+    t8 = t5 * t7
+
+    t10 = t9 * t9
+    t11 = t7 * t10
+    t13 = np.cos(PA)
+    t14 = t13 * t13
+    t15 = t14 * t10
+    t18 = t7 * t14
+    t19 = t18 * t10
+
+    t24 = np.sin(PA)
+
+    t31 = t1 * t3
+
+    t36 = 2.0 * t31 * t32 * t26 * t6
+    t37 = t31 * t32
+    t38 = t26 * t6
+    t45 = t4 * t10
+
+    t56 = t55 * t55
+    t57 = t4 * t7
+    t60 = -t8 + t5 * t11 + 2.0 * t5 * t15 - t5 * t19 - \
+          2.0 * t1 * t4 * t22 * t10 * t24 * t13 * t26 - t36 + \
+          2.0 * t37 * t38 * t10 - 2.0 * t37 * t38 * t15 - t45 * t14 - t45 * t2 + \
+          2.0 * t22 * t3 * t32 * t6 * t24 * t10 * t13 - t56 + t7 - t11 + t4 - t57 + t57 * t10 + t19 - t18 * t45
+    t61 = e * e
+    t63 = t60 * t61 + t8 + t57 - t4 - t7 + t56 + t36
+
+    return t63 > 0
+
+
 """Utilities for manipulating Avro data and schemas.
 """
 
@@ -507,6 +605,8 @@ class AlertConsumer(object):
                     if self.db['db'][self.collection_alerts_aux].count_documents({'_id': objectId}, limit=1) == 0:
                         # tic = time.time()
                         xmatches = alert_filter__xmatch(self.db['db'], alert)
+                        # CLU cross-match:
+                        xmatches = {**xmatches, **alert_filter__xmatch_clu(self.db['db'], alert)}
                         # alert['cross_matches'] = xmatches
                         # toc = time.time()
                         # print(f'xmatch for {alert["candid"]} took {toc-tic:.2f} s')
@@ -729,6 +829,86 @@ def alert_filter__xmatch(db, alert):
             s = db[catalog].find({**object_position_query, **catalog_filter},
                                  {**catalog_projection})
             xmatches[catalog] = list(s)
+
+    except Exception as e:
+        print(*time_stamps(), str(e))
+
+    return xmatches
+
+
+# cone search radius in deg:
+cone_search_radius_clu = 3.0
+# convert deg to rad:
+cone_search_radius_clu *= np.pi / 180.0
+
+
+def alert_filter__xmatch_clu(database, alert, size_margin=3, clu_version='CLU_20190625'):
+    """
+        Filter to apply to each alert.
+        :param size_margin: multiply galaxy size by this much before looking for a match
+        :param clu_version: CLU catalog version
+    """
+
+    xmatches = dict()
+
+    try:
+        ra = float(alert['candidate']['ra'])
+        dec = float(alert['candidate']['dec'])
+
+        # geojson-friendly ra:
+        ra_geojson = float(alert['candidate']['ra']) - 180.0
+        dec_geojson = dec
+
+        catalog_filter = {}
+        catalog_projection = {"_id": 1, "name": 1, "ra": 1, "dec": 1,
+                              "a": 1, "b2a": 1, "pa": 1, "z": 1,
+                              "sfr_fuv": 1, "mstar": 1, "sfr_ha": 1,
+                              "coordinates.radec_str": 1}
+
+        # first do a coarse search of everything that is around
+        object_position_query = dict()
+        object_position_query['coordinates.radec_geojson'] = {
+            '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius_clu]}}
+        s = database[clu_version].find({**object_position_query, **catalog_filter},
+                                       {**catalog_projection})
+        galaxies = list(s)
+
+        # these guys are very big, so check them separately
+        M31 = {'_id': 596900, 'name': 'PGC2557',
+               'ra': 10.6847, 'dec': 41.26901, 'a': 6.35156, 'b2a': 0.32, 'pa': 35.0,
+               'sfr_fuv': None, 'mstar': 253816876.412914, 'sfr_ha': 0,
+               'coordinates': {'radec_geojson': ["00:42:44.3503", "41:16:08.634"]}
+               }
+        M33 = {'_id': 597543, 'name': 'PGC5818',
+               'ra': 23.46204, 'dec': 30.66022, 'a': 2.35983, 'b2a': 0.59, 'pa': 23.0,
+               'sfr_fuv': None, 'mstar': 4502777.420493, 'sfr_ha': 0,
+               'coordinates': {'radec_geojson': ["01:33:50.8900", "30:39:36.800"]}
+               }
+
+        # do elliptical matches
+        matches = []
+
+        for galaxy in galaxies + [M31, M33]:
+            alpha1, delta01 = galaxy['ra'], galaxy['dec']
+            d0, axis_ratio, PA0 = galaxy['a'], galaxy['b2a'], galaxy['pa']
+
+            # no shape info for galaxy? replace with median values
+            if d0 < -990:
+                d0 = 0.0265889
+            if axis_ratio < -990:
+                axis_ratio = 0.61
+            if PA0 < -990:
+                PA0 = 86.0
+
+            in_galaxy = in_ellipse(ra, dec, alpha1, delta01, size_margin * d0, axis_ratio, PA0)
+
+            if in_galaxy:
+                match = galaxy
+                distance_arcsec = round(great_circle_distance(ra, dec, alpha1, delta01) * 3600, 2)
+                match['coordinates']['distance_arcsec'] = distance_arcsec
+                matches.append(match)
+
+        xmatches[clu_version] = matches
 
     except Exception as e:
         print(*time_stamps(), str(e))
