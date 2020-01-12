@@ -230,7 +230,7 @@
             JS9.SetZoom('ToFit', {display: display});
         }
 
-        var lc_colors = {1: '#28a745', 2: '#dc3545', 3: '#343a40'};
+        var lc_colors = {'ztfr': '#28a745', 'ztfg': '#dc3545', 'ztfi': '#343a40'};
 
         {# Light curves for objectId #}
         var data_det_object = [];
@@ -281,21 +281,21 @@
                                       array: {{ lc['data'][key]['magerr'] }},
                                       width: 2,
                                       thickness: 0.8,
-                                      color: lc_colors[{{ lc['filter'] }}],
+                                      color: lc_colors["{{ lc['filter'] }}"],
                                       opacity: 0.5,
                                       visible: true},
                             name: 'LC_{{ lc_ind }}',
-                            marker: {color: lc_colors[{{ lc['filter'] }}]},
+                            marker: {color: lc_colors["{{ lc['filter'] }}"]},
                             showlegend: true,
                             {% elif key == 'lc_nodet_u' %}
                             y: {{ lc['data'][key]['mag_ulim'] }},
                             name: 'LC_{{ lc_ind }}_nodet_u',
-                            marker: {symbol: 'triangle-down', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
+                            marker: {symbol: 'triangle-down', color: lc_colors["{{ lc['filter'] }}"], opacity: 0.4},
                             showlegend: true,
                             {% elif key == 'lc_nodet_l' %}
                             y: {{ lc['data'][key]['mag_llim'] }},
                             name: 'LC_{{ lc_ind }}_nodet_l',
-                            marker: {symbol: 'triangle-up', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
+                            marker: {symbol: 'triangle-up', color: lc_colors["{{ lc['filter'] }}"], opacity: 0.4},
                             showlegend: true,
                             {% endif %}
 

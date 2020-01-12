@@ -2482,20 +2482,20 @@ def assemble_lc_zuds(dflc, objectId, composite=False, match_radius_arcsec=1.5, s
     # todo: fixme: deal with variable sources
     lc = []
 
-    for fid in (1, 2, 3):
+    for fid in ('ztfg', 'ztfr', 'ztfi'):
         # print(fid)
         # get detections in this filter:
-        w = (dflc.fid == fid) & ~dflc['mag'].isnull()
+        w = (dflc['filter'] == fid) & ~dflc['mag'].isnull()
 
         dflc.loc[w, 'magerr'] = -2.5 * np.log10(dflc.loc[w, 'fluxerr']) + dflc.loc[w, 'zp']
 
         lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
-                             dflc.loc[w, 'mjd'], dflc.loc[w, 'mag'], dflc.loc[w, 'sigmapsf']],
+                             dflc.loc[w, 'mjd'], dflc.loc[w, 'mag'], dflc.loc[w, 'magerr']],
                             axis=1, ignore_index=True, sort=False) if np.sum(w) else None
         if lc_dets is not None:
             lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
 
-        wnodet = (dflc.fid == fid) & dflc['mag'].isnull()
+        wnodet = (dflc['filter'] == fid) & dflc['mag'].isnull()
 
         lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
                                  dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'lim_mag']],
@@ -2531,7 +2531,7 @@ def assemble_lc_zuds(dflc, objectId, composite=False, match_radius_arcsec=1.5, s
                    "instrument": "ZTF/ZUDS",
                    "filter": fid,
                    "source": "alert_stream",
-                   "comment": "no corrections applied. using raw magpsf, sigmapsf, and diffmaglim",
+                   "comment": "no corrections applied. using raw mag, magerr, and lim_mag",
                    "id": lc_id,
                    "lc_type": "temporal",
                    "data": lc_joint.to_dict('records')
@@ -2622,7 +2622,7 @@ async def zuds_alert_get_handler(request):
                    'alert': alert,
                    'alert_aux': alert_aux,
                    'lc_object': lc_object}
-        response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
+        response = aiohttp_jinja2.render_template('template-lab-zuds-alert.html',
                                                   request,
                                                   context)
         return response
