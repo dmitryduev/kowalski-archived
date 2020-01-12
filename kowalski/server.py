@@ -2235,6 +2235,576 @@ async def zuds_alert_get_handler(request):
     return response
 
 
+@routes.post('/lab/zuds-alerts')
+@login_required
+async def zuds_alert_post_handler(request):
+    """
+        Process query to own ZUDS_alerts db from browser
+
+        714104325815015060
+        [('22:08:59.5326', '57:23:54.941')]
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    try:
+        _query = await request.json()
+    except Exception as _e:
+        print(f'Cannot extract json() from request, trying post(): {str(_e)}')
+        # _err = traceback.format_exc()
+        # print(_err)
+        _query = await request.post()
+    # print(_query)
+
+    try:
+        # parse query
+        q = dict()
+
+        # filter set?
+        if len(_query['filter']) > 2:
+            # construct filter
+            _filter = _query['filter']
+            if isinstance(_filter, str):
+                # passed string? evaluate:
+                _filter = literal_eval(_filter.strip())
+            elif isinstance(_filter, dict):
+                # passed dict?
+                _filter = _filter
+            else:
+                raise ValueError('Unsupported filter specification')
+
+            q = {**q, **_filter}
+
+        # cone search?
+        if len(_query['cone_search_radius']) > 0 and len(_query['radec']) > 8:
+            cone_search_radius = float(_query['cone_search_radius'])
+            # convert to rad:
+            if _query['cone_search_unit'] == 'arcsec':
+                cone_search_radius *= np.pi / 180.0 / 3600.
+            elif _query['cone_search_unit'] == 'arcmin':
+                cone_search_radius *= np.pi / 180.0 / 60.
+            elif _query['cone_search_unit'] == 'deg':
+                cone_search_radius *= np.pi / 180.0
+            elif _query['cone_search_unit'] == 'rad':
+                cone_search_radius *= 1
+            else:
+                raise Exception('Unknown cone search unit. Must be in [deg, rad, arcsec, arcmin]')
+
+            # parse coordinate list
+
+            # comb radecs for single sources as per Tom's request:
+            radec = _query['radec'].strip()
+            if radec[0] not in ('[', '(', '{'):
+                ra, dec = radec.split()
+                if ('s' in radec) or (':' in radec):
+                    radec = f"[('{ra}', '{dec}')]"
+                else:
+                    radec = f"[({ra}, {dec})]"
+
+            # print(task['object_coordinates']['radec'])
+            objects = literal_eval(radec)
+            # print(type(objects), isinstance(objects, dict), isinstance(objects, list))
+
+            # this could either be list [(ra1, dec1), (ra2, dec2), ..] or dict {'name': (ra1, dec1), ...}
+            if isinstance(objects, list):
+                object_coordinates = objects
+                object_names = [str(obj_crd) for obj_crd in object_coordinates]
+            elif isinstance(objects, dict):
+                object_names, object_coordinates = zip(*objects.items())
+                object_names = list(map(str, object_names))
+            else:
+                raise ValueError('Unsupported type of object coordinates')
+
+            # print(object_names, object_coordinates)
+
+            object_position_query = dict()
+            object_position_query['$or'] = []
+
+            for oi, obj_crd in enumerate(object_coordinates):
+                # convert ra/dec into GeoJSON-friendly format
+                # print(obj_crd)
+                _ra, _dec = radec_str2geojson(*obj_crd)
+                # print(str(obj_crd), _ra, _dec)
+
+                object_position_query['$or'].append({'coordinates.radec_geojson':
+                                                         {'$geoWithin': {'$centerSphere': [[_ra, _dec],
+                                                                                           cone_search_radius]}}})
+
+            q = {**q, **object_position_query}
+            q = {'$and': [q]}
+
+        # print(q)
+        if len(q) == 0:
+            context = {'logo': config['server']['logo'],
+                       'user': session['user_id'],
+                       'data': [],
+                       'form': _query,
+                       'messages': [[f'Empty query', 'danger']]}
+
+        else:
+
+            # do not fetch/pass cutouts in bulk
+            # alerts = await request.app['mongo']['ZTF_alerts'].find(q, {'cutoutScience': 0,
+            #                                                            'cutoutTemplate': 0,
+            #                                                            'cutoutDifference': 0}). \
+            #     sort([('candidate.jd', -1)]).to_list(length=None)
+            alerts = await request.app['mongo']['ZUDS_alerts'].find(q, {'cutoutScience': 0,
+                                                                        'cutoutTemplate': 0,
+                                                                        'cutoutDifference': 0},
+                                                                    max_time_ms=300000).to_list(length=None)
+
+            context = {'logo': config['server']['logo'],
+                       'user': session['user_id'],
+                       'alerts': alerts,
+                       'form': _query}
+
+            if len(alerts) == 0:
+                context['messages'] = [['No alerts found', 'info']]
+
+        response = aiohttp_jinja2.render_template('template-lab-zuds-alerts.html',
+                                                  request,
+                                                  context)
+        return response
+
+    except Exception as _e:
+
+        print(f'Error: {str(_e)}')
+
+        context = {'logo': config['server']['logo'],
+                   'user': session['user_id'],
+                   'alerts': [],
+                   'form': _query,
+                   'messages': [[f'Error: {str(_e)}', 'danger']]}
+
+        response = aiohttp_jinja2.render_template('template-lab-zuds-alerts.html',
+                                                  request,
+                                                  context)
+
+        return response
+
+
+@routes.get('/lab/zuds-alerts/{candid}/cutout/{cutout}/{file_format}')
+@login_required
+async def ztf_alert_get_cutout_handler(request):
+    """
+        Serve cutouts as fits or png
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    candid = int(request.match_info['candid'])
+    cutout = request.match_info['cutout'].capitalize()
+    file_format = request.match_info['file_format']
+
+    assert cutout in ['Science', 'Template', 'Difference']
+    assert file_format in ['fits', 'png']
+
+    alert = await request.app['mongo']['ZUDS_alerts'].find_one({'candid': candid},
+                                                               {f'cutout{cutout}': 1},
+                                                               max_time_ms=60000)
+
+    cutout_data = loads(dumps([alert[f'cutout{cutout}']]))[0]
+
+    # unzipped fits name
+    fits_name = f"{candid}.cutout{cutout}.fits"
+
+    # unzip and flip about y axis on the server side
+    with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
+        with fits.open(io.BytesIO(f.read())) as hdu:
+            header = hdu[0].header
+            data_flipped_y = np.flipud(hdu[0].data)
+
+    if file_format == 'fits':
+        hdu = fits.PrimaryHDU(data_flipped_y, header=header)
+        # hdu = fits.PrimaryHDU(data_flipped_y)
+        hdul = fits.HDUList([hdu])
+
+        stamp_fits = io.BytesIO()
+        hdul.writeto(fileobj=stamp_fits)
+
+        return web.Response(body=stamp_fits.getvalue(), content_type='image/fits',
+                            headers=MultiDict({'Content-Disposition': f'Attachment;filename={fits_name}'}), )
+
+    if file_format == 'png':
+        # pil_img = Image.fromarray(data_flipped_y).convert("L")
+        # buff = io.BytesIO()
+        # # pil_img.save(buff, format="JPEG")
+        # pil_img.save(buff, format="PNG")
+        # buff.seek(0)
+        #
+        # return web.Response(body=buff, content_type='image/png')
+
+        buff = io.BytesIO()
+        plt.close('all')
+        fig = plt.figure()
+        fig.set_size_inches(4, 4, forward=False)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+
+        # remove nans:
+        img = np.array(data_flipped_y)
+        img = np.nan_to_num(img)
+
+        if cutout != 'Difference':
+            # img += np.min(img)
+            img[img <= 0] = np.median(img)
+            # plt.imshow(img, cmap='gray', norm=LogNorm(), origin='lower')
+            plt.imshow(img, cmap=plt.cm.bone, norm=LogNorm(), origin='lower')
+        else:
+            # plt.imshow(img, cmap='gray', origin='lower')
+            plt.imshow(img, cmap=plt.cm.bone, origin='lower')
+        plt.savefig(buff, dpi=42)
+
+        buff.seek(0)
+        plt.close('all')
+        return web.Response(body=buff, content_type='image/png')
+
+
+def assemble_lc_zuds(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
+    # mjds:
+    dflc['mjd'] = dflc.jd - 2400000.5
+
+    dflc['datetime'] = dflc['mjd'].apply(lambda x: mjd_to_datetime(x))
+    # strings for plotly:
+    dflc['dt'] = dflc['datetime'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
+
+    dflc.sort_values(by=['mjd'], inplace=True)
+
+    # fractional days ago
+    dflc['days_ago'] = dflc['datetime'].apply(lambda x:
+                                              (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
+
+    if is_star(dflc, match_radius_arcsec=match_radius_arcsec, star_galaxy_threshold=star_galaxy_threshold):
+        # print('It is a star!')
+        # variable object/star? take into account flux in ref images:
+        lc = []
+
+        # fix old alerts:
+        dflc.replace('None', np.nan, inplace=True)
+
+        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
+        # which makes inferring upper limits more difficult
+        # fix using pdiffimfilename:
+        w = dflc.rcid.isnull()
+        if np.sum(w):
+            dflc.loc[w, 'rcid'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
+                                                      ccd_quad_2_rc(ccd=int(os.path.basename(x).split('_')[4][1:]),
+                                                                    quad=int(os.path.basename(x).split('_')[6][1:])))
+            dflc.loc[w, 'field'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
+                                                                        int(os.path.basename(x).split('_')[2][1:]))
+
+        # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        #     print(dflc[['fid', 'field', 'rcid', 'magnr']])
+
+        grp = dflc.groupby(['fid', 'field', 'rcid'])
+        impute_magnr = grp['magnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
+        # print(impute_magnr)
+        impute_sigmagnr = grp['sigmagnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
+        # print(impute_sigmagnr)
+
+        for idx, grpi in grp:
+            w = np.isnan(grpi['magnr'])
+            w2 = grpi[w].index
+            dflc.loc[w2, 'magnr'] = impute_magnr[idx]
+            dflc.loc[w2, 'sigmagnr'] = impute_sigmagnr[idx]
+
+        # print(dflc)
+
+        # fix weird isdiffpos'es:
+        w_1 = dflc['isdiffpos'] == '1'
+        dflc.loc[w_1, 'isdiffpos'] = 't'
+
+        dflc['sign'] = 2 * (dflc['isdiffpos'] == 't') - 1
+
+        # Eric Bellm 20190722: Convert to DC magnitudes (see p.102 of the Explanatory Supplement)
+        dflc['dc_flux'] = 10 ** (-0.4 * dflc['magnr']) + dflc['sign'] * 10 ** (-0.4 * dflc['magpsf'])
+        w_dc_flux_good = dflc['dc_flux'] > 0
+        dflc.loc[w_dc_flux_good, 'dc_mag'] = -2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
+        dflc.loc[w_dc_flux_good, 'dc_sigmag'] = np.sqrt(
+            (10 ** (-0.4 * dflc['magnr']) * dflc['sigmagnr']) ** 2. +
+            (10 ** (-0.4 * dflc['magpsf']) * dflc['sigmapsf']) ** 2.) / dflc.loc[w_dc_flux_good, 'dc_flux']
+
+        dflc['dc_flux_ulim'] = 10 ** (-0.4 * dflc['magnr']) + 10 ** (-0.4 * dflc['diffmaglim'])
+        dflc['dc_flux_llim'] = 10 ** (-0.4 * dflc['magnr']) - 10 ** (-0.4 * dflc['diffmaglim'])
+
+        w_dc_flux_ulim_good = dflc['dc_flux_ulim'] > 0
+        w_dc_flux_llim_good = dflc['dc_flux_llim'] > 0
+
+        dflc.loc[w_dc_flux_ulim_good, 'dc_mag_ulim'] = -2.5 * np.log10(
+            10 ** (-0.4 * dflc.loc[w_dc_flux_ulim_good, 'magnr']) +
+            10 ** (-0.4 * dflc.loc[w_dc_flux_ulim_good, 'diffmaglim']))
+        dflc.loc[w_dc_flux_llim_good, 'dc_mag_llim'] = -2.5 * np.log10(
+            10 ** (-0.4 * dflc.loc[w_dc_flux_llim_good, 'magnr']) -
+            10 ** (-0.4 * dflc.loc[w_dc_flux_llim_good, 'diffmaglim']))
+
+        # if some of the above produces NaNs for some reason, try fixing it sloppy way:
+        for fid in (1, 2, 3):
+            if fid in dflc.fid.values:
+                ref_flux = None
+                w = (dflc.fid == fid) & ~dflc.magpsf.isnull() & (dflc.distnr <= match_radius_arcsec)
+                if np.sum(w):
+                    ref_mag = np.float64(dflc.loc[w].iloc[0]['magnr'])
+                    ref_flux = np.float64(10 ** (0.4 * (27 - ref_mag)))
+                    # print(fid, ref_mag, ref_flux)
+
+                wnodet_old = (dflc.fid == fid) & dflc.magpsf.isnull() & \
+                             dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0)
+
+                if np.sum(wnodet_old) and (ref_flux is not None):
+                    # if we have a non-detection that means that there's no flux +/- 5 sigma from
+                    # the ref flux (unless it's a bad subtraction)
+                    dflc.loc[wnodet_old, 'difference_fluxlim'] = 10 ** (0.4 * (27 - dflc.loc[wnodet_old, 'diffmaglim']))
+                    dflc.loc[wnodet_old, 'dc_flux_ulim'] = ref_flux + dflc.loc[wnodet_old, 'difference_fluxlim']
+                    dflc.loc[wnodet_old, 'dc_flux_llim'] = ref_flux - dflc.loc[wnodet_old, 'difference_fluxlim']
+
+                    # mask bad values:
+                    w_u_good = (dflc.fid == fid) & dflc.magpsf.isnull() & \
+                               dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_ulim > 0)
+                    w_l_good = (dflc.fid == fid) & dflc.magpsf.isnull() & \
+                               dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_llim > 0)
+
+                    dflc.loc[w_u_good, 'dc_mag_ulim'] = 27 - 2.5 * np.log10(dflc.loc[w_u_good, 'dc_flux_ulim'])
+                    dflc.loc[w_l_good, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dflc.loc[w_l_good, 'dc_flux_llim'])
+
+        # corrections done, now proceed with assembly
+        for fid in (1, 2, 3):
+            # print(fid)
+            # get detections in this filter:
+            w = (dflc.fid == fid) & ~dflc.magpsf.isnull()
+            lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
+                                 dflc.loc[w, 'mjd'], dflc.loc[w, 'dc_mag'], dflc.loc[w, 'dc_sigmag']],
+                                axis=1, ignore_index=True, sort=False) if np.sum(w) else None
+            if lc_dets is not None:
+                lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
+
+            wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
+            # print(wnodet)
+
+            lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
+                                     dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'dc_mag_llim'],
+                                     dflc.loc[wnodet, 'dc_mag_ulim']],
+                                    axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
+            if lc_non_dets is not None:
+                lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_llim', 'mag_ulim']
+
+            if lc_dets is None and lc_non_dets is None:
+                continue
+
+            lc_joint = None
+
+            if lc_dets is not None:
+                # print(lc_dets)
+                # print(lc_dets.to_dict('records'))
+                lc_joint = lc_dets
+            if lc_non_dets is not None:
+                # print(lc_non_dets.to_dict('records'))
+                lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
+                                                                          axis=0, ignore_index=True, sort=False)
+
+            # sort by date and fill NaNs with zeros
+            lc_joint.sort_values(by=['mjd'], inplace=True)
+            # print(lc_joint)
+            lc_joint = lc_joint.fillna(0)
+
+            # single or multiple alert packets used?
+            lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
+                if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
+            # print(lc_id)
+
+            lc_save = {"telescope": "PO:1.2m",
+                       "instrument": "ZTF",
+                       "filter": fid,
+                       "source": "alert_stream",
+                       "comment": "corrected for flux in reference image",
+                       "id": lc_id,
+                       "lc_type": "temporal",
+                       "data": lc_joint.to_dict('records')
+                       }
+            lc.append(lc_save)
+
+    else:
+        # print('Not a star!')
+        # not a star (transient): up to three individual lcs
+        lc = []
+
+        for fid in (1, 2, 3):
+            # print(fid)
+            # get detections in this filter:
+            w = (dflc.fid == fid) & ~dflc.magpsf.isnull()
+            lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
+                                 dflc.loc[w, 'mjd'], dflc.loc[w, 'magpsf'], dflc.loc[w, 'sigmapsf']],
+                                axis=1, ignore_index=True, sort=False) if np.sum(w) else None
+            if lc_dets is not None:
+                lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
+
+            wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
+
+            lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
+                                     dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'diffmaglim']],
+                                    axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
+            if lc_non_dets is not None:
+                lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_ulim']
+
+            if lc_dets is None and lc_non_dets is None:
+                continue
+
+            lc_joint = None
+
+            if lc_dets is not None:
+                # print(lc_dets)
+                # print(lc_dets.to_dict('records'))
+                lc_joint = lc_dets
+            if lc_non_dets is not None:
+                # print(lc_non_dets.to_dict('records'))
+                lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
+                                                                          axis=0, ignore_index=True, sort=False)
+
+            # sort by date and fill NaNs with zeros
+            lc_joint.sort_values(by=['mjd'], inplace=True)
+            # print(lc_joint)
+            lc_joint = lc_joint.fillna(0)
+
+            # single or multiple alert packets used?
+            lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
+                if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
+            # print(lc_id)
+
+            lc_save = {"telescope": "PO:1.2m",
+                       "instrument": "ZTF",
+                       "filter": fid,
+                       "source": "alert_stream",
+                       "comment": "no corrections applied. using raw magpsf, sigmapsf, and diffmaglim",
+                       "id": lc_id,
+                       "lc_type": "temporal",
+                       "data": lc_joint.to_dict('records')
+                       }
+            lc.append(lc_save)
+
+    # print(lc)
+    return lc
+
+
+@routes.get('/lab/zuds-alerts/{candid}')
+@login_required
+async def zuds_alert_get_handler(request):
+    """
+        Serve alert page for the browser
+    :param request:
+    :return:
+    """
+    # get session:
+    session = await get_session(request)
+
+    candid = int(request.match_info['candid'])
+
+    # pass as optional get params to control is_star
+    match_radius_arcsec = float(request.query.get('match_radius_arcsec', 1.5))
+    star_galaxy_threshold = float(request.query.get('star_galaxy_threshold', 0.4))
+
+    alert = await request.app['mongo']['ZUDS_alerts'].find_one({'candid': candid}, max_time_ms=30000)
+    alert = loads(dumps(alert))
+
+    # get aux data (cross-matches and prv_candidates)
+    alert_aux = await request.app['mongo']['ZUDS_alerts_aux'].find_one({'_id': alert['objectId']}, max_time_ms=60000) \
+        if alert is not None else None
+
+    download = request.query.get('download', None)
+    # frmt = request.query.get('format', 'web')
+    # print(frmt)
+
+    if download is not None:
+
+        if download == 'alert':
+            return web.json_response(alert, status=200, dumps=dumps)
+
+        elif download == 'alert_aux':
+            return web.json_response(alert_aux, status=200, dumps=dumps)
+
+        elif download == 'lc_object':
+            obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
+                                                                {'cutoutScience': 0,
+                                                                 'cutoutTemplate': 0,
+                                                                 'cutoutDifference': 0,
+                                                                 'classifications': 0},
+                                                                max_time_ms=60000).to_list(length=None)
+            dflc = make_dataframe(obj)
+
+            # concat alert_aux with dflc
+            df_prv = pd.DataFrame(alert_aux['prv_candidates'])
+            dflc = pd.concat([dflc, df_prv],
+                             ignore_index=True,
+                             sort=False).drop_duplicates(subset='jd').reset_index(drop=True).sort_values(by=['jd'])
+
+            lc_object = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
+                                    match_radius_arcsec=match_radius_arcsec,
+                                    star_galaxy_threshold=star_galaxy_threshold)
+            return web.json_response(lc_object, status=200, dumps=dumps)
+
+    if alert is not None and (len(alert) > 0):
+        # make composite light curve from all packets for alert['objectId']
+        obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
+                                                            {'cutoutScience': 0,
+                                                             'cutoutTemplate': 0,
+                                                             'cutoutDifference': 0,
+                                                             'classifications': 0},
+                                                            max_time_ms=60000).to_list(length=None)
+        # print([o['_id'] for o in obj])
+        dflc = make_dataframe(obj)
+
+        # concat alert_aux with dflc
+        df_prv = pd.DataFrame(alert_aux['prv_candidates'])
+        dflc = pd.concat([dflc, df_prv],
+                         ignore_index=True,
+                         sort=False).drop_duplicates(subset='jd').reset_index(drop=True).sort_values(by=['jd'])
+
+        lc_obj = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
+                             match_radius_arcsec=match_radius_arcsec,
+                             star_galaxy_threshold=star_galaxy_threshold)
+
+        # pre-process for plotly:
+        lc_object = []
+        for lc_ in lc_obj:
+            lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
+                    'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
+                    'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
+            for dp in lc_['data']:
+                if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
+                        lc__['lc_nodet_u'][kk].append(dp[kk])
+                if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
+                        lc__['lc_nodet_l'][kk].append(dp[kk])
+                if ('mag' in dp) and (dp['mag'] > 0.01):
+                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
+                        lc__['lc_det'][kk].append(dp[kk])
+            lc_['data'] = lc__
+            lc_object.append(lc_)
+
+        # print(lc_candid)
+
+        context = {'logo': config['server']['logo'],
+                   'user': session['user_id'],
+                   'match_radius_arcsec': match_radius_arcsec,
+                   'star_galaxy_threshold': star_galaxy_threshold,
+                   'alert': alert,
+                   'alert_aux': alert_aux,
+                   'lc_object': lc_object}
+        response = aiohttp_jinja2.render_template('template-lab-ztf-alert.html',
+                                                  request,
+                                                  context)
+        return response
+
+    else:
+        # redirect to alerts lab page
+        location = request.app.router['ztf-alerts'].url_for()
+        raise web.HTTPFound(location=location)
+
+
 ''' web endpoints '''
 
 

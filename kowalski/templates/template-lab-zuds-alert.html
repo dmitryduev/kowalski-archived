@@ -1,0 +1,416 @@
+{% extends "template.html" %}
+
+{% block title %} - ZUDS Alert Lab - {{ alert['candid'] }}{% endblock %}
+
+{# custom css #}
+{% block css %}
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/styles/default.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/jquery.json-viewer.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/js9support.css">
+    <link rel="stylesheet" href="{{-script_root-}}/static/css/js9.css">
+{% endblock %}
+
+{% block nav_lab %}
+    active
+{% endblock %}
+
+
+{% block body %}
+
+    <div class="container">
+        <div class="row mb-2">
+            <div class="col-12">
+                <h3 class="title-blue">ZUDS Alert <code>{{ alert['candid'] }}</code></h3>
+            </div>
+        </div>
+
+        <div class="row">
+
+            {# cutouts: #}
+            {% for cutout in ["Science", "Template", "Difference"] %}
+            <div class="col-md-auto">
+                <figure class='figure m-1 align-top'>
+                    <div class="JS9" id="JS9{{ cutout }}" data-width="180px" data-height="180px"></div>
+{#                    <div style="margin-top: 2px;">#}
+{#                        <div class="JS9Colorbar" id="JS9{{ cutout }}Colorbar"#}
+{#                             data-displays="JS9{{ cutout }}" data-width="180px"></div>#}
+{#                    </div>#}
+                    <div class="JS9Menubar d-none" id="JS9{{ cutout }}Menubar"
+                         data-displays="JS9{{ cutout }}" data-width="180px"></div>
+                    <figcaption class='mt-2 figure-caption text-center'>
+                        {{ cutout }} <a href="/lab/zuds-alerts/{{-alert["candid"]-}}/cutout/{{ cutout }}/fits"><i class='fas fa-download'></i></a>
+                    </figcaption>
+                </figure>
+            </div>
+            {% endfor %}
+
+            <div class="col-md-auto">
+                <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'
+                   onclick="toggleMenus()">Toggle JS9 Menus</a>
+            </div>
+
+            <div class="col-md-auto">
+                <span class="badge badge-secondary">{{ alert['coordinates']['radec_str'][0] }}</span>&nbsp;
+                <span class="badge badge-secondary">{{ alert['coordinates']['radec_str'][1] }}</span><br>
+                fid: {{ alert['candidate']['fid'] }}<br>
+                isdiffpos: {{ alert['candidate']['isdiffpos'] }}<br>
+                {% if 'drb' in alert['candidate'] %}
+                    drb: {{ "{:.3f}".format(alert['candidate']['drb']) }}&nbsp;&nbsp;&nbsp;
+                    drb_v: {{ "{:}".format(alert['candidate']['drbversion']) }}<br>
+                {% endif %}
+                {% if 'classifications' in alert %}
+                    {% if 'braai' in alert['classifications'] %}
+                        braai: {{ "{:.3f}".format(alert['classifications']['braai']) }}&nbsp;&nbsp;&nbsp;
+                        braai_v: {{ "{:}".format(alert['classifications']['braai_version']) }}
+                    {% endif %}
+                {% endif %}
+            </div>
+
+        </div>
+
+        <div class="row">
+            <div class="col-sm-12">
+                {# Buttons:#}
+{#                <a role='button' href="#" class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'#}
+{#                   onclick="toggleMenus()">Toggle JS9 Menus</a>#}
+{#                <a role='button' download='{{alert['candid']}}.json' href='/lab/ztf-alerts/{{alert['candid']}}?format=json'#}
+{#                   class='btn btn-sm btn-outline-dark mt-1 ml-1 mb-1 align-top'>Download JSON <i class='fas fa-download'></i></a>#}
+                <hr>
+            </div>
+        </div>
+
+        <div class="row mt-1">
+            <div class="col-12">
+                <h5 class="title-blue">Alert packet contents
+                    <a download='{{alert['candid']}}.json'
+                       href="/lab/zuds-alerts/{{-alert["candid"]-}}?download=alert"><i class='fas fa-download'></i></a>
+                </h5>
+{#                <pre><code class="json">{{alert|tojson_pretty|safe}}</code></pre>#}
+                <p>
+                    <pre id="json-renderer-alert" class="pl-4 pr-4"></pre>
+                </p>
+
+                <hr>
+            </div>
+        </div>
+
+        <div class="row mt-1">
+            <div class="col-12">
+                <h5 class="title-blue">
+                    Cross-matches with external catalogs within 5" and
+                    detection history for <code>{{ alert['objectId'] }}</code>
+                    <a download='{{alert['objectId']}}.aux.json'
+                       href="/lab/zuds-alerts/{{-alert["candid"]-}}?download=alert_aux"><i class='fas fa-download'></i></a>
+                </h5>
+                <p>
+                    <pre id="json-renderer-alert-aux" class="pl-4 pr-4"></pre>
+                </p>
+
+                <hr>
+            </div>
+        </div>
+
+        <div class="row mt-1">
+            <div class="col-12">
+                <h5 class="title-blue">Composite light curves for <code>{{ alert['objectId'] }}</code>
+                    <a download='{{alert['objectId']}}.lc.json'
+                       href="/lab/zuds-alerts/{{-alert["candid"]-}}?match_radius_arcsec={{-match_radius_arcsec-}}&star_galaxy_threshold={{-star_galaxy_threshold-}}&download=lc_object"><i class='fas fa-download'></i></a>
+                </h5>
+
+                {% if lc_object | length == 0 %}
+                {# this should never happen! #}
+                <p>No photometry available.</p>
+
+                {% else %}
+
+                <div id="lc_object" style="width: 100%; height: 300px;"></div>
+
+                <div class="form-group row mt-2">
+                    <label for="epoch_object" class="col-lg-2 control-label">
+                        Epoch:
+                    </label>
+
+                    <div class="col-md-4">
+                        <select class="form-control form-control-sm col-lg-6" id="epoch_object" name="epoch_object">
+                            <option>date</option>
+                            <option>mjd</option>
+                            <option>jd</option>
+                            <option>days ago</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr>
+
+                <p class="mt-2">
+                {% for lc in lc_object %}
+                    {% if lc['lc_type'] == 'temporal' %}
+                        {% set lc_info = {'telescope': lc['telescope'],
+                                          'instrument': lc['instrument'],
+                                          'filter': lc['filter'],
+                                          'comment': lc['comment']} %}
+                        <b>LC_{{ loop.index }}:</b> {{ lc_info | safe }}<br>
+                    {% endif %}
+                {% endfor %}
+                </p>
+
+                <p class="mt-2">
+                    <span class="badge badge-primary">Note</span>
+                    Using ?<b>match_radius_arcsec</b>={{-match_radius_arcsec-}}&<b>star_galaxy_threshold</b>={{-star_galaxy_threshold-}}<br>
+                </p>
+
+                {% endif %}
+                <hr>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
+
+{% block js %}
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- JS9 -->
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9prefs.js"></script>
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9support.min.js"></script>
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9.min.js"></script>
+    <script type="text/javascript" src="{{-script_root-}}/static/js/js9plugins.js"></script>
+
+    <!-- Big int support for js -->
+    <script src="{{-script_root-}}/static/js/json-bigint.js"></script>
+
+    <!-- Julian dates -->
+    <script src="{{-script_root-}}/static/js/julianDate.min.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+
+    <!-- Highlight code-->
+    <script src="{{-script_root-}}/static/js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="{{-script_root-}}/static/js/jquery.json-viewer.js"></script>
+
+    <script>
+        // display alert JSON
+        let data_alert = JSONbig.parse('{{-alert|tojson_pretty|safe|replace('\n', '')|replace('NaN', 'null')-}}');
+        {#var data = JSONbig.parse('{{ alert }}');#}
+        {#console.log(data);#}
+        $('#json-renderer-alert').jsonViewer(data_alert, {collapsed: true, withQuotes: true});
+        // open
+        $('#json-renderer-alert').find(">:first-child").trigger("click");
+
+        // display alert_aux JSON
+        let data_alert_aux = JSONbig.parse('{{-alert_aux|tojson_pretty|safe|replace('\n', '')|replace('NaN', 'null')-}}');
+        $('#json-renderer-alert-aux').jsonViewer(data_alert_aux, {collapsed: true, withQuotes: true});
+        // open
+        $('#json-renderer-alert-aux').find(">:first-child").trigger("click");
+    </script>
+
+
+    <script>
+        {# Cutouts #}
+        document.addEventListener('DOMContentLoaded', function () {
+            JS9.Preload('/lab/zuds-alerts/{{-alert["candid"]-}}/cutout/science/fits', {scale: 'log', onload: setZoom}, {display: 'JS9Science'});
+            JS9.Preload('/lab/zuds-alerts/{{-alert["candid"]-}}/cutout/template/fits', {scale: 'log', onload: setZoom}, {display: 'JS9Template'});
+            JS9.Preload('/lab/zuds-alerts/{{-alert["candid"]-}}/cutout/difference/fits', {scale: 'log', onload: setZoom}, {display: 'JS9Difference'});
+            {#plotLightCurve();#}
+        });
+
+        function toggleMenus() {
+            menus = document.getElementsByClassName('JS9Menubar');
+            for (var i = 0; i < menus.length; i++) {
+                menus[i].classList.toggle('d-none');
+            }
+        }
+
+        function setZoom(display) {
+            JS9.SetZoom('ToFit', {display: display});
+        }
+
+        var lc_colors = {1: '#28a745', 2: '#dc3545', 3: '#343a40'};
+
+        {# Light curves for objectId #}
+        var data_det_object = [];
+        var data_non_det_u_object = [];
+        var data_non_det_l_object = [];
+
+        function plot_lc_object(x_axis="dt") {
+            {#// flush first:#}
+            {#Plotly.newPlot('lc');#}
+
+            let layout = {xaxis: {autorange: true},
+                          yaxis: {autorange: 'reversed'},
+                          margin: {b: 30, t: 30, l: 50, r: 50, pad: 1},
+                          shapes: [{
+                                type: 'line',
+                                x0: '2019-06-09',
+                                y0: 0,
+                                x1: '2019-06-09',
+                                yref: 'paper',
+                                y1: 1,
+                                line: {
+                                  color: 'grey',
+                                  width: 1.5,
+                                  dash: 'dot'
+                                }
+                              }]
+            };
+
+            {# iterate over individual light-curves #}
+            {% for lc in lc_object %}
+                {% set lc_ind = loop.index %}
+
+                {# iterate over detections and non-detections #}
+                {% for key in lc['data'] %}
+
+                    {% set lc_dn_ind = loop.index %}
+
+                    {% if lc['data'][key]['dt'] | length > 0 %}
+                        let data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }} = {
+                            x: [],
+                            dt: {{ lc['data'][key]['dt'] | safe }},
+                            days_ago: {{ lc['data'][key]['days_ago'] }},
+                            mjd: {{ lc['data'][key]['mjd'] }},
+                            jd: {{ lc['data'][key]['jd'] }},
+                            {% if key == 'lc_det' %}
+                            y: {{ lc['data'][key]['mag'] }},
+                            error_y: {type: 'data',
+                                      array: {{ lc['data'][key]['magerr'] }},
+                                      width: 2,
+                                      thickness: 0.8,
+                                      color: lc_colors[{{ lc['filter'] }}],
+                                      opacity: 0.5,
+                                      visible: true},
+                            name: 'LC_{{ lc_ind }}',
+                            marker: {color: lc_colors[{{ lc['filter'] }}]},
+                            showlegend: true,
+                            {% elif key == 'lc_nodet_u' %}
+                            y: {{ lc['data'][key]['mag_ulim'] }},
+                            name: 'LC_{{ lc_ind }}_nodet_u',
+                            marker: {symbol: 'triangle-down', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
+                            showlegend: true,
+                            {% elif key == 'lc_nodet_l' %}
+                            y: {{ lc['data'][key]['mag_llim'] }},
+                            name: 'LC_{{ lc_ind }}_nodet_l',
+                            marker: {symbol: 'triangle-up', color: lc_colors[{{ lc['filter'] }}], opacity: 0.4},
+                            showlegend: true,
+                            {% endif %}
+
+                            mode: 'markers'
+                        };
+
+                        // set x:
+                        if (x_axis === 'mjd') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.mjd
+                        }
+                        else if (x_axis === 'jd') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.jd
+                        }
+                        else if (x_axis === 'hjd') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.hjd
+                        }
+                        else if (x_axis === 'days ago') {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.days_ago
+                        }
+                        else {
+                            data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.x = data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }}.dt
+                        }
+
+                        {% if key == 'lc_det' %}
+                        data_det_object.push(data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }});
+                        {#Plotly.plot('lc', data_{{ loop.index }}, layout);#}
+                        {% elif key == 'lc_nodet_u' %}
+                        data_non_det_u_object.push(data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }});
+                        {% elif key == 'lc_nodet_l' %}
+                        data_non_det_l_object.push(data_{{ lc_ind }}_{{ key }}_{{ lc_dn_ind }});
+                        {% endif %}
+
+                    {% endif %}
+                {% endfor %}
+
+            {% endfor %}
+
+            // mark alert's jd
+            if (x_axis === 'jd') {
+                layout.shapes[0].x0 = {{ alert['candidate']['jd'] }};
+                layout.shapes[0].x1 = {{ alert['candidate']['jd'] }};
+            }
+            else if (x_axis === 'mjd') {
+                layout.shapes[0].x0 = {{ alert['candidate']['jd'] }} - 2400000.5;
+                layout.shapes[0].x1 = {{ alert['candidate']['jd'] }} - 2400000.5;
+            }
+            else if (x_axis === 'days ago') {
+                let jd = new JulianDate().julian({{ alert['candidate']['jd'] }});
+                let dt = moment.utc(jd.getDate());
+                let da = moment.utc().diff(dt, 'days', true);
+                layout.shapes[0].x0 = da;
+                layout.shapes[0].x1 = da;
+                // revese x axis
+                layout.xaxis.autorange = 'reversed';
+            }
+            else {
+                let jd = new JulianDate().julian({{ alert['candidate']['jd'] }});
+                let dt = moment.utc(jd.getDate());
+                layout.shapes[0].x0 = dt.format('YYYY-MM-DD HH:mm:ss');
+                layout.shapes[0].x1 = dt.format('YYYY-MM-DD HH:mm:ss');
+            }
+
+            // plot detections. there should always be at least one detection since there's an alert
+            if (data_det_object.length > 0) {
+                Plotly.newPlot('lc_object', data_det_object, layout);
+            }
+            // plot non-detections
+            if (data_non_det_u_object.length > 0) {
+                Plotly.plot('lc_object', data_non_det_u_object, layout);
+            }
+            if (data_non_det_l_object.length > 0) {
+                Plotly.plot('lc_object', data_non_det_l_object, layout);
+            }
+        }
+
+        {% if lc_object | length > 0 %}
+        $(document).ready(function() {
+            // wait for whole document to load before plotting light curves
+            plot_lc_object();
+        });
+
+        $('#epoch_object').on('change', function() {
+            // change x axis
+            // console.log(this.value);
+            data_det_object = [];
+            data_non_det_u_object = [];
+            data_non_det_l_object = [];
+            plot_lc_object(this.value);
+        });
+
+        {% endif %}
+
+        {# show flashing messages #}
+        function showFlashingMessage(title, message, type) {
+            $.notify({title: title, message: message},
+                {placement: {
+                    from: "bottom",
+                    align: "right"
+                },
+                    type: type,
+                    template: '<div data-notify="container" class="col-xs-11 col-sm-3 alert alert-{0}" role="alert" ' +
+                    'style="max-width:400px; font-size: 0.75rem;">' +
+                    '<button type="button" aria-hidden="true" class="close" data-notify="dismiss">×</button>' +
+                    '<span data-notify="icon"></span> ' +
+                    '<span data-notify="title">{1}</span> ' +
+                    '<span data-notify="message">{2}</span>' +
+                    '<div class="progress" data-notify="progressbar">' +
+                    '<div class="progress-bar progress-bar-{0}" role="progressbar" aria-valuenow="0" ' +
+                    'aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>' +
+                    '</div>' +
+                    '<a href="{3}" target="{4}" data-notify="url"></a>' +
+                    '</div>'
+            });
+        }
+    </script>
+
+
+{% endblock %}
