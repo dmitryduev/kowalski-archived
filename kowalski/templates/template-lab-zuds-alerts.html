@@ -345,15 +345,39 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                     {
                         field: 'candidate',
                         title: 'candidate',
-                        colspan: 10,
+                        colspan: 13,
                         align: 'center',
                         valign: 'middle'
                     }
                 ],
                 [
                     {
+                        field: 'alert_type',
+                        title: 'alert_type',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
                         field: 'fid',
                         title: 'fid',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'nframesstack',
+                        title: 'nframesstack',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'exptime',
+                        title: 'exptime',
                         align: 'center',
                         valign: 'middle',
                         sortable: true,
@@ -441,12 +465,21 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         objectId: "{{objectId}}",
                         candid: "{{candid}}",
 
-                        obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss'),
+                        {% if 'jd' in alert['candidate']%}
+                            obs_date: moment(jd.julian({{ alert['candidate']['jd'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss'),
+                        {% else %}
+                            obs_date: moment(jd.julian({{ alert['candidate']['jdmed'] }}).getDate()).utc().format('YYYY/MM/DD_HH:mm:ss'),
+                        {% endif %}
 
                         ra: "{{ alert['coordinates']['radec_str'][0] }}",
                         dec: "{{ alert['coordinates']['radec_str'][1] }}",
 
+                        alert_type: "{{alert['candidate']['fid']}}",
                         fid: "{{alert['candidate']['fid']}}",
+                        {% if 'nframesstack' in alert['candidate'] %}
+                            nframesstack: "{{alert['candidate']['nframesstack']}}",
+                        {% endif %}
+                        exptime: "{{alert['candidate']['exptime']}}",
                         ra_deg: "{{alert['candidate']['ra']}}",
                         dec_deg: "{{alert['candidate']['dec']}}",
                         xpos: "{{'{:.2f}'.format(alert['candidate']['xpos'])}}",
