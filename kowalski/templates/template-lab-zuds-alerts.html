@@ -474,7 +474,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         ra: "{{ alert['coordinates']['radec_str'][0] }}",
                         dec: "{{ alert['coordinates']['radec_str'][1] }}",
 
-                        alert_type: "{{alert['candidate']['fid']}}",
+                        alert_type: "{{alert['candidate']['alert_type']}}",
                         fid: "{{alert['candidate']['fid']}}",
                         {% if 'nframesstack' in alert['candidate'] %}
                             nframesstack: "{{alert['candidate']['nframesstack']}}",
