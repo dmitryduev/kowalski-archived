@@ -2487,7 +2487,7 @@ def assemble_lc_zuds(dflc, objectId, composite=False, match_radius_arcsec=1.5, s
         # get detections in this filter:
         w = (dflc['filter'] == fid) & ~dflc['mag'].isnull()
 
-        dflc.loc[w, 'magerr'] = -2.5 * np.log10(dflc.loc[w, 'fluxerr']) + dflc.loc[w, 'zp']
+        dflc.loc[w, 'magerr'] = 1.086 * dflc.loc[w, 'fluxerr'] / dflc.loc[w, 'flux']
 
         lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
                              dflc.loc[w, 'mjd'], dflc.loc[w, 'mag'], dflc.loc[w, 'magerr']],
