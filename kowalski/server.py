@@ -2466,8 +2466,8 @@ async def ztf_alert_get_cutout_handler(request):
 
 
 def assemble_lc_zuds(dflc, objectId, composite=False, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
-    # mjds:
-    dflc['mjd'] = dflc.jd - 2400000.5
+    # jds:
+    dflc['jd'] = dflc['mjd'] + 2400000.5
 
     dflc['datetime'] = dflc['mjd'].apply(lambda x: mjd_to_datetime(x))
     # strings for plotly:
@@ -2479,211 +2479,64 @@ def assemble_lc_zuds(dflc, objectId, composite=False, match_radius_arcsec=1.5, s
     dflc['days_ago'] = dflc['datetime'].apply(lambda x:
                                               (datetime.datetime.utcnow() - x).total_seconds() / 86400.)
 
-    if is_star(dflc, match_radius_arcsec=match_radius_arcsec, star_galaxy_threshold=star_galaxy_threshold):
-        # print('It is a star!')
-        # variable object/star? take into account flux in ref images:
-        lc = []
+    # todo: fixme: deal with variable sources
+    lc = []
 
-        # fix old alerts:
-        dflc.replace('None', np.nan, inplace=True)
+    for fid in (1, 2, 3):
+        # print(fid)
+        # get detections in this filter:
+        w = (dflc.fid == fid) & ~dflc['mag'].isnull()
 
-        # prior to 2018-11-12, non-detections don't have field and rcid in the alert packet,
-        # which makes inferring upper limits more difficult
-        # fix using pdiffimfilename:
-        w = dflc.rcid.isnull()
-        if np.sum(w):
-            dflc.loc[w, 'rcid'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
-                                                      ccd_quad_2_rc(ccd=int(os.path.basename(x).split('_')[4][1:]),
-                                                                    quad=int(os.path.basename(x).split('_')[6][1:])))
-            dflc.loc[w, 'field'] = dflc.loc[w, 'pdiffimfilename'].apply(lambda x:
-                                                                        int(os.path.basename(x).split('_')[2][1:]))
+        dflc.loc[w, 'magerr'] = -2.5 * np.log10(dflc.loc[w, 'fluxerr']) + dflc.loc[w, 'zp']
 
-        # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        #     print(dflc[['fid', 'field', 'rcid', 'magnr']])
+        lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
+                             dflc.loc[w, 'mjd'], dflc.loc[w, 'mag'], dflc.loc[w, 'sigmapsf']],
+                            axis=1, ignore_index=True, sort=False) if np.sum(w) else None
+        if lc_dets is not None:
+            lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
 
-        grp = dflc.groupby(['fid', 'field', 'rcid'])
-        impute_magnr = grp['magnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
-        # print(impute_magnr)
-        impute_sigmagnr = grp['sigmagnr'].agg(lambda x: np.median(x[np.isfinite(x)]))
-        # print(impute_sigmagnr)
+        wnodet = (dflc.fid == fid) & dflc['mag'].isnull()
 
-        for idx, grpi in grp:
-            w = np.isnan(grpi['magnr'])
-            w2 = grpi[w].index
-            dflc.loc[w2, 'magnr'] = impute_magnr[idx]
-            dflc.loc[w2, 'sigmagnr'] = impute_sigmagnr[idx]
+        lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
+                                 dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'lim_mag']],
+                                axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
+        if lc_non_dets is not None:
+            lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_ulim']
 
-        # print(dflc)
+        if lc_dets is None and lc_non_dets is None:
+            continue
 
-        # fix weird isdiffpos'es:
-        w_1 = dflc['isdiffpos'] == '1'
-        dflc.loc[w_1, 'isdiffpos'] = 't'
+        lc_joint = None
 
-        dflc['sign'] = 2 * (dflc['isdiffpos'] == 't') - 1
+        if lc_dets is not None:
+            # print(lc_dets)
+            # print(lc_dets.to_dict('records'))
+            lc_joint = lc_dets
+        if lc_non_dets is not None:
+            # print(lc_non_dets.to_dict('records'))
+            lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
+                                                                      axis=0, ignore_index=True, sort=False)
 
-        # Eric Bellm 20190722: Convert to DC magnitudes (see p.102 of the Explanatory Supplement)
-        dflc['dc_flux'] = 10 ** (-0.4 * dflc['magnr']) + dflc['sign'] * 10 ** (-0.4 * dflc['magpsf'])
-        w_dc_flux_good = dflc['dc_flux'] > 0
-        dflc.loc[w_dc_flux_good, 'dc_mag'] = -2.5 * np.log10(dflc.loc[w_dc_flux_good, 'dc_flux'])
-        dflc.loc[w_dc_flux_good, 'dc_sigmag'] = np.sqrt(
-            (10 ** (-0.4 * dflc['magnr']) * dflc['sigmagnr']) ** 2. +
-            (10 ** (-0.4 * dflc['magpsf']) * dflc['sigmapsf']) ** 2.) / dflc.loc[w_dc_flux_good, 'dc_flux']
+        # sort by date and fill NaNs with zeros
+        lc_joint.sort_values(by=['mjd'], inplace=True)
+        # print(lc_joint)
+        lc_joint = lc_joint.fillna(0)
 
-        dflc['dc_flux_ulim'] = 10 ** (-0.4 * dflc['magnr']) + 10 ** (-0.4 * dflc['diffmaglim'])
-        dflc['dc_flux_llim'] = 10 ** (-0.4 * dflc['magnr']) - 10 ** (-0.4 * dflc['diffmaglim'])
+        # single or multiple alert packets used?
+        lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
+            if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
+        # print(lc_id)
 
-        w_dc_flux_ulim_good = dflc['dc_flux_ulim'] > 0
-        w_dc_flux_llim_good = dflc['dc_flux_llim'] > 0
-
-        dflc.loc[w_dc_flux_ulim_good, 'dc_mag_ulim'] = -2.5 * np.log10(
-            10 ** (-0.4 * dflc.loc[w_dc_flux_ulim_good, 'magnr']) +
-            10 ** (-0.4 * dflc.loc[w_dc_flux_ulim_good, 'diffmaglim']))
-        dflc.loc[w_dc_flux_llim_good, 'dc_mag_llim'] = -2.5 * np.log10(
-            10 ** (-0.4 * dflc.loc[w_dc_flux_llim_good, 'magnr']) -
-            10 ** (-0.4 * dflc.loc[w_dc_flux_llim_good, 'diffmaglim']))
-
-        # if some of the above produces NaNs for some reason, try fixing it sloppy way:
-        for fid in (1, 2, 3):
-            if fid in dflc.fid.values:
-                ref_flux = None
-                w = (dflc.fid == fid) & ~dflc.magpsf.isnull() & (dflc.distnr <= match_radius_arcsec)
-                if np.sum(w):
-                    ref_mag = np.float64(dflc.loc[w].iloc[0]['magnr'])
-                    ref_flux = np.float64(10 ** (0.4 * (27 - ref_mag)))
-                    # print(fid, ref_mag, ref_flux)
-
-                wnodet_old = (dflc.fid == fid) & dflc.magpsf.isnull() & \
-                             dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0)
-
-                if np.sum(wnodet_old) and (ref_flux is not None):
-                    # if we have a non-detection that means that there's no flux +/- 5 sigma from
-                    # the ref flux (unless it's a bad subtraction)
-                    dflc.loc[wnodet_old, 'difference_fluxlim'] = 10 ** (0.4 * (27 - dflc.loc[wnodet_old, 'diffmaglim']))
-                    dflc.loc[wnodet_old, 'dc_flux_ulim'] = ref_flux + dflc.loc[wnodet_old, 'difference_fluxlim']
-                    dflc.loc[wnodet_old, 'dc_flux_llim'] = ref_flux - dflc.loc[wnodet_old, 'difference_fluxlim']
-
-                    # mask bad values:
-                    w_u_good = (dflc.fid == fid) & dflc.magpsf.isnull() & \
-                               dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_ulim > 0)
-                    w_l_good = (dflc.fid == fid) & dflc.magpsf.isnull() & \
-                               dflc.dc_mag_ulim.isnull() & (dflc.diffmaglim > 0) & (dflc.dc_flux_llim > 0)
-
-                    dflc.loc[w_u_good, 'dc_mag_ulim'] = 27 - 2.5 * np.log10(dflc.loc[w_u_good, 'dc_flux_ulim'])
-                    dflc.loc[w_l_good, 'dc_mag_llim'] = 27 - 2.5 * np.log10(dflc.loc[w_l_good, 'dc_flux_llim'])
-
-        # corrections done, now proceed with assembly
-        for fid in (1, 2, 3):
-            # print(fid)
-            # get detections in this filter:
-            w = (dflc.fid == fid) & ~dflc.magpsf.isnull()
-            lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
-                                 dflc.loc[w, 'mjd'], dflc.loc[w, 'dc_mag'], dflc.loc[w, 'dc_sigmag']],
-                                axis=1, ignore_index=True, sort=False) if np.sum(w) else None
-            if lc_dets is not None:
-                lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
-
-            wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
-            # print(wnodet)
-
-            lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
-                                     dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'dc_mag_llim'],
-                                     dflc.loc[wnodet, 'dc_mag_ulim']],
-                                    axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
-            if lc_non_dets is not None:
-                lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_llim', 'mag_ulim']
-
-            if lc_dets is None and lc_non_dets is None:
-                continue
-
-            lc_joint = None
-
-            if lc_dets is not None:
-                # print(lc_dets)
-                # print(lc_dets.to_dict('records'))
-                lc_joint = lc_dets
-            if lc_non_dets is not None:
-                # print(lc_non_dets.to_dict('records'))
-                lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
-                                                                          axis=0, ignore_index=True, sort=False)
-
-            # sort by date and fill NaNs with zeros
-            lc_joint.sort_values(by=['mjd'], inplace=True)
-            # print(lc_joint)
-            lc_joint = lc_joint.fillna(0)
-
-            # single or multiple alert packets used?
-            lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
-                if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
-            # print(lc_id)
-
-            lc_save = {"telescope": "PO:1.2m",
-                       "instrument": "ZTF",
-                       "filter": fid,
-                       "source": "alert_stream",
-                       "comment": "corrected for flux in reference image",
-                       "id": lc_id,
-                       "lc_type": "temporal",
-                       "data": lc_joint.to_dict('records')
-                       }
-            lc.append(lc_save)
-
-    else:
-        # print('Not a star!')
-        # not a star (transient): up to three individual lcs
-        lc = []
-
-        for fid in (1, 2, 3):
-            # print(fid)
-            # get detections in this filter:
-            w = (dflc.fid == fid) & ~dflc.magpsf.isnull()
-            lc_dets = pd.concat([dflc.loc[w, 'jd'], dflc.loc[w, 'dt'], dflc.loc[w, 'days_ago'],
-                                 dflc.loc[w, 'mjd'], dflc.loc[w, 'magpsf'], dflc.loc[w, 'sigmapsf']],
-                                axis=1, ignore_index=True, sort=False) if np.sum(w) else None
-            if lc_dets is not None:
-                lc_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag', 'magerr']
-
-            wnodet = (dflc.fid == fid) & dflc.magpsf.isnull()
-
-            lc_non_dets = pd.concat([dflc.loc[wnodet, 'jd'], dflc.loc[wnodet, 'dt'], dflc.loc[wnodet, 'days_ago'],
-                                     dflc.loc[wnodet, 'mjd'], dflc.loc[wnodet, 'diffmaglim']],
-                                    axis=1, ignore_index=True, sort=False) if np.sum(wnodet) else None
-            if lc_non_dets is not None:
-                lc_non_dets.columns = ['jd', 'dt', 'days_ago', 'mjd', 'mag_ulim']
-
-            if lc_dets is None and lc_non_dets is None:
-                continue
-
-            lc_joint = None
-
-            if lc_dets is not None:
-                # print(lc_dets)
-                # print(lc_dets.to_dict('records'))
-                lc_joint = lc_dets
-            if lc_non_dets is not None:
-                # print(lc_non_dets.to_dict('records'))
-                lc_joint = lc_non_dets if lc_joint is None else pd.concat([lc_joint, lc_non_dets],
-                                                                          axis=0, ignore_index=True, sort=False)
-
-            # sort by date and fill NaNs with zeros
-            lc_joint.sort_values(by=['mjd'], inplace=True)
-            # print(lc_joint)
-            lc_joint = lc_joint.fillna(0)
-
-            # single or multiple alert packets used?
-            lc_id = f"{objectId}_composite_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}" \
-                if composite else f"{objectId}_{int(dflc.loc[0, 'candid'])}"
-            # print(lc_id)
-
-            lc_save = {"telescope": "PO:1.2m",
-                       "instrument": "ZTF",
-                       "filter": fid,
-                       "source": "alert_stream",
-                       "comment": "no corrections applied. using raw magpsf, sigmapsf, and diffmaglim",
-                       "id": lc_id,
-                       "lc_type": "temporal",
-                       "data": lc_joint.to_dict('records')
-                       }
-            lc.append(lc_save)
+        lc_save = {"telescope": "PO:1.2m",
+                   "instrument": "ZTF/ZUDS",
+                   "filter": fid,
+                   "source": "alert_stream",
+                   "comment": "no corrections applied. using raw magpsf, sigmapsf, and diffmaglim",
+                   "id": lc_id,
+                   "lc_type": "temporal",
+                   "data": lc_joint.to_dict('records')
+                   }
+        lc.append(lc_save)
 
     # print(lc)
     return lc
@@ -2709,7 +2562,7 @@ async def zuds_alert_get_handler(request):
     alert = await request.app['mongo']['ZUDS_alerts'].find_one({'candid': candid}, max_time_ms=30000)
     alert = loads(dumps(alert))
 
-    # get aux data (cross-matches and prv_candidates)
+    # get aux data (cross-matches and light_curve)
     alert_aux = await request.app['mongo']['ZUDS_alerts_aux'].find_one({'_id': alert['objectId']}, max_time_ms=60000) \
         if alert is not None else None
 
@@ -2726,19 +2579,8 @@ async def zuds_alert_get_handler(request):
             return web.json_response(alert_aux, status=200, dumps=dumps)
 
         elif download == 'lc_object':
-            obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
-                                                                {'cutoutScience': 0,
-                                                                 'cutoutTemplate': 0,
-                                                                 'cutoutDifference': 0,
-                                                                 'classifications': 0},
-                                                                max_time_ms=60000).to_list(length=None)
-            dflc = make_dataframe(obj)
-
-            # concat alert_aux with dflc
-            df_prv = pd.DataFrame(alert_aux['prv_candidates'])
-            dflc = pd.concat([dflc, df_prv],
-                             ignore_index=True,
-                             sort=False).drop_duplicates(subset='jd').reset_index(drop=True).sort_values(by=['jd'])
+            lc = alert_aux['light_curve']
+            dflc = pd.DataFrame(lc)
 
             lc_object = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
                                     match_radius_arcsec=match_radius_arcsec,
@@ -2746,25 +2588,11 @@ async def zuds_alert_get_handler(request):
             return web.json_response(lc_object, status=200, dumps=dumps)
 
     if alert is not None and (len(alert) > 0):
-        # make composite light curve from all packets for alert['objectId']
-        obj = await request.app['mongo']['ZTF_alerts'].find({'objectId': alert['objectId']},
-                                                            {'cutoutScience': 0,
-                                                             'cutoutTemplate': 0,
-                                                             'cutoutDifference': 0,
-                                                             'classifications': 0},
-                                                            max_time_ms=60000).to_list(length=None)
-        # print([o['_id'] for o in obj])
-        dflc = make_dataframe(obj)
+        dflc = pd.DataFrame(alert_aux['light_curve'])
 
-        # concat alert_aux with dflc
-        df_prv = pd.DataFrame(alert_aux['prv_candidates'])
-        dflc = pd.concat([dflc, df_prv],
-                         ignore_index=True,
-                         sort=False).drop_duplicates(subset='jd').reset_index(drop=True).sort_values(by=['jd'])
-
-        lc_obj = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
-                             match_radius_arcsec=match_radius_arcsec,
-                             star_galaxy_threshold=star_galaxy_threshold)
+        lc_obj = assemble_lc_zuds(dflc, objectId=alert['objectId'], composite=True,
+                                  match_radius_arcsec=match_radius_arcsec,
+                                  star_galaxy_threshold=star_galaxy_threshold)
 
         # pre-process for plotly:
         lc_object = []
