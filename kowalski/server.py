@@ -2588,32 +2588,33 @@ async def zuds_alert_get_handler(request):
             return web.json_response(lc_object, status=200, dumps=dumps)
 
     if alert is not None and (len(alert) > 0):
-        dflc = pd.DataFrame(alert_aux['light_curve'])
+        if len(alert_aux['light_curve']) > 0:
+            dflc = pd.DataFrame(alert_aux['light_curve'])
 
-        lc_obj = assemble_lc_zuds(dflc, objectId=alert['objectId'], composite=True,
-                                  match_radius_arcsec=match_radius_arcsec,
-                                  star_galaxy_threshold=star_galaxy_threshold)
+            lc_obj = assemble_lc_zuds(dflc, objectId=alert['objectId'], composite=True,
+                                      match_radius_arcsec=match_radius_arcsec,
+                                      star_galaxy_threshold=star_galaxy_threshold)
 
-        # pre-process for plotly:
-        lc_object = []
-        for lc_ in lc_obj:
-            lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
-                    'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
-                    'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
-            for dp in lc_['data']:
-                if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
-                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
-                        lc__['lc_nodet_u'][kk].append(dp[kk])
-                if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
-                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
-                        lc__['lc_nodet_l'][kk].append(dp[kk])
-                if ('mag' in dp) and (dp['mag'] > 0.01):
-                    for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
-                        lc__['lc_det'][kk].append(dp[kk])
-            lc_['data'] = lc__
-            lc_object.append(lc_)
-
-        # print(lc_candid)
+            # pre-process for plotly:
+            lc_object = []
+            for lc_ in lc_obj:
+                lc__ = {'lc_det': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag': [], 'magerr': []},
+                        'lc_nodet_u': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_ulim': []},
+                        'lc_nodet_l': {'dt': [], 'days_ago': [], 'jd': [], 'mjd': [], 'mag_llim': []}}
+                for dp in lc_['data']:
+                    if ('mag_ulim' in dp) and (dp['mag_ulim'] > 0.01):
+                        for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_ulim'):
+                            lc__['lc_nodet_u'][kk].append(dp[kk])
+                    if ('mag_llim' in dp) and (dp['mag_llim'] > 0.01):
+                        for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag_llim'):
+                            lc__['lc_nodet_l'][kk].append(dp[kk])
+                    if ('mag' in dp) and (dp['mag'] > 0.01):
+                        for kk in ('dt', 'days_ago', 'jd', 'mjd', 'mag', 'magerr'):
+                            lc__['lc_det'][kk].append(dp[kk])
+                lc_['data'] = lc__
+                lc_object.append(lc_)
+        else:
+            lc_object = []
 
         context = {'logo': config['server']['logo'],
                    'user': session['user_id'],
