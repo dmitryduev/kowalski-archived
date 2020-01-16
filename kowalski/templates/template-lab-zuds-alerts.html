@@ -345,7 +345,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                     {
                         field: 'candidate',
                         title: 'candidate',
-                        colspan: 13,
+                        colspan: 14,
                         align: 'center',
                         valign: 'middle'
                     }
@@ -354,6 +354,14 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                     {
                         field: 'alert_type',
                         title: 'alert_type',
+                        align: 'center',
+                        valign: 'middle',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'ztfname',
+                        title: 'ztfname',
                         align: 'center',
                         valign: 'middle',
                         sortable: true,
@@ -475,6 +483,7 @@ Alternatively, for a single source, either two numbers [deg deg] or two strings 
                         dec: "{{ alert['coordinates']['radec_str'][1] }}",
 
                         alert_type: "{{alert['candidate']['alert_type']}}",
+                        ztfname: "{{alert['candidate']['ztfname']}}",
                         fid: "{{alert['candidate']['fid']}}",
                         {% if 'nframesstack' in alert['candidate'] %}
                             nframesstack: "{{alert['candidate']['nframesstack']}}",
