@@ -2416,7 +2416,9 @@ async def ztf_alert_get_cutout_handler(request):
     with gzip.open(io.BytesIO(cutout_data), 'rb') as f:
         with fits.open(io.BytesIO(f.read())) as hdu:
             header = hdu[0].header
-            data_flipped_y = np.flipud(hdu[0].data)
+            # no need to flip it since Danny does that on his end
+            # data_flipped_y = np.flipud(hdu[0].data)
+            data_flipped_y = hdu[0].data
 
     if file_format == 'fits':
         hdu = fits.PrimaryHDU(data_flipped_y, header=header)
