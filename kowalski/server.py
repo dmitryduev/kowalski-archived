@@ -2632,7 +2632,7 @@ async def zuds_alert_get_handler(request):
 
     else:
         # redirect to alerts lab page
-        location = request.app.router['ztf-alerts'].url_for()
+        location = request.app.router['zuds-alerts'].url_for()
         raise web.HTTPFound(location=location)
 
 
