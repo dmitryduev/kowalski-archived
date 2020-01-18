@@ -142,8 +142,8 @@ def get_ops():
         print(datetime.datetime.utcnow())
         raise Exception('Failed to fetch allexp.tbl')
 
-    latest = list(db[collection].find({}, sort=[["$natural", -1]]))
-    print(latest)
+    latest = list(db[collection].find({}, sort=[["$natural", -1]], limit=1))
+    # print(latest)
 
     df = pd.read_fwf(os.path.join(config['path']['path_tmp'], 'allexp.tbl'), comment='|', header=None,
                      names=['utc_start', 'sun_elevation',
@@ -167,7 +167,7 @@ def get_ops():
 
     # drop rows with utc_start <= c['utc_start]
     if len(latest) > 0:
-        new = df['jd_start'] > latest.get('jd_start', 0)
+        new = df['jd_start'] > latest[0].get('jd_start', 0)
         df = df.loc[new]
 
     documents = df.to_dict('records')
