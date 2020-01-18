@@ -168,29 +168,21 @@ def get_ops():
     # drop rows with utc_start <= c['utc_start]
     if len(latest) > 0:
         new = df['jd_start'] > latest[0].get('jd_start', 0)
-        df = df.loc[new]
+
+        if sum(new):
+            df = df.loc[new]
+        else:
+            # no new data? take a nap...
+            # close connection to db
+            client.close()
+            print('Disconnected from db')
+            return
 
     documents = df.to_dict('records')
 
     documents = [mongify(doc) for doc in documents]
 
     insert_multiple_db_entries(db, _collection=collection, _db_entries=documents, _verbose=False)
-
-    # kk = 30 if grab_all else 1
-    # for page in range(kk):
-    #     # print(page)
-    #     url = f'https://wis-tns.weizmann.ac.il/search?format=csv&num_page=1000&page={page}'
-    #
-    #     data = pd.read_csv(url)
-    #     # print(data)
-    #
-    #     documents = []
-    #
-    #     for index, row in data.iterrows():
-    #         doc = mongify(row)
-    #         documents.append(doc)
-    #
-    #     insert_multiple_db_entries(db, _collection=collection, _db_entries=documents, _verbose=False)
 
     # close connection to db
     client.close()
