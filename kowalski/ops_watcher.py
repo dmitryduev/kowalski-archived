@@ -161,7 +161,7 @@ def get_ops():
 
     documents = df.to_dict('records')
 
-    documents = {mongify(doc) for doc in documents}
+    documents = [mongify(doc) for doc in documents]
 
     insert_multiple_db_entries(db, _collection=collection, _db_entries=documents, _verbose=False)
 
