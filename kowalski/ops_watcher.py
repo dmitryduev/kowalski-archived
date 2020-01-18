@@ -10,7 +10,7 @@ import time
 import pandas as pd
 import pytz
 import requests
-from utils import radec_str2rad, radec_str2geojson
+from utils import radec_str2rad, radec_str2geojson, jd
 
 
 ''' load config and secrets '''
@@ -114,7 +114,7 @@ def mongify(doc):
 
 def get_ops():
     """
-
+        Fetch and ingest ZTF ops data
     """
 
     # connect to MongoDB:
@@ -128,6 +128,9 @@ def get_ops():
     db[collection].create_index([('utc_start', pymongo.ASCENDING),
                                  ('utc_end', pymongo.ASCENDING),
                                  ('fileroot', pymongo.ASCENDING)], background=True)
+    db[collection].create_index([('jd_start', pymongo.ASCENDING),
+                                 ('jd_end', pymongo.ASCENDING),
+                                 ('fileroot', pymongo.ASCENDING)], background=True)
 
     # fetch full table
     url = secrets['ztf_ops']['url']
@@ -139,8 +142,8 @@ def get_ops():
         print(datetime.datetime.utcnow())
         raise Exception('Failed to fetch allexp.tbl')
 
-    c = db[collection].find({}, sort=[["$natural", -1]])
-    print(list(c))
+    latest = list(db[collection].find({}, sort=[["$natural", -1]]))
+    print(latest)
 
     df = pd.read_fwf(os.path.join(config['path']['path_tmp'], 'allexp.tbl'), comment='|', header=None,
                      names=['utc_start', 'sun_elevation',
@@ -159,7 +162,13 @@ def get_ops():
     df['utc_start'] = df['utc_start'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%f'))
     df['utc_end'] = df['utc_start'].add(df['exp'].apply(lambda x: datetime.timedelta(seconds=x)))
 
-    # FIXME: TODO: drop rows with utc_start <= c['utc_start]
+    df['jd_start'] = df['utc_start'].apply(lambda x: jd(x))
+    df['jd_end'] = df['utc_end'].apply(lambda x: jd(x))
+
+    # drop rows with utc_start <= c['utc_start]
+    if len(latest) > 0:
+        new = df['jd_start'] > latest.get('jd_start', 0)
+        df = df.loc[new]
 
     documents = df.to_dict('records')
 
