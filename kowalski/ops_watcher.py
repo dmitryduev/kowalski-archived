@@ -21,7 +21,10 @@ with open('/app/secrets.json') as sjson:
     secrets = json.load(sjson)
 
 for k in secrets:
-    config[k].update(secrets.get(k, {}))
+    if k in config:
+        config[k].update(secrets.get(k, {}))
+    else:
+        config[k] = secrets.get(k, {})
 
 
 def connect_to_db(_config):
