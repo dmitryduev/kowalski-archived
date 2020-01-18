@@ -125,7 +125,9 @@ def get_ops():
     collection = 'ZTF_ops'
 
     db[collection].create_index([('coordinates.radec_geojson', '2dsphere')], background=True)
-    db[collection].create_index([('utc_start', 'utc_end', 'fileroot')], background=True)
+    db[collection].create_index([('utc_start', pymongo.ASCENDING),
+                                 ('utc_end', pymongo.ASCENDING),
+                                 ('fileroot', pymongo.ASCENDING)], background=True)
 
     # fetch full table
     url = secrets['ztf_ops']['url']
