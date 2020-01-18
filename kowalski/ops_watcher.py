@@ -159,6 +159,8 @@ def get_ops():
     df['utc_start'] = df['utc_start'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%f'))
     df['utc_end'] = df['utc_start'].add(df['exp'].apply(lambda x: datetime.timedelta(seconds=x)))
 
+    # FIXME: TODO: drop rows with utc_start <= c['utc_start]
+
     documents = df.to_dict('records')
 
     documents = [mongify(doc) for doc in documents]

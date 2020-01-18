@@ -48,8 +48,10 @@ with open('/app/secrets.json') as sjson:
     secrets = json.load(sjson)
 
 for k in secrets:
-    config[k].update(secrets.get(k, {}))
-# print(config)
+    if k in config:
+        config[k].update(secrets.get(k, {}))
+    else:
+        config[k] = secrets.get(k, {})
 
 
 async def init_db():

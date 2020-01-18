@@ -44,6 +44,10 @@
 
   },
 
+  "ztf_ops": {
+
+  },
+
   "ml_models": {
     "braai": {
       "version":  "d6_m9"
