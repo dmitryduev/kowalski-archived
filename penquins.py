@@ -6,11 +6,12 @@ import time
 from copy import deepcopy
 from typing import Union
 import requests
+from requests.adapters import HTTPAdapter, DEFAULT_POOL_TIMEOUT, DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES
 from bson.json_util import loads
 
 
 ''' PENQUINS - Processing ENormous Queries of ztf Users INStantaneously '''
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 Num = Union[int, float]
@@ -20,14 +21,21 @@ Method = Union['get', 'post', 'put', 'patch', 'delete']
 
 class Kowalski(object):
     """
-        Query ZTF TDA databases
+        Class to communicate with a kowalski instance
     """
 
-    # def __init__(self, protocol='http', host='127.0.0.1', port=8000, verbose=False,
-    #              username=None, password=None):
-
-    def __init__(self, protocol='https', host='kowalski.caltech.edu', port=443, verbose=False,
-                 username=None, password=None):
+    def __init__(self, username=None, password=None,
+                 protocol: str = 'https', host: str = 'kowalski.caltech.edu', port: int = 443,
+                 pool_connections=None, pool_maxsize=None, max_retries=None, pool_block=None,
+                 verbose: bool = False):
+        """
+            username, password, protocol, host, port:
+                kowalski instance access credentials and address
+            pool_connections, pool_maxsize, max_retries, pool_block:
+                control requests.Session connection pool
+            verbose:
+                "Status, Kowalski!"
+        """
 
         assert username is not None, 'username must be specified'
         assert password is not None, 'password must be specified'
@@ -46,6 +54,20 @@ class Kowalski(object):
         self.password = password
 
         self.session = requests.Session()
+
+        # requests' defaults overridden?
+        if (pool_connections is not None) or (pool_maxsize is not None) \
+                or (max_retries is not None) or (pool_block is not None):
+
+            pc = pool_connections if pool_connections is not None else DEFAULT_POOLSIZE
+            pm = pool_maxsize if pool_maxsize is not None else DEFAULT_POOLSIZE
+            mr = max_retries if max_retries is not None else DEFAULT_RETRIES
+            pb = pool_block if pool_block is not None else DEFAULT_POOLBLOCK
+
+            self.session.mount('https://', HTTPAdapter(pool_connections=pc, pool_maxsize=pm,
+                                                       max_retries=mr, pool_block=pb))
+            self.session.mount('http://', HTTPAdapter(pool_connections=pc, pool_maxsize=pm,
+                                                       max_retries=mr, pool_block=pb))
 
         self.access_token = self.authenticate()
 

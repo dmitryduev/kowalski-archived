@@ -229,13 +229,13 @@ async def auth(request):
             return web.json_response({'token': jwt_token.decode('utf-8')})
 
         else:
-            return web.json_response({'message': 'Wrong credentials'}, status=400)
+            return web.json_response({'message': 'Wrong credentials'}, status=401)
 
     except Exception as e:
         print(f'Got error: {str(e)}')
         _err = traceback.format_exc()
         print(_err)
-        return web.json_response({'message': 'Wrong credentials'}, status=400)
+        return web.json_response({'message': 'Wrong credentials'}, status=401)
 
 
 @routes.get('/login')
