@@ -53,13 +53,15 @@ class TestKowalski(object):
 
             # little benchmark:
             if benchmark:
-                qu = {"query_type": "general_search",
-                      "query": "db['ZTF_alerts'].aggregate([{'$match': {'candidate.rb': {'$gt': 0.98}}}, {'$project': {'_id': 1}}, {'$sample': {'size': 1}}])",
-                      "kwargs": {}}
+                # qu = {"query_type": "general_search",
+                #       "query": "db['ZTF_alerts'].aggregate([{'$match': {'candidate.rb': {'$gt': 0.98}}}, {'$project': {'_id': 1}}, {'$sample': {'size': 1}}])",
+                #       "kwargs": {}}
                 qu = {"query_type": "aggregate",
                       "query": {
                           "catalog": 'ZTF_alerts',
-                          "pipeline": {},
+                          "pipeline": [{'$match': {'candidate.rb': {'$gt': 0.98}}},
+                                       {'$project': {'_id': 1}},
+                                       {'$sample': {'size': 1}}],
                       },
                       "kwargs": {"save": False}
                       }
