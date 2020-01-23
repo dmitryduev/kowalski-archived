@@ -169,7 +169,7 @@ cone_search_radius = 2
 cone_search_radius *= np.pi / 180.0 / 3600.
 
 
-def xmatch(db, ra, dec):
+def xmatch(_db, ra, dec):
     """
         Cross-match by position
     """
@@ -190,8 +190,8 @@ def xmatch(db, ra, dec):
             object_position_query = dict()
             object_position_query['coordinates.radec_geojson'] = {
                 '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
-            s = db[catalog].find({**object_position_query, **catalog_filter},
-                                 {**catalog_projection})
+            s = _db[catalog].find({**object_position_query, **catalog_filter},
+                                  {**catalog_projection})
             xmatches[catalog] = list(s)
 
     except Exception as e:
@@ -235,6 +235,10 @@ def process_file(fcvd):
         docs = df.to_dict(orient='records')
 
         for doc in docs:
+            # Cross-match:
+            xmatches = xmatch(_db, doc['ra'], doc['dec'])
+            doc['cross_matches'] = xmatches
+
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
             _ra = doc['ra']
