@@ -3,7 +3,7 @@ from bson.json_util import loads
 import os
 import random
 import requests
-from requests.adapters import HTTPAdapter, DEFAULT_POOL_TIMEOUT, DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES
+from requests.adapters import HTTPAdapter, DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES
 import secrets
 import string
 import time
