@@ -1,16 +1,15 @@
-import hashlib
-import random
-import string
-
-import math
-import numpy as np
-import pandas as pd
-import datetime
-import pytz
 import base64
 import bcrypt
 from bson.json_util import dumps
-
+import datetime
+import hashlib
+import math
+import numpy as np
+import pandas as pd
+import pytz
+import random
+import secrets
+import string
 from typing import Union
 
 
@@ -289,6 +288,14 @@ def compute_hash(_task):
 
 def random_alphanumeric_str(length: int = 8):
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(length)).lower()
+
+
+# alphabet = string.ascii_letters + string.digits
+alphabet = string.ascii_lowercase + string.digits
+
+
+def uid(prefix: str = '', length: int = 6):
+    return prefix + ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
 ''' ZTF Alert Light Curve helpers '''

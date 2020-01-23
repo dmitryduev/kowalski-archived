@@ -2867,7 +2867,7 @@ class TestAPIs(object):
         # print(test)
 
         # adding a user
-        resp = await client.put('/users', json={'user': 'test_user', 'password': random_alphanumeric_str(6)})
+        resp = await client.put('/users', json={'user': 'test_user', 'password': uid(6)})
         assert resp.status == 200
         # text = await resp.text()
         # text = await resp.json()
@@ -2875,7 +2875,7 @@ class TestAPIs(object):
         # editing user credentials
         resp = await client.post('/users', json={'_user': 'test_user',
                                                  'edit-user': 'test_user',
-                                                 'edit-password': random_alphanumeric_str(6)})
+                                                 'edit-password': uid(6)})
         assert resp.status == 200
         resp = await client.post('/users', json={'_user': 'test_user',
                                                  'edit-user': 'test_user_edited',
@@ -2907,10 +2907,17 @@ class TestAPIs(object):
         collection = 'ZTF_alerts'
 
         # check query without book-keeping
-        qu = {"query_type": "general_search",
-              "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+        # qu = {"query_type": "general_search",
+        #       "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
+        #       "kwargs": {"save": False}
+        #      }
+        qu = {"query_type": "find_one",
+              "query": {
+                  "catalog": collection,
+                  "query": {},
+              },
               "kwargs": {"save": False}
-              }
+             }
         # print(qu)
         resp = await client.put('/query', json=qu, headers=headers, timeout=1)
         assert resp.status == 200
@@ -2920,7 +2927,7 @@ class TestAPIs(object):
         # check query with book-keeping
         qu = {"query_type": "general_search",
               "query": f"db['{collection}'].find_one({{}}, {{'_id': 1}})",
-              "kwargs": {"enqueue_only": True, "_id": random_alphanumeric_str(32)}
+              "kwargs": {"enqueue_only": True, "_id": uid(32)}
               }
         # print(qu)
         resp = await client.put('/query', json=qu, headers=headers, timeout=0.15)
@@ -2934,6 +2941,8 @@ class TestAPIs(object):
         assert resp.status == 200
         result = await resp.json()
         assert result['message'] == 'success'
+
+        # todo: check multiple query types
 
 
 uvloop.install()

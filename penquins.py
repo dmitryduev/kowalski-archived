@@ -1,13 +1,14 @@
-import string
-import random
-import traceback
-import os
-import time
 from copy import deepcopy
-from typing import Union
+from bson.json_util import loads
+import os
+import random
 import requests
 from requests.adapters import HTTPAdapter, DEFAULT_POOL_TIMEOUT, DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES
-from bson.json_util import loads
+import secrets
+import string
+import time
+import traceback
+from typing import Union
 
 
 ''' PENQUINS - Processing ENormous Queries of ztf Users INStantaneously '''
@@ -167,8 +168,12 @@ class Kowalski(object):
                 if resp.status_code == requests.codes.ok:
                     return loads(resp.text)
                 else:
+                    if self.v:
+                        print('Server response: error')
                     # bad status code? sleep before retrying, maybe no connections available due to high load
                     time.sleep(0.5)
+
+            raise Exception('')
 
         except Exception as _e:
             _err = traceback.format_exc()
@@ -193,8 +198,9 @@ class Kowalski(object):
                     _query['kwargs'] = dict()
                 if '_id' not in _query['kwargs']:
                     # generate a unique hash id and store it in query if saving query in db on Kowalski is requested
-                    _id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                  for _ in range(32)).lower()
+                    # _id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                    #               for _ in range(32)).lower()
+                    _id = ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(32))
 
                     _query['kwargs']['_id'] = _id
 
@@ -293,5 +299,6 @@ class Kowalski(object):
 
         except Exception as _e:
             _err = traceback.format_exc()
-            print(_err)
+            if self.v:
+                print(_err)
             return False
