@@ -302,9 +302,9 @@ if __name__ == '__main__':
 
     print(f'# files to process: {len(files)}')
 
-    input_list = [(f, collection, verbose, dry_run) for f in sorted(files)]
+    input_list = [(f, collection, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
     # process_file(input_list[0])
-    with mp.Pool(processes=1) as p:
+    with mp.Pool(processes=40) as p:
         results = list(tqdm(p.imap(process_file, input_list), total=len(files)))
 
     print('All done')
