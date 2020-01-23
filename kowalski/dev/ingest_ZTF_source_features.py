@@ -300,11 +300,12 @@ if __name__ == '__main__':
     _location = f'/_tmp/ztf_variablity_10_fields/'
     files = glob.glob(os.path.join(_location, '*.h5'))
 
-    print(f'# files to process: {len(files)}')
-
     input_list = [(f, collection, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
+
+    print(f'# files to process: {len(input_list)}')
+
     # process_file(input_list[0])
     with mp.Pool(processes=40) as p:
-        results = list(tqdm(p.imap(process_file, input_list), total=len(files)))
+        results = list(tqdm(p.imap(process_file, input_list), total=len(input_list)))
 
     print('All done')
