@@ -19,9 +19,16 @@ class TestKowalski(object):
             assert k.check_connection()
 
             # base query:
-            qu = {"query_type": "general_search",
-                  "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
-                  "kwargs": {}}
+            # qu = {"query_type": "general_search",
+            #       "query": "db['ZTF_alerts'].find_one({}, {'_id': 1})",
+            #       "kwargs": {}}
+            qu = {"query_type": "find_one",
+                  "query": {
+                      "catalog": collection,
+                      "query": {},
+                  },
+                  "kwargs": {}
+                  }
             timeout = 1  # seconds
 
             # query: enqueue_only, save=True, save=False
@@ -49,6 +56,13 @@ class TestKowalski(object):
                 qu = {"query_type": "general_search",
                       "query": "db['ZTF_alerts'].aggregate([{'$match': {'candidate.rb': {'$gt': 0.98}}}, {'$project': {'_id': 1}}, {'$sample': {'size': 1}}])",
                       "kwargs": {}}
+                qu = {"query_type": "aggregate",
+                      "query": {
+                          "catalog": 'ZTF_alerts',
+                          "pipeline": {},
+                      },
+                      "kwargs": {"save": False}
+                      }
                 timeout = 5  # seconds
                 qu['kwargs'] = dict()
                 qu['kwargs']['save'] = False

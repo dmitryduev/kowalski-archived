@@ -2914,7 +2914,7 @@ class TestAPIs(object):
         qu = {"query_type": "find_one",
               "query": {
                   "catalog": collection,
-                  "query": {},
+                  "filter": {},
               },
               "kwargs": {"save": False}
              }
