@@ -231,7 +231,7 @@ def pwd_np(a):
     return diff[i, j]
 
 
-@jit
+# @jit
 def compute_dmdt(jd, mag):
     jd_diff = pwd_for(jd)
     mag_diff = pwd_for(mag)
@@ -300,6 +300,7 @@ def process_file(fcvd):
             # compute dmdt
             dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'])
             doc['dmdt'] = dmdt
+            print(dmdt.shape)
 
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
@@ -317,7 +318,7 @@ def process_file(fcvd):
             # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
         if _verbose:
-            print(f'inserting {_file}')
+            print(f'ingesting contents of {_file}')
         if not _dry_run:
             insert_multiple_db_entries(_db, _collection=_collections['features'],
                                        _db_entries=docs, _verbose=_verbose)
