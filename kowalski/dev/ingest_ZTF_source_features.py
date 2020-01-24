@@ -299,8 +299,7 @@ def process_file(fcvd):
 
             # compute dmdt
             dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'])
-            doc['dmdt'] = dmdt
-            print(dmdt.shape)
+            doc['dmdt'] = dmdt.tolist()
 
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
