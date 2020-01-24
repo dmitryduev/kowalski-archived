@@ -240,7 +240,8 @@ def compute_dmdt(jd, mag):
     # extent = [ex[0], ex[-1], ey[0], ey[-1]]
     dmdt = hh
     dmdt = np.transpose(dmdt)
-    dmdt = (maxval * dmdt / dmdt.shape[0])
+    # dmdt = (maxval * dmdt / dmdt.shape[0])
+    dmdt /= np.linalg.norm(dmdt)
 
     return dmdt
 
@@ -371,8 +372,8 @@ if __name__ == '__main__':
 
     print(f'# files to process: {len(input_list)}')
 
-    process_file(input_list[0])
-    # with mp.Pool(processes=40) as p:
-    #     results = list(tqdm(p.imap(process_file, input_list), total=len(input_list)))
+    # process_file(input_list[0])
+    with mp.Pool(processes=40) as p:
+        results = list(tqdm(p.imap(process_file, input_list), total=len(input_list)))
 
     print('All done')
