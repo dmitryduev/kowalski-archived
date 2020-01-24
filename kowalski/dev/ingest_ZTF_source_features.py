@@ -200,20 +200,78 @@ def xmatch(_db, ra, dec):
     return xmatches
 
 
+maxval = 255
+
+# dmints = [-8, -5, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, 0,
+#           0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 5, 8]
+# dtints = [0.0, 1.0 / 145, 2.0 / 145, 3.0 / 145, 4.0 / 145,
+#           1.0 / 25, 2.0 / 25, 3.0 / 25, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+#           10, 20, 30, 60, 90, 120, 240, 600, 960, 2000, 4000]
+dmints = [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
+          0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8]
+dtints = [0.0, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.5, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+          10, 20, 30, 60, 90, 120, 240, 500, 650, 900, 1200, 1500, 2000]
+
+
+@jit
+def pwd_for(a):
+    """
+        Compute pairwise differences with for loops
+    """
+    return np.array([a[j] - a[i] for i in range(len(a)) for j in range(i + 1, len(a))])
+
+
+@jit
+def pwd_np(a):
+    """
+        Compute pairwise differences with numpy
+    """
+    diff = (np.expand_dims(a, axis=0) - np.expand_dims(a, axis=1))
+    i, j = np.where(np.triu(diff) != 0)
+    return diff[i, j]
+
+
+@jit
+def compute_dmdt(jd, mag):
+    jd_diff = pwd_for(jd)
+    mag_diff = pwd_for(mag)
+
+    hh, ex, ey = np.histogram2d(jd_diff, mag_diff, bins=[dtints, dmints])
+    # extent = [ex[0], ex[-1], ey[0], ey[-1]]
+    dmdt = hh
+    dmdt = np.transpose(dmdt)
+    dmdt = (maxval * dmdt / dmdt.shape[0])
+
+    return dmdt
+
+
+def lc_dmdt(_db, _id, catalog='ZTF_sources_20191101'):
+    c = _db[catalog].find({'_id': _id}, {"_id": 0, "data.catflags": 1, "data.hjd": 1, "data.mag": 1})
+    lc = list(c)[0]
+
+    df_lc = pd.DataFrame.from_records(lc['data'])
+    w_good = df_lc['catflags'] == 0
+    df_lc = df_lc.loc[w_good]
+
+    dmdt = compute_dmdt(df_lc['hjd'].values, df_lc['mag'].values)
+
+    return dmdt
+
+
 filters = {'zg': 1, 'zr': 2, 'zi': 3}
 
 
 def process_file(fcvd):
-    _file, _collection, verbose, _dry_run = fcvd
+    _file, _collections, _verbose, _dry_run = fcvd
 
     # connect to MongoDB:
-    if verbose:
+    if _verbose:
         print('Connecting to DB')
     _client, _db = connect_to_db()
-    if verbose:
+    if _verbose:
         print('Successfully connected')
 
-    if verbose:
+    if _verbose:
         print(f'processing {_file}')
 
     try:
@@ -239,6 +297,10 @@ def process_file(fcvd):
             xmatches = xmatch(_db, doc['ra'], doc['dec'])
             doc['cross_matches'] = xmatches
 
+            # compute dmdt
+            dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'])
+            doc['dmdt'] = dmdt
+
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
             _ra = doc['ra']
@@ -254,10 +316,11 @@ def process_file(fcvd):
             # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
             # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
-        if verbose:
+        if _verbose:
             print(f'inserting {_file}')
         if not _dry_run:
-            insert_multiple_db_entries(_db, _collection=_collection, _db_entries=docs, _verbose=verbose)
+            insert_multiple_db_entries(_db, _collection=_collections['features'],
+                                       _db_entries=docs, _verbose=_verbose)
 
     except Exception as e:
         traceback.print_exc()
@@ -266,9 +329,8 @@ def process_file(fcvd):
     # disconnect from db:
     try:
         _client.close()
-        if verbose:
-            if verbose:
-                print('Successfully disconnected from db')
+        if _verbose:
+            print('Successfully disconnected from db')
     finally:
         pass
 
@@ -293,23 +355,24 @@ if __name__ == '__main__':
 
     t_tag = '20191101'
 
-    collection = f'ZTF_source_features_{t_tag}'
+    collections = {'sources': f'ZTF_sources_{t_tag}',
+                   'features': f'ZTF_source_features_{t_tag}'}
 
     # create indices:
     print('Creating indices')
     if not dry_run:
-        db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                     ('_id', pymongo.ASCENDING)], background=True)
+        db[collections['features']].create_index([('coordinates.radec_geojson', '2dsphere'),
+                                                  ('_id', pymongo.ASCENDING)], background=True)
 
     _location = f'/_tmp/ztf_variablity_10_fields/'
     files = glob.glob(os.path.join(_location, '*.h5'))
 
-    input_list = [(f, collection, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
+    input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
 
     print(f'# files to process: {len(input_list)}')
 
-    # process_file(input_list[0])
-    with mp.Pool(processes=40) as p:
-        results = list(tqdm(p.imap(process_file, input_list), total=len(input_list)))
+    process_file(input_list[0])
+    # with mp.Pool(processes=40) as p:
+    #     results = list(tqdm(p.imap(process_file, input_list), total=len(input_list)))
 
     print('All done')
