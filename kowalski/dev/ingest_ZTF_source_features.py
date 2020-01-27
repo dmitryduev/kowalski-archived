@@ -365,7 +365,8 @@ if __name__ == '__main__':
         db[collections['features']].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                   ('_id', pymongo.ASCENDING)], background=True)
 
-    _location = f'/_tmp/ztf_variablity_10_fields/'
+    # _location = f'/_tmp/ztf_variability_10_fields/'
+    _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
     files = glob.glob(os.path.join(_location, '*.h5'))
 
     input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
