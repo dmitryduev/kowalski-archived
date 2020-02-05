@@ -200,17 +200,46 @@ def xmatch(_db, ra, dec):
     return xmatches
 
 
-maxval = 255
+def get_n_ztf_alerts(_db, ra, dec):
+    """
+        Cross-match by position
+    """
 
+    try:
+        ra_geojson = float(ra)
+        # geojson-friendly ra:
+        ra_geojson -= 180.0
+        dec_geojson = float(dec)
+
+        ''' catalogs '''
+        catalog = 'ZTF_alerts'
+        object_position_query = dict()
+        object_position_query['coordinates.radec_geojson'] = {
+            '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
+        n = int(_db[catalog].count_documents(object_position_query))
+
+    except Exception as e:
+        print(str(e))
+
+    return n
+
+
+# Ashish's original for CRTS
 # dmints = [-8, -5, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, 0,
 #           0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 5, 8]
 # dtints = [0.0, 1.0 / 145, 2.0 / 145, 3.0 / 145, 4.0 / 145,
 #           1.0 / 25, 2.0 / 25, 3.0 / 25, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
 #           10, 20, 30, 60, 90, 120, 240, 600, 960, 2000, 4000]
+# v. 20200202
+# dmints = [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
+#           0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8]
+# dtints = [0.0, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.5, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+#           10, 20, 30, 60, 90, 120, 240, 500, 650, 900, 1200, 1500, 2000]
+# v. 20200205: optimized based on random 100,000 examples from the 20 pilot fields
 dmints = [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
           0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8]
-dtints = [0.0, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.5, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
-          10, 20, 30, 60, 90, 120, 240, 500, 650, 900, 1200, 1500, 2000]
+dtints = [0.0, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+          10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 500, 650, 2000]
 
 
 @jit
@@ -298,6 +327,10 @@ def process_file(fcvd):
             xmatches = xmatch(_db, doc['ra'], doc['dec'])
             doc['cross_matches'] = xmatches
 
+            # get number of ZTF alerts within 2"
+            n_ztf_alerts = get_n_ztf_alerts(_db, doc['ra'], doc['dec'])
+            doc['n_ztf_alerts'] = n_ztf_alerts
+
             # compute dmdt
             dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'])
             doc['dmdt'] = dmdt.tolist()
@@ -366,7 +399,9 @@ if __name__ == '__main__':
                                                   ('_id', pymongo.ASCENDING)], background=True)
 
     # _location = f'/_tmp/ztf_variability_10_fields/'
-    _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability_20_fields/'
+    # _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
+    _location = f'/_tmp/ztf_variability_training_set_1_2_epochs/catalog/GCE_LS_AOV/'
     files = glob.glob(os.path.join(_location, '*.h5'))
 
     input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
