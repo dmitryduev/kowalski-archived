@@ -270,7 +270,11 @@ def compute_dmdt(jd, mag):
     dmdt = hh
     dmdt = np.transpose(dmdt)
     # dmdt = (maxval * dmdt / dmdt.shape[0])
-    dmdt /= np.linalg.norm(dmdt)
+    norm = np.linalg.norm(dmdt)
+    if norm != 0.0:
+        dmdt /= np.linalg.norm(dmdt)
+    else:
+        dmdt = np.zeros_like(dmdt)
 
     return dmdt
 
