@@ -280,14 +280,17 @@ def compute_dmdt(jd, mag):
 
 
 def lc_dmdt(_db, _id, catalog='ZTF_sources_20191101'):
-    c = _db[catalog].find({'_id': _id}, {"_id": 0, "data.catflags": 1, "data.hjd": 1, "data.mag": 1})
-    lc = list(c)[0]
+    try:
+        c = _db[catalog].find({'_id': _id}, {"_id": 0, "data.catflags": 1, "data.hjd": 1, "data.mag": 1})
+        lc = list(c)[0]
 
-    df_lc = pd.DataFrame.from_records(lc['data'])
-    w_good = df_lc['catflags'] == 0
-    df_lc = df_lc.loc[w_good]
+        df_lc = pd.DataFrame.from_records(lc['data'])
+        w_good = df_lc['catflags'] == 0
+        df_lc = df_lc.loc[w_good]
 
-    dmdt = compute_dmdt(df_lc['hjd'].values, df_lc['mag'].values)
+        dmdt = compute_dmdt(df_lc['hjd'].values, df_lc['mag'].values)
+    except:
+        dmdt = np.zeros((len(dtints), len(dmints)))
 
     return dmdt
 
