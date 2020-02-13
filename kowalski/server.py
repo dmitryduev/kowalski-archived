@@ -2388,7 +2388,7 @@ async def zuds_alert_post_handler(request):
 
 @routes.get('/lab/zuds-alerts/{candid}/cutout/{cutout}/{file_format}')
 @login_required
-async def ztf_alert_get_cutout_handler(request):
+async def zuds_alert_get_cutout_handler(request):
     """
         Serve cutouts as fits or png
     :param request:

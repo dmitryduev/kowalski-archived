@@ -294,7 +294,7 @@ def random_alphanumeric_str(length: int = 8):
 alphabet = string.ascii_lowercase + string.digits
 
 
-def uid(prefix: str = '', length: int = 6):
+def uid(length: int = 6, prefix: str = ''):
     return prefix + ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
