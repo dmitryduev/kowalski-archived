@@ -334,16 +334,17 @@
             {% endfor %}
 
             // mark alert's jd
+            {% set alert_jd = alert['candidate']['jd'] if 'jd' in alert['candidate'] else alert['candidate']['jdmed'] %}
             if (x_axis === 'jd') {
-                layout.shapes[0].x0 = {{ alert['candidate']['jd'] }};
-                layout.shapes[0].x1 = {{ alert['candidate']['jd'] }};
+                layout.shapes[0].x0 = {{ alert_jd }};
+                layout.shapes[0].x1 = {{ alert_jd }};
             }
             else if (x_axis === 'mjd') {
-                layout.shapes[0].x0 = {{ alert['candidate']['jd'] }} - 2400000.5;
-                layout.shapes[0].x1 = {{ alert['candidate']['jd'] }} - 2400000.5;
+                layout.shapes[0].x0 = {{ alert_jd }} - 2400000.5;
+                layout.shapes[0].x1 = {{ alert_jd }} - 2400000.5;
             }
             else if (x_axis === 'days ago') {
-                let jd = new JulianDate().julian({{ alert['candidate']['jd'] }});
+                let jd = new JulianDate().julian({{ alert_jd }});
                 let dt = moment.utc(jd.getDate());
                 let da = moment.utc().diff(dt, 'days', true);
                 layout.shapes[0].x0 = da;
@@ -352,7 +353,7 @@
                 layout.xaxis.autorange = 'reversed';
             }
             else {
-                let jd = new JulianDate().julian({{ alert['candidate']['jd'] }});
+                let jd = new JulianDate().julian({{ alert_jd }});
                 let dt = moment.utc(jd.getDate());
                 layout.shapes[0].x0 = dt.format('YYYY-MM-DD HH:mm:ss');
                 layout.shapes[0].x1 = dt.format('YYYY-MM-DD HH:mm:ss');
