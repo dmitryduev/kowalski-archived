@@ -897,13 +897,6 @@ def parse_query(task, save: bool = False):
 
             # parse coordinate list
 
-            if isinstance(_projection, str):
-                # passed string? evaluate:
-                catalog_projection = literal_eval(_projection.strip())
-            elif isinstance(_filter, dict):
-                # passed dict?
-                catalog_projection = _projection
-
             for oi, obj_crd in enumerate(object_coordinates):
                 # convert ra/dec into GeoJSON-friendly format
                 # print(obj_crd)
