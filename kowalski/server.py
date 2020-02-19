@@ -716,7 +716,7 @@ def parse_query(task, save: bool = False):
                 if isinstance(_projection, str):
                     # passed string? evaluate:
                     catalog_projection = literal_eval(_projection.strip())
-                elif isinstance(_filter, dict):
+                elif isinstance(_projection, dict):
                     # passed dict?
                     catalog_projection = _projection
                 else:
@@ -889,7 +889,7 @@ def parse_query(task, save: bool = False):
             if isinstance(_projection, str):
                 # passed string? evaluate:
                 catalog_projection = literal_eval(_projection.strip())
-            elif isinstance(_filter, dict):
+            elif isinstance(_projection, dict):
                 # passed dict?
                 catalog_projection = _projection
             else:
@@ -2585,9 +2585,9 @@ async def zuds_alert_get_handler(request):
             lc = alert_aux['light_curve']
             dflc = pd.DataFrame(lc)
 
-            lc_object = assemble_lc(dflc, objectId=alert['objectId'], composite=True,
-                                    match_radius_arcsec=match_radius_arcsec,
-                                    star_galaxy_threshold=star_galaxy_threshold)
+            lc_object = assemble_lc_zuds(dflc, objectId=alert['objectId'], composite=True,
+                                         match_radius_arcsec=match_radius_arcsec,
+                                         star_galaxy_threshold=star_galaxy_threshold)
             return web.json_response(lc_object, status=200, dumps=dumps)
 
     if alert is not None and (len(alert) > 0):
