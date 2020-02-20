@@ -163,7 +163,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     print(f'processing {_file}')
 
-    df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|', chunksize=_batch_size)
+    # df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|', chunksize=_batch_size)
+    df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|')
 
     df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
 
