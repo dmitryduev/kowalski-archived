@@ -163,15 +163,12 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     print(f'processing {_file}')
 
-    for ii, df in enumerate(pd.read_csv('/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/galex_cat.tsv',
+    for ii, df in enumerate(pd.read_csv(_file,
                              skip_blank_lines=True, comment='#',
                              sep='|', chunksize=_batch_size)):
 
         print(f'{_file}: processing batch # {ii + 1}')
 
-        df = pd.read_csv('/Users/dmitryduev/_caltech/python/kowalski/kowalski/dev/galex_cat.tsv',
-                         skip_blank_lines=True, comment='#',
-                         sep='|')
         df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
         df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec'}, inplace=True)
         for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
@@ -238,7 +235,7 @@ if __name__ == '__main__':
     print('Creating 2d index')
     if not dry_run:
         db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
-                                     ('_id', pymongo.ASCENDING)], background=True)
+                                     ('name', pymongo.ASCENDING)], background=True)
 
     # number of records to insert
     batch_size = 4096
