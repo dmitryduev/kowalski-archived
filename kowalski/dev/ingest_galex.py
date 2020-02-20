@@ -163,51 +163,44 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     print(f'processing {_file}')
 
-    for ii, df in enumerate(pd.read_csv(_file,
-                            skip_blank_lines=True, comment='#',
-                            sep='|', chunksize=_batch_size)):
+    df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|', chunksize=_batch_size)
 
-        print(f'{_file}: processing batch # {ii + 1}')
+    df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
 
-        if ii == 0:
-            df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
-        else:
-            df = df.drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
+    df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec'}, inplace=True)
+    for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
+        df[col] = df[col].apply(lambda x: float(x) if len(x.strip()) > 0 else np.nan)
+    for col in ['b', 'Fafl', 'Nafl', 'Fexf', 'Nexf']:
+        df[col] = df[col].apply(lambda x: int(x) if len(x.strip()) > 0 else np.nan)
 
-        df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec'}, inplace=True)
-        for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
-            df[col] = df[col].apply(lambda x: float(x) if len(x.strip()) > 0 else np.nan)
-        for col in ['b', 'Fafl', 'Nafl', 'Fexf', 'Nexf']:
-            df[col] = df[col].apply(lambda x: int(x) if len(x.strip()) > 0 else np.nan)
+    batch = [{k: v for k, v in m.items() if pd.notnull(v)} for m in df.to_dict(orient='rows')]
 
-        batch = [{k: v for k, v in m.items() if pd.notnull(v)} for m in df.to_dict(orient='rows')]
+    bad_doc_ind = []
 
-        bad_doc_ind = []
+    for ie, doc in enumerate(batch):
+        try:
+            # GeoJSON for 2D indexing
+            # print(doc['ra'], doc['dec'])
+            doc['coordinates'] = dict()
+            # string format: H:M:S, D:M:S
+            doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
+            # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+            _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
+            doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                   'coordinates': _radec_geojson}
+        except Exception as e:
+            print(str(e))
+            bad_doc_ind.append(ie)
 
-        for ie, doc in enumerate(batch):
-            try:
-                # GeoJSON for 2D indexing
-                # print(doc['ra'], doc['dec'])
-                doc['coordinates'] = dict()
-                # string format: H:M:S, D:M:S
-                doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
-                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-                _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
-                doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                       'coordinates': _radec_geojson}
-            except Exception as e:
-                print(str(e))
-                bad_doc_ind.append(ie)
+    if len(bad_doc_ind) > 0:
+        print('removing bad docs')
+        for index in sorted(bad_doc_ind, reverse=True):
+            del batch[index]
 
-        if len(bad_doc_ind) > 0:
-            print('removing bad docs')
-            for index in sorted(bad_doc_ind, reverse=True):
-                del batch[index]
+    # print(batch)
 
-        # print(batch)
-
-        # ingest
-        insert_multiple_db_entries(_db, _collection=_collection, _db_entries=batch)
+    # ingest
+    insert_multiple_db_entries(_db, _collection=_collection, _db_entries=batch)
 
     # disconnect from db:
     try:
