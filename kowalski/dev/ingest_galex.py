@@ -164,8 +164,8 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
     print(f'processing {_file}')
 
     for ii, df in enumerate(pd.read_csv(_file,
-                             skip_blank_lines=True, comment='#',
-                             sep='|', chunksize=_batch_size)):
+                            skip_blank_lines=True, comment='#',
+                            sep='|', chunksize=_batch_size)):
 
         print(f'{_file}: processing batch # {ii + 1}')
 
