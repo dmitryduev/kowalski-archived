@@ -170,7 +170,10 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         print(f'{_file}: processing batch # {ii + 1}')
 
-        df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
+        if ii == 0:
+            df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
+        else:
+            df = df.drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
 
         df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec', 'Name': 'name'}, inplace=True)
         for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
