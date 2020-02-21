@@ -170,9 +170,9 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec'}, inplace=True)
     for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
-        df[col] = df[col].apply(lambda x: float(x) if len(x.strip()) > 0 else np.nan)
+        df[col] = df[col].apply(lambda x: float(x) if len(str(x).strip()) > 0 else np.nan)
     for col in ['b', 'Fafl', 'Nafl', 'Fexf', 'Nexf']:
-        df[col] = df[col].apply(lambda x: int(x) if len(x.strip()) > 0 else np.nan)
+        df[col] = df[col].apply(lambda x: int(x) if len(str(x).strip()) > 0 else np.nan)
 
     batch = [{k: v for k, v in m.items() if pd.notnull(v)} for m in df.to_dict(orient='rows')]
 
