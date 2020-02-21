@@ -168,7 +168,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
 
-    df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec'}, inplace=True)
+    df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec', 'Name': 'name'}, inplace=True)
     for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
         df[col] = df[col].apply(lambda x: float(x) if len(str(x).strip()) > 0 else np.nan)
     for col in ['b', 'Fafl', 'Nafl', 'Fexf', 'Nexf']:
