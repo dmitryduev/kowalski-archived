@@ -14,6 +14,7 @@ import pytz
 from numba import jit
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
 
 
 ''' load config and secrets '''
@@ -163,45 +164,48 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
     print(f'processing {_file}')
 
-    # df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|', chunksize=_batch_size)
-    df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|')
+    # df = pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|')
 
-    df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
+    for ii, df in enumerate(pd.read_csv(_file, skip_blank_lines=True, comment='#', sep='|', chunksize=_batch_size)):
 
-    df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec', 'Name': 'name'}, inplace=True)
-    for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
-        df[col] = df[col].apply(lambda x: float(x) if len(str(x).strip()) > 0 else np.nan)
-    for col in ['b', 'Fafl', 'Nafl', 'Fexf', 'Nexf']:
-        df[col] = df[col].apply(lambda x: int(x) if len(str(x).strip()) > 0 else np.nan)
+        print(f'{_file}: processing batch # {ii + 1}')
 
-    batch = [{k: v for k, v in m.items() if pd.notnull(v)} for m in df.to_dict(orient='rows')]
+        df = df.drop([0, 1]).drop(['_RAJ2000', '_DEJ2000'], axis=1).reset_index(drop=True)
 
-    bad_doc_ind = []
+        df.rename(columns={'RAJ2000': 'ra', 'DEJ2000': 'dec', 'Name': 'name'}, inplace=True)
+        for col in ['ra', 'dec', 'FUVmag', 'e_FUVmag', 'NUVmag', 'e_NUVmag', 'Fr', 'Nr']:
+            df[col] = df[col].apply(lambda x: float(x) if len(str(x).strip()) > 0 else np.nan)
+        for col in ['b', 'Fafl', 'Nafl', 'Fexf', 'Nexf']:
+            df[col] = df[col].apply(lambda x: int(x) if len(str(x).strip()) > 0 else np.nan)
 
-    for ie, doc in enumerate(batch):
-        try:
-            # GeoJSON for 2D indexing
-            # print(doc['ra'], doc['dec'])
-            doc['coordinates'] = dict()
-            # string format: H:M:S, D:M:S
-            doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
-            # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
-            _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
-            doc['coordinates']['radec_geojson'] = {'type': 'Point',
-                                                   'coordinates': _radec_geojson}
-        except Exception as e:
-            print(str(e))
-            bad_doc_ind.append(ie)
+        batch = [{k: v for k, v in m.items() if pd.notnull(v)} for m in df.to_dict(orient='rows')]
 
-    if len(bad_doc_ind) > 0:
-        print('removing bad docs')
-        for index in sorted(bad_doc_ind, reverse=True):
-            del batch[index]
+        bad_doc_ind = []
 
-    # print(batch)
+        for ie, doc in enumerate(batch):
+            try:
+                # GeoJSON for 2D indexing
+                # print(doc['ra'], doc['dec'])
+                doc['coordinates'] = dict()
+                # string format: H:M:S, D:M:S
+                doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
+                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
+                doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                       'coordinates': _radec_geojson}
+            except Exception as e:
+                print(str(e))
+                bad_doc_ind.append(ie)
 
-    # ingest
-    insert_multiple_db_entries(_db, _collection=_collection, _db_entries=batch)
+        if len(bad_doc_ind) > 0:
+            print('removing bad docs')
+            for index in sorted(bad_doc_ind, reverse=True):
+                del batch[index]
+
+        # print(batch)
+
+        # ingest
+        insert_multiple_db_entries(_db, _collection=_collection, _db_entries=batch)
 
     # disconnect from db:
     try:
