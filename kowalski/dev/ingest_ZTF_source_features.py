@@ -242,11 +242,11 @@ def get_mean_ztf_alert_braai(_db, ra, dec):
         object_position_query['coordinates.radec_geojson'] = {
             '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
         # n = int(_db[catalog].count_documents(object_position_query))
-        objects = _db[catalog].aggregate([
+        objects = list(_db[catalog].aggregate([
             {'$match': object_position_query},
             {'$project': {'objectId': 1, 'classifications.braai': 1}},
             {'$group': {'_id': '$objectId', 'braai_avg': {'$avg': '$classifications.braai'}}}
-        ])
+        ]))
         if len(objects) > 0:
             # there may be multiple objectId's in the match due to astrometric errors:
             braai_avg = np.mean([float(o['braai_avg']) for o in objects])
