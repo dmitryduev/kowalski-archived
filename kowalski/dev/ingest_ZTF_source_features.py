@@ -220,8 +220,44 @@ def get_n_ztf_alerts(_db, ra, dec):
 
     except Exception as e:
         print(str(e))
+        n = None
 
     return n
+
+
+def get_mean_ztf_alert_braai(_db, ra, dec):
+    """
+        Cross-match by position and get mean alert braai score
+    """
+
+    try:
+        ra_geojson = float(ra)
+        # geojson-friendly ra:
+        ra_geojson -= 180.0
+        dec_geojson = float(dec)
+
+        ''' catalogs '''
+        catalog = 'ZTF_alerts'
+        object_position_query = dict()
+        object_position_query['coordinates.radec_geojson'] = {
+            '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
+        # n = int(_db[catalog].count_documents(object_position_query))
+        objects = _db[catalog].aggregate([
+            {'$match': object_position_query},
+            {'$project': {'objectId': 1, 'classifications.braai': 1}},
+            {'$group': {'_id': '$objectId', 'braai_avg': {'$avg': '$classifications.braai'}}}
+        ])
+        if len(objects) > 0:
+            # there may be multiple objectId's in the match due to astrometric errors:
+            braai_avg = np.mean([float(o['braai_avg']) for o in objects])
+        else:
+            braai_avg = None
+
+    except Exception as e:
+        print(str(e))
+        braai_avg = None
+
+    return braai_avg
 
 
 # Ashish's original for CRTS
@@ -338,6 +374,11 @@ def process_file(fcvd):
             n_ztf_alerts = get_n_ztf_alerts(_db, doc['ra'], doc['dec'])
             doc['n_ztf_alerts'] = n_ztf_alerts
 
+            if n_ztf_alerts > 0:
+                doc['mean_ztf_alert_braai'] = get_mean_ztf_alert_braai(_db, doc['ra'], doc['dec'])
+            else:
+                doc['mean_ztf_alert_braai'] = None
+
             # compute dmdt
             dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'])
             doc['dmdt'] = dmdt.tolist()
@@ -406,9 +447,10 @@ if __name__ == '__main__':
                                                   ('_id', pymongo.ASCENDING)], background=True)
 
     # _location = f'/_tmp/ztf_variability_10_fields/'
-    _location = f'/_tmp/ztf_variability_20_fields/'
+    # _location = f'/_tmp/ztf_variability_20_fields/'
     # _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability_training_set_1_2_epochs/catalog/GCE_LS_AOV/'
+    _location = f'/_tmp/ztf_variability_20_fields_subset_20200305/catalog/GCE_LS_AOV/'
     files = glob.glob(os.path.join(_location, '*.h5'))
 
     input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
