@@ -445,6 +445,8 @@ if __name__ == '__main__':
     if not dry_run:
         db[collections['features']].create_index([('coordinates.radec_geojson', '2dsphere'),
                                                   ('_id', pymongo.ASCENDING)], background=True)
+        db[collections['features']].create_index([('period', pymongo.DESCENDING),
+                                                  ('significance', pymongo.DESCENDING)], background=True)
 
     # _location = f'/_tmp/ztf_variability_10_fields/'
     # _location = f'/_tmp/ztf_variability_20_fields/'
