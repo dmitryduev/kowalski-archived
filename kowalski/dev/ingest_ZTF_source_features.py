@@ -272,10 +272,36 @@ def get_mean_ztf_alert_braai(_db, ra, dec):
 # dtints = [0.0, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.5, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
 #           10, 20, 30, 60, 90, 120, 240, 500, 650, 900, 1200, 1500, 2000]
 # v. 20200205: optimized based on random 100,000 examples from the 20 pilot fields
-dmints = [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
-          0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8]
-dtints = [0.0, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
-          10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 500, 650, 2000]
+# dmints = [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
+#           0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8]
+# dtints = [0.0, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+#           10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 500, 650, 2000]
+# v. 20200318: maximum baseline limited at 240 days
+# dmints = [-8, -4.5, -3, -2.5, -2, -1.5, -1.25, -0.75, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
+#           0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.25, 1.5, 2, 2.5, 3, 4.5, 8]
+# dtints = [0.0, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.5, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+#           10, 20, 30, 45, 60, 75, 90, 120, 150, 180, 210, 240]
+
+dmdt_ints = {
+    'original': {
+        'dmints': [-8, -5, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, 0,
+                   0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 5, 8],
+        'dtints': [0.0, 1.0 / 145, 2.0 / 145, 3.0 / 145, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25,
+                   1.5, 2.5, 3.5, 4.5, 5.5, 7, 10, 20, 30, 60, 90, 120, 240, 600, 960, 2000, 4000]
+    },
+    'v20200205': {
+        'dmints': [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
+                   0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8],
+        'dtints': [0.0, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+                   10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 500, 650, 2000]
+    },
+    'v20200318': {
+        'dmints': [-8, -5, -4, -3, -2.5, -2, -1.5, -1, -0.5, -0.3, -0.2, -0.1, -0.05, 0,
+                   0.05, 0.1, 0.2, 0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 8],
+        'dtints': [0.0, 4.0 / 145, 1.0 / 25, 2.0 / 25, 3.0 / 25, 0.3, 0.75, 1, 1.5, 2.5, 3.5, 4.5, 5.5, 7,
+                   10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 500, 650, 2000]
+    }
+}
 
 
 @jit
@@ -297,11 +323,12 @@ def pwd_np(a):
 
 
 # @jit
-def compute_dmdt(jd, mag):
+def compute_dmdt(jd, mag, dmdt_ints_v: str = 'v20200318'):
     jd_diff = pwd_for(jd)
     mag_diff = pwd_for(mag)
 
-    hh, ex, ey = np.histogram2d(jd_diff, mag_diff, bins=[dtints, dmints])
+    hh, ex, ey = np.histogram2d(jd_diff, mag_diff,
+                                bins=[dmdt_ints[dmdt_ints_v]['dtints'], dmdt_ints[dmdt_ints_v]['dmints']])
     # extent = [ex[0], ex[-1], ey[0], ey[-1]]
     dmdt = hh
     dmdt = np.transpose(dmdt)
@@ -315,7 +342,7 @@ def compute_dmdt(jd, mag):
     return dmdt
 
 
-def lc_dmdt(_db, _id, catalog='ZTF_sources_20191101'):
+def lc_dmdt(_db, _id, catalog: str = 'ZTF_sources_20191101', dmdt_ints_v: str = 'v20200318'):
     try:
         c = _db[catalog].find({'_id': _id}, {"_id": 0, "data.catflags": 1, "data.hjd": 1, "data.mag": 1})
         lc = list(c)[0]
@@ -324,9 +351,9 @@ def lc_dmdt(_db, _id, catalog='ZTF_sources_20191101'):
         w_good = df_lc['catflags'] == 0
         df_lc = df_lc.loc[w_good]
 
-        dmdt = compute_dmdt(df_lc['hjd'].values, df_lc['mag'].values)
+        dmdt = compute_dmdt(df_lc['hjd'].values, df_lc['mag'].values, dmdt_ints_v)
     except:
-        dmdt = np.zeros((len(dtints), len(dmints)))
+        dmdt = np.zeros((len(dmdt_ints[dmdt_ints_v]['dtints']), len(dmdt_ints[dmdt_ints_v]['dtints'])))
 
     return dmdt
 
@@ -379,8 +406,12 @@ def process_file(fcvd):
             else:
                 doc['mean_ztf_alert_braai'] = None
 
-            # compute dmdt
-            dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'])
+            # compute dmdt's
+            # with long time baseline:
+            dmdt_long = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'], dmdt_ints_v='v20200205')
+            doc['dmdt_long'] = dmdt_long.tolist()
+            # with short time baseline:
+            dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'], dmdt_ints_v='v20200318')
             doc['dmdt'] = dmdt.tolist()
 
             # GeoJSON for 2D indexing
@@ -452,7 +483,8 @@ if __name__ == '__main__':
     # _location = f'/_tmp/ztf_variability_20_fields/'
     # _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability_training_set_1_2_epochs/catalog/GCE_LS_AOV/'
-    _location = f'/_tmp/ztf_variability_20_fields_subset_20200305/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability_20_fields_subset_20200305/catalog/GCE_LS_AOV/'
+    _location = f'/_tmp/ztf_variability_20_fields_subset_20200318/catalog/GCE_LS_AOV/'
     files = glob.glob(os.path.join(_location, '*.h5'))
 
     input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
