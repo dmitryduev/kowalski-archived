@@ -484,7 +484,9 @@ if __name__ == '__main__':
     # _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability_training_set_1_2_epochs/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability_20_fields_subset_20200305/catalog/GCE_LS_AOV/'
-    _location = f'/_tmp/ztf_variability_20_fields_subset_20200318/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability_20_fields_subset_20200318/catalog/GCE_LS_AOV/'
+    _location = f'/_tmp/ztf_variability_20_fields_20200321/catalog/GCE_LS_AOV/'
+
     files = glob.glob(os.path.join(_location, '*.h5'))
 
     input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
