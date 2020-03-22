@@ -249,7 +249,11 @@ def get_mean_ztf_alert_braai(_db, ra, dec):
         ]))
         if len(objects) > 0:
             # there may be multiple objectId's in the match due to astrometric errors:
-            braai_avg = np.mean([float(o.get('braai_avg', 0)) for o in objects if o.get('braai_avg', None)])
+            braais = [float(o.get('braai_avg', 0)) for o in objects if o.get('braai_avg', None)]
+            if len(braais) > 0:
+                braai_avg = np.mean(braais)
+            else:
+                braai_avg = None
         else:
             braai_avg = None
 
