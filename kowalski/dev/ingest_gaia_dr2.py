@@ -444,7 +444,9 @@ if __name__ == '__main__':
                                      ('dec_error', 1),
                                      ('ra_dec_corr', 1),
                                      ('phot_g_mean_flux_over_error', 1),
-                                     ('_id', 1)], background=True)
+                                     ('_id', 1)],
+                                    name='crd_mag_ra_dec_etc',
+                                    background=True)
 
     # number of records to insert
     batch_size = 4096
