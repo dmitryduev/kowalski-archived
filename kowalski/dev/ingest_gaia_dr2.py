@@ -368,10 +368,10 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
         # dff.rename(index=str, columns={'id': '_id'}, inplace=True)
         dff['_id'] = dff['source_id']
 
-        batch = dff.to_dict(orient='records')
+        batch = dff.fillna('DROPMEPLEASE').to_dict(orient='records')
 
         # pop nulls - save space
-        batch = [{kk: vv for kk, vv in bb.items() if not np.isnan(vv)} for bb in batch]
+        batch = [{kk: vv for kk, vv in bb.items() if vv not in ('DROPMEPLEASE', 'NOT_AVAILABLE')} for bb in batch]
 
         bad_doc_ind = []
 
