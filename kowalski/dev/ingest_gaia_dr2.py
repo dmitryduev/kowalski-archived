@@ -9,6 +9,7 @@ import json
 import argparse
 import traceback
 import datetime
+import pandas as pd
 import pytz
 from numba import jit
 from concurrent.futures import ThreadPoolExecutor
@@ -96,7 +97,7 @@ def insert_multiple_db_entries(_db, _collection=None, _db_entries=None, _verbose
             print(_e)
 
 
-@jit(forceobj=True)
+# @jit(forceobj=True)
 def deg2hms(x):
     """Transform degrees to *hours:minutes:seconds* strings.
 
@@ -124,7 +125,7 @@ def deg2hms(x):
     return hms
 
 
-@jit(forceobj=True)
+# @jit(forceobj=True)
 def deg2dms(x):
     """Transform degrees to *degrees:arcminutes:arcseconds* strings.
 
@@ -151,7 +152,7 @@ def deg2dms(x):
     return dms
 
 
-def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=False):
+def process_file_old(_file, _collection, _batch_size=2048, verbose=False, _dry_run=False):
 
     # connect to MongoDB:
     if verbose:
@@ -349,6 +350,64 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
             print('Successfully disconnected from db')
 
 
+def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=False):
+
+    # connect to MongoDB:
+    if verbose:
+        print('Connecting to DB')
+    _client, _db = connect_to_db()
+    if verbose:
+        print('Successfully connected')
+
+    print(f'processing {_file}')
+
+    for ii, dff in enumerate(pd.read_csv(_file, chunksize=_batch_size)):
+
+        print(f'{_file}: processing batch # {ii + 1}')
+
+        # dff.rename(index=str, columns={'id': '_id'}, inplace=True)
+        dff['_id'] = dff['source_id']
+
+        batch = dff.to_dict(orient='records')
+
+        # pop nulls - save space
+        batch = [{kk: vv for kk, vv in bb.items() if vv} for bb in batch]
+
+        bad_doc_ind = []
+
+        for ie, doc in enumerate(batch):
+            try:
+                # GeoJSON for 2D indexing
+                # print(doc['ra'], doc['dec'])
+                doc['coordinates'] = dict()
+                # string format: H:M:S, D:M:S
+                doc['coordinates']['radec_str'] = [deg2hms(doc['ra']), deg2dms(doc['dec'])]
+                # for GeoJSON, must be lon:[-180, 180], lat:[-90, 90] (i.e. in deg)
+                _radec_geojson = [doc['ra'] - 180.0, doc['dec']]
+                doc['coordinates']['radec_geojson'] = {'type': 'Point',
+                                                       'coordinates': _radec_geojson}
+            except Exception as e:
+                print(str(e))
+                bad_doc_ind.append(ie)
+
+        if len(bad_doc_ind) > 0:
+            print('removing bad docs')
+            for index in sorted(bad_doc_ind, reverse=True):
+                del batch[index]
+
+        # print(batch)
+
+        # ingest
+        insert_multiple_db_entries(_db, _collection=_collection, _db_entries=batch)
+
+    # disconnect from db:
+    try:
+        _client.close()
+    finally:
+        if verbose:
+            print('Successfully disconnected from db')
+
+
 if __name__ == '__main__':
     ''' Create command line argument parser '''
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -365,7 +424,7 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    collection = 'Gaia_DR2'
+    collection = 'Gaia_DR2_new'
 
     # create indexes:
     print('Creating indexes')
@@ -390,7 +449,7 @@ if __name__ == '__main__':
     # number of records to insert
     batch_size = 4096
 
-    _location = '/_tmp/gaia_dr2/'
+    _location = '/_tmp/gaia/dr2/'
 
     files = glob.glob(os.path.join(_location, 'Gaia*.csv'))
 
