@@ -365,8 +365,7 @@ def process_file(_file, _collection, _batch_size=2048, verbose=False, _dry_run=F
 
         print(f'{_file}: processing batch # {ii + 1}')
 
-        # dff.rename(index=str, columns={'id': '_id'}, inplace=True)
-        dff['_id'] = dff['source_id']
+        dff['_id'] = dff['source_id'].apply(lambda x: str(x))
 
         batch = dff.fillna('DROPMEPLEASE').to_dict(orient='records')
 
@@ -434,19 +433,23 @@ if __name__ == '__main__':
         db[collection].create_index([('ra', 1),
                                      ('dec', 1),
                                      ('parallax', 1)], background=True)
-        db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+        db[collection].create_index([('parallax', 1),
                                      ('phot_g_mean_mag', 1),
-                                     ('pmra', 1),
-                                     ('pmdec', 1),
-                                     ('ra', 1),
-                                     ('ra_error', 1),
-                                     ('dec', 1),
-                                     ('dec_error', 1),
-                                     ('ra_dec_corr', 1),
-                                     ('phot_g_mean_flux_over_error', 1),
-                                     ('_id', 1)],
-                                    name='crd_mag_ra_dec_etc',
-                                    background=True)
+                                     ('radial_velocity', 1),
+                                     ('radial_velocity_error', 1)], name='coughlin01', background=True)
+        # db[collection].create_index([('coordinates.radec_geojson', '2dsphere'),
+        #                              ('phot_g_mean_mag', 1),
+        #                              ('pmra', 1),
+        #                              ('pmdec', 1),
+        #                              ('ra', 1),
+        #                              ('ra_error', 1),
+        #                              ('dec', 1),
+        #                              ('dec_error', 1),
+        #                              ('ra_dec_corr', 1),
+        #                              ('phot_g_mean_flux_over_error', 1),
+        #                              ('_id', 1)],
+        #                             name='crd_mag_ra_dec_etc',
+        #                             background=True)
 
     # number of records to insert
     batch_size = 4096
