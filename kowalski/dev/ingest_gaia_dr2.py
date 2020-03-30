@@ -423,7 +423,7 @@ if __name__ == '__main__':
     client, db = connect_to_db()
     print('Successfully connected')
 
-    collection = 'Gaia_DR2'
+    collection = 'Gaia_DR2_new'
 
     # create indexes:
     print('Creating indexes')
