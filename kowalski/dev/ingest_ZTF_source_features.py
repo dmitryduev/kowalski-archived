@@ -365,8 +365,8 @@ def lc_dmdt(_db, _id, catalog: str = 'ZTF_sources_20191101', dmdt_ints_v: str = 
 filters = {'zg': 1, 'zr': 2, 'zi': 3}
 
 
-def process_file(fcvd):
-    _file, _collections, _verbose, _dry_run = fcvd
+def process_file(fcvdx):
+    _file, _collections, _verbose, _dry_run, _xmatch = fcvdx
 
     # connect to MongoDB:
     if _verbose:
@@ -398,8 +398,9 @@ def process_file(fcvd):
 
         for doc in docs:
             # Cross-match:
-            xmatches = xmatch(_db, doc['ra'], doc['dec'])
-            doc['cross_matches'] = xmatches
+            if _xmatch:
+                xmatches = xmatch(_db, doc['ra'], doc['dec'])
+                doc['cross_matches'] = xmatches
 
             # get number of ZTF alerts within 2"
             n_ztf_alerts = get_n_ztf_alerts(_db, doc['ra'], doc['dec'])
@@ -459,11 +460,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--dryrun', action='store_true', help='dry run?')
     parser.add_argument('--verbose', action='store_true', help='verbose?')
+    parser.add_argument('--xmatch', action='store_true', help='cross match?')
 
     args = parser.parse_args()
 
     dry_run = args.dryrun
     verbose = args.verbose
+    cross_match = args.xmatch
 
     # connect to MongoDB:
     print('Connecting to DB')
@@ -497,7 +500,7 @@ if __name__ == '__main__':
 
     files = glob.glob(os.path.join(_location, '*.h5'))
 
-    input_list = [(f, collections, verbose, dry_run) for f in sorted(files) if os.stat(f).st_size != 0]
+    input_list = [(f, collections, verbose, dry_run, cross_match) for f in sorted(files) if os.stat(f).st_size != 0]
 
     print(f'# files to process: {len(input_list)}')
 
