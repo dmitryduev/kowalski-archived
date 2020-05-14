@@ -412,8 +412,8 @@ def process_file(fcvd):
 
             # compute dmdt's
             # with long time baseline:
-            dmdt_long = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'], dmdt_ints_v='v20200205')
-            doc['dmdt_long'] = dmdt_long.tolist()
+            # dmdt_long = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'], dmdt_ints_v='v20200205')
+            # doc['dmdt_long'] = dmdt_long.tolist()
             # with short time baseline:
             dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'], dmdt_ints_v='v20200318')
             doc['dmdt'] = dmdt.tolist()
@@ -473,7 +473,7 @@ if __name__ == '__main__':
     t_tag = '20191101'
 
     collections = {'sources': f'ZTF_sources_{t_tag}',
-                   'features': f'ZTF_source_features_{t_tag}'}
+                   'features': f'ZTF_source_features_{t_tag}_dr2'}
 
     # create indices:
     print('Creating indices')
@@ -489,7 +489,11 @@ if __name__ == '__main__':
     # _location = f'/_tmp/ztf_variability_training_set_1_2_epochs/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability_20_fields_subset_20200305/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability_20_fields_subset_20200318/catalog/GCE_LS_AOV/'
-    _location = f'/_tmp/ztf_variability_20_fields_20200321/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability_20_fields_20200321/catalog/GCE_LS_AOV/'
+
+    _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_0_300/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_300_400/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_400_500/catalog/GCE_LS_AOV/'
 
     files = glob.glob(os.path.join(_location, '*.h5'))
 
