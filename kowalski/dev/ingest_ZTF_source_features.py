@@ -506,10 +506,6 @@ def process_file(fcvdx):
         docs = df.to_dict(orient='records')
 
         for doc in docs:
-            # Cross-match:
-            if _xmatch:
-                xmatches = xmatch(_db, doc['ra'], doc['dec'])
-                doc['cross_matches'] = xmatches
 
             # get number of ZTF alerts within 2"
             n_ztf_alerts = get_n_ztf_alerts(_db, doc['ra'], doc['dec'])
@@ -527,6 +523,12 @@ def process_file(fcvdx):
             # with short time baseline:
             dmdt = lc_dmdt(_db, doc['_id'], catalog=_collections['sources'], dmdt_ints_v='v20200318')
             doc['dmdt'] = dmdt.tolist()
+
+            # Cross-match:
+            if _xmatch:
+                xmatches = xmatch(_db, doc['ra'], doc['dec'])
+                # doc['cross_matches'] = xmatches
+                doc = {**doc, **xmatches}
 
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
