@@ -163,6 +163,33 @@ def ccd_quad_2_rc(ccd: int, quad: int) -> int:
     return rc
 
 
+@jit
+def great_circle_distance(phi1, lambda1, phi2, lambda2):
+    # input: dec1, ra1, dec2, ra2 [rad]
+    # this is orders of magnitude faster than astropy.coordinates.Skycoord.separation
+    delta_lambda = np.abs(lambda2 - lambda1)
+    return np.arctan2(np.sqrt((np.cos(phi2) * np.sin(delta_lambda)) ** 2
+                              + (np.cos(phi1) * np.sin(phi2) -
+                                 np.sin(phi1) * np.cos(phi2) * np.cos(delta_lambda)) ** 2),
+                      np.sin(phi1) * np.sin(phi2) + np.cos(phi1) * np.cos(phi2) * np.cos(delta_lambda))
+
+
+def radec_str2rad(_ra_str, _dec_str):
+    """
+    :param _ra_str: 'H:M:S'
+    :param _dec_str: 'D:M:S'
+    :return: ra, dec in rad
+    """
+    # convert to rad:
+    _ra = list(map(float, _ra_str.split(':')))
+    _ra = (_ra[0] + _ra[1] / 60.0 + _ra[2] / 3600.0) * np.pi / 12.
+    _dec = list(map(float, _dec_str.split(':')))
+    _sign = -1 if _dec_str.strip()[0] == '-' else 1
+    _dec = _sign * (abs(_dec[0]) + abs(_dec[1]) / 60.0 + abs(_dec[2]) / 3600.0) * np.pi / 180.
+
+    return _ra, _dec
+
+
 # cone search radius in arcsec:
 cone_search_radius = 2
 # convert arcsec to rad:
@@ -175,6 +202,64 @@ def xmatch(_db, ra, dec):
     """
 
     xmatches = dict()
+    features = dict()
+
+    # catalogs = config['xmatch']['catalogs']
+    catalogs = {
+        "AllWISE": {
+            "filter": {},
+            "projection": {
+                "_id": 1,
+                "coordinates.radec_str": 1,
+                # "ra": 1,
+                # "dec": 1,
+                "w1mpro": 1,
+                "w1sigmpro": 1,
+                "w2mpro": 1,
+                "w2sigmpro": 1,
+                "w3mpro": 1,
+                "w3sigmpro": 1,
+                "w4mpro": 1,
+                "w4sigmpro": 1,
+                "ph_qual": 1
+            }
+        },
+        "Gaia_DR2": {
+            "filter": {},
+            "projection": {
+                "_id": 1,
+                "coordinates.radec_str": 1,
+                # "ra": 1,
+                # "dec": 1,
+                "phot_g_mean_mag": 1,
+                "phot_bp_mean_mag": 1,
+                "phot_rp_mean_mag": 1,
+                "parallax": 1,
+                "parallax_error": 1,
+                "pmra": 1,
+                "pmra_error": 1,
+                "pmdec": 1,
+                "pmdec_error": 1,
+                "astrometric_excess_noise": 1,
+                "phot_bp_rp_excess_factor": 1,
+            }
+        },
+        "PS1_DR1": {
+            "filter": {},
+            "projection": {
+                "_id": 1,
+                "coordinates.radec_str": 1,
+                # "raMean": 1,
+                # "decMean": 1,
+                "gMeanPSFMag": 1, "gMeanPSFMagErr": 1,
+                "rMeanPSFMag": 1, "rMeanPSFMagErr": 1,
+                "iMeanPSFMag": 1, "iMeanPSFMagErr": 1,
+                "zMeanPSFMag": 1, "zMeanPSFMagErr": 1,
+                "yMeanPSFMag": 1, "yMeanPSFMagErr": 1,
+                "qualityFlag": 1
+            }
+        }
+    }
 
     try:
         ra_geojson = float(ra)
@@ -183,16 +268,40 @@ def xmatch(_db, ra, dec):
         dec_geojson = float(dec)
 
         ''' catalogs '''
-        for catalog in config['xmatch']['catalogs']:
+        for catalog in catalogs:
             catalog_filter = config['xmatch']['catalogs'][catalog]['filter']
             catalog_projection = config['xmatch']['catalogs'][catalog]['projection']
 
             object_position_query = dict()
             object_position_query['coordinates.radec_geojson'] = {
                 '$geoWithin': {'$centerSphere': [[ra_geojson, dec_geojson], cone_search_radius]}}
-            s = _db[catalog].find({**object_position_query, **catalog_filter},
-                                  {**catalog_projection})
+            s = _db[catalog].find(
+                {**object_position_query, **catalog_filter},
+                {**catalog_projection}
+            )
             xmatches[catalog] = list(s)
+
+        # convert into a dict of features
+        for catalog in catalogs:
+            if len(xmatches[catalog]) > 0:
+                # pick the nearest match:
+                if len(xmatches[catalog]) > 1:
+                    ii = np.argmin([great_circle_distance(dec * np.pi / 180, ra * np.pi / 180,
+                                                          *radec_str2rad(*dd['coordinates']['radec_str'])[::-1])
+                                    for dd in xmatches[catalog]])
+
+                    xmatch = xmatches[catalog][int(ii)]
+                else:
+                    xmatch = xmatches[catalog][0]
+            else:
+                xmatch = dict()
+
+            for feature in catalogs[catalog]['projection'].keys():
+                if feature == 'coordinates.radec_str':
+                    continue
+                f = xmatch.get(feature, None)
+                f_name = f"{catalog}__{feature}"
+                features[f_name] = f
 
     except Exception as e:
         print(str(e))
@@ -455,8 +564,7 @@ def process_file(fcvdx):
 
 if __name__ == '__main__':
     ''' Create command line argument parser '''
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description='')
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('--dryrun', action='store_true', help='dry run?')
     parser.add_argument('--verbose', action='store_true', help='verbose?')
@@ -486,17 +594,14 @@ if __name__ == '__main__':
         db[collections['features']].create_index([('period', pymongo.DESCENDING),
                                                   ('significance', pymongo.DESCENDING)], background=True)
 
-    # _location = f'/_tmp/ztf_variability_10_fields/'
-    # _location = f'/_tmp/ztf_variability_20_fields/'
-    # _location = f'/_tmp/ztf_variability_training_set_1/catalog/GCE_LS_AOV/'
-    # _location = f'/_tmp/ztf_variability_training_set_1_2_epochs/catalog/GCE_LS_AOV/'
-    # _location = f'/_tmp/ztf_variability_20_fields_subset_20200305/catalog/GCE_LS_AOV/'
-    # _location = f'/_tmp/ztf_variability_20_fields_subset_20200318/catalog/GCE_LS_AOV/'
-    # _location = f'/_tmp/ztf_variability_20_fields_20200321/catalog/GCE_LS_AOV/'
-
-    _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_0_300/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_0_300/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_300_400/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_400_500/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_500_600/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_600_700/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_700_800/catalog/GCE_LS_AOV/'
+    # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_800_900/catalog/GCE_LS_AOV/'
+    _location = f'/_tmp/ztf_variability/quadrants_AOV_20Fields_v2/catalog/GCE_LS_AOV/'
 
     files = glob.glob(os.path.join(_location, '*.h5'))
 
