@@ -528,10 +528,11 @@ def process_file(fcvdx):
             # print(_xmatch)
             if _xmatch:
                 # xmatches = xmatch(_db, doc['ra'], doc['dec'])
+                # doc['cross_matches'] = xmatches
                 features = xmatch(_db, doc['ra'], doc['dec'])
                 # print(features)
-                # doc['cross_matches'] = xmatches
-                doc = {**doc, **features}
+                for feature in features:
+                    doc[feature] = features[feature]
 
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
