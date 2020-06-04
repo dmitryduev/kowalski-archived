@@ -306,7 +306,7 @@ def xmatch(_db, ra, dec):
     except Exception as e:
         print(str(e))
 
-    return xmatches
+    return features
 
 
 def get_n_ztf_alerts(_db, ra, dec):
@@ -525,10 +525,13 @@ def process_file(fcvdx):
             doc['dmdt'] = dmdt.tolist()
 
             # Cross-match:
+            print(_xmatch)
             if _xmatch:
-                xmatches = xmatch(_db, doc['ra'], doc['dec'])
+                # xmatches = xmatch(_db, doc['ra'], doc['dec'])
+                features = xmatch(_db, doc['ra'], doc['dec'])
+                print(features)
                 # doc['cross_matches'] = xmatches
-                doc = {**doc, **xmatches}
+                doc = {**doc, **features}
 
             # GeoJSON for 2D indexing
             doc['coordinates'] = {}
