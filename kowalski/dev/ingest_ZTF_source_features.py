@@ -525,11 +525,11 @@ def process_file(fcvdx):
             doc['dmdt'] = dmdt.tolist()
 
             # Cross-match:
-            print(_xmatch)
+            # print(_xmatch)
             if _xmatch:
                 # xmatches = xmatch(_db, doc['ra'], doc['dec'])
                 features = xmatch(_db, doc['ra'], doc['dec'])
-                print(features)
+                # print(features)
                 # doc['cross_matches'] = xmatches
                 doc = {**doc, **features}
 
