@@ -603,7 +603,7 @@ if __name__ == '__main__':
     # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_600_700/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_700_800/catalog/GCE_LS_AOV/'
     # _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_800_900/catalog/GCE_LS_AOV/'
-    _location = f'/_tmp/ztf_variability/quadrants_AOV_20Fields_v2/catalog/GCE_LS_AOV/'
+    _location = f'/_tmp/ztf_variability/quadrants_GCE_LS_AOV_20Fields_v2/catalog/GCE_LS_AOV/'
 
     files = glob.glob(os.path.join(_location, '*.h5'))
 
