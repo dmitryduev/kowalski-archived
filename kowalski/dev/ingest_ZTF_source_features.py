@@ -269,8 +269,8 @@ def xmatch(_db, ra, dec):
 
         ''' catalogs '''
         for catalog in catalogs:
-            catalog_filter = config['xmatch']['catalogs'][catalog]['filter']
-            catalog_projection = config['xmatch']['catalogs'][catalog]['projection']
+            catalog_filter = catalogs[catalog]['filter']
+            catalog_projection = catalogs[catalog]['projection']
 
             object_position_query = dict()
             object_position_query['coordinates.radec_geojson'] = {
