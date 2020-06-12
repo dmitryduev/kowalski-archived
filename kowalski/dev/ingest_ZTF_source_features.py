@@ -505,6 +505,8 @@ def process_file(fcvdx):
 
         docs = df.to_dict(orient='records')
 
+        requests = []
+
         for doc in docs:
 
             # get number of ZTF alerts within 2"
@@ -549,11 +551,22 @@ def process_file(fcvdx):
             # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
             # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
+            _id = doc["id"]
+            doc.pop("_id", None)
+            requests += [
+                pymongo.UpdateOne(
+                    {'_id': _id},
+                    {'$set': doc},
+                    upsert=True,
+                )
+            ]
+
         if _verbose:
             print(f'ingesting contents of {_file}')
         if not _dry_run:
-            insert_multiple_db_entries(_db, _collection=_collections['features'],
-                                       _db_entries=docs, _verbose=_verbose)
+            # insert_multiple_db_entries(_db, _collection=_collections['features'],
+            #                            _db_entries=docs, _verbose=_verbose)
+            _db[_collections['features']].bulk_write(requests)
 
     except Exception as e:
         traceback.print_exc()
