@@ -551,7 +551,7 @@ def process_file(fcvdx):
             # doc['coordinates']['radec_rad'] = [_ra * np.pi / 180.0, _dec * np.pi / 180.0]
             # doc['coordinates']['radec_deg'] = [_ra, _dec]
 
-            _id = doc["id"]
+            _id = doc["_id"]
             doc.pop("_id", None)
             requests += [
                 pymongo.UpdateOne(
