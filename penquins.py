@@ -1,6 +1,7 @@
 from copy import deepcopy
 from bson.json_util import loads
 import os
+from netrc import netrc
 import random
 import requests
 from requests.adapters import HTTPAdapter, DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES
@@ -31,12 +32,19 @@ class Kowalski(object):
                  verbose: bool = False):
         """
             username, password, protocol, host, port:
-                kowalski instance access credentials and address
+                kowalski instance access credentials and address.
+                If password is omitted, then look up default credentials from
+                the ~/.netrc file.
             pool_connections, pool_maxsize, max_retries, pool_block:
                 control requests.Session connection pool
             verbose:
                 "Status, Kowalski!"
         """
+
+        if password is None:
+            netrc_auth = netrc().authenticators(host)
+            if netrc_auth:
+                username, _, password = netrc_auth
 
         assert username is not None, 'username must be specified'
         assert password is not None, 'password must be specified'
@@ -55,6 +63,11 @@ class Kowalski(object):
         self.password = password
 
         self.session = requests.Session()
+
+        # Prevent Requests from attempting to do HTTP basic auth using a
+        # matching username and password from the user's ~/.netrc file,
+        # because kowalski will reject all HTTP basic auth attempts.
+        self.session.trust_env=False
 
         # requests' defaults overridden?
         if (pool_connections is not None) or (pool_maxsize is not None) \
