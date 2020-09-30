@@ -1,4 +1,6 @@
-# Kowalski
+# THIS REPOSITORY IS DEPRECATED IN FAVOR OF [THIS ONE](https://github.com/dmitryduev/kowalski)
+
+# Kowalski v1
 
 The legendary [ZTF](https://ztf.caltech.edu) time domain astronomy penguin: 
 `docker`-ized and powered by `aiohttp` and `mongodb` to deliver improved performance and robustness.
